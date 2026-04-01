@@ -1,0 +1,16 @@
+{
+  "name": "Hydrotherapy Management System",
+  "short_name": "HydroSys",
+  "description": "Automatic Colon Hydrotherapy Management System PWA",
+  "orientation": "landscape",
+  "display": "standalone",
+  "theme_color": "#0a5c99",
+  "background_color": "#ffffff",
+  "icons": [
+    {
+      "src": "favicon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}

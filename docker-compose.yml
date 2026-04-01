@@ -1,0 +1,70 @@
+services:
+  # proxy:
+  #   image: traefik:v3.6
+  #   command: --providers.docker
+  #   ports:
+  #     - 80:80
+  #   volumes:
+  #     - /var/run/docker.sock:/var/run/docker.sock
+  backend:
+    build:
+      context: ./backend
+      target: backend-dev
+    environment:
+      MONGODB_URI: mongodb://${MONGO_USER}:${MONGO_PASS}@mongodb:27017/hydrotherapy?authSource=admin
+      JWT_SECRET: ${JWT_SECRET}
+      NODE_ENV: development
+    ports:
+      - "3000:3000"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    develop:
+      watch:
+        - path: ./backend/app
+          action: sync
+          target: /usr/local/app/app
+        - path: ./backend/package.json
+          action: rebuild
+    # labels:
+    #   traefik.http.routers.backend.rule: Host(`localhost`) && PathRegexp(`/(api|admin)`)
+    #   traefik.http.services.backend.loadbalancer.server.port: 3000
+
+  frontend:
+    build:
+      context: ./frontend
+      target: frontend-dev
+    ports:
+      - "5173:5173"
+    develop:
+      watch:
+        - path: ./frontend/src
+          action: sync
+          target: /usr/local/app/src
+        - path: ./frontend/public
+          action: sync
+          target: /usr/local/app/public
+        - path: ./frontend/package.json
+          action: rebuild
+    # labels:
+    #   traefik.http.routers.client.rule: Host(`localhost`)
+    #   traefik.http.services.client.loadbalancer.server.port: 5173
+
+  mongodb:
+    image: mongo:7
+    volumes:
+      - mongo_data:/data/db
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASS}
+      MONGO_INITDB_DATABASE: hydrotherapy
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 10s
+      retries: 5
+
+volumes:
+  mongo_data:
