@@ -29,6 +29,7 @@ function SearchSelect<T>({
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  
 
   const selected = items.find((i) => getId(i) === selectedId);
 
@@ -340,6 +341,8 @@ const Therapy: React.FC = () => {
     }
   };
 
+  const refPatientDob = useRef<HTMLDivElement>(null);
+
   return (
     <IonPage>
       <IonHeader>
@@ -557,7 +560,7 @@ const Therapy: React.FC = () => {
           </IonItem>
           <IonItem>
             <IonLabel position="floating">Date of Birth</IonLabel>
-            <IonInput className="ion-padding-top" onClick={() => this.showDatePicker()}   type="date" value={pDob} onIonChange={(e) => setPDob(e.detail.value || '')} />
+            <IonInput ref={refPatientDob} className="ion-padding-top" onClick={() => refPatientDob.current?.showDatePicker()}   type="date" value={pDob} onIonChange={(e) => setPDob(e.detail.value || '')} />
             <IonIcon name="calendarOutline" slot="end"></IonIcon>
           </IonItem>
           <IonItem>

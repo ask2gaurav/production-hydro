@@ -81,13 +81,10 @@ export async function fetchAndCachePatients(machineId: string): Promise<void> {
 
 // Push any unsynced therapists to the server
 export async function syncPendingTherapists(machineId: string): Promise<void> {
-  console.log('Syncing pending therapists...', machineId);
   const unsynced = await localDB.therapists
     .where('synced').equals(0)
     .and((t) => t.machine_id === machineId)
     .toArray();
-console.log(`Found ${unsynced.length} unsynced therapists for machine ${machineId}`);
-console.log('Unsynced therapists:', unsynced);
   for (const therapist of unsynced) {
     try {
       const res = await api.post('/therapists', {

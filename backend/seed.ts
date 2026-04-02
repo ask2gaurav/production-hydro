@@ -28,7 +28,7 @@ async function seed() {
     console.log('UserTypes seeded.');
 
     // 2. Admin User
-    const adminEmail = process.env.ADMIN_EMAIL || 'admin@example.com';
+    const adminEmail = process.env.ADMIN_EMAIL || 'ask2gaurav@gmail.com';
     let admin = await User.findOne({ email: adminEmail });
     if (!admin) {
       admin = await User.create({
@@ -38,7 +38,7 @@ async function seed() {
         email: adminEmail
       });
       
-      const password_hash = await bcrypt.hash(process.env.MONGO_PASS || 'securepassword', 10);
+      const password_hash = await bcrypt.hash(process.env.ADMIN_PASS || 'securepassword', 10);
       await AuthCredential.create({
         user_id: admin._id,
         email: adminEmail,

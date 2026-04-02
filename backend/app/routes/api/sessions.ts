@@ -22,6 +22,8 @@ export async function action({ request }: { request: Request }) {
 
     let is_locked_now = false;
     const session = await Session.create(data);
+    //Update last_seen_date of machine on every session start
+    await Machine.findOneAndUpdate({ _id: machine._id }, { last_seen_date: new Date() }); 
     if (machine.mode === 'demo') {
         const updatedMachine = await Machine.findOneAndUpdate(
           { _id: machine._id, demo_sessions_used: { $lt: machine.demo_session_limit } },

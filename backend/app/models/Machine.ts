@@ -28,7 +28,8 @@ const MachineSchema = new mongoose.Schema({
     supplier_phone: String,
     supplier_available_hours: String,
     custom_message: String
-  }
+  },
+  last_seen_date: { type: Date },
 }, { timestamps: true });
 
 export default mongoose.models.Machine || mongoose.model('Machine', MachineSchema);
