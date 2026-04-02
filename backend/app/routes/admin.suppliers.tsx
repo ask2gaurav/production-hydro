@@ -281,7 +281,7 @@ export default function AdminSuppliers() {
         )}
       </Form>
 
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-auto">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
@@ -330,19 +330,23 @@ export default function AdminSuppliers() {
                     >
                       Edit
                     </button>
+                    &nbsp;|&nbsp;
                     <button
                       onClick={() => openMachineModal(s as SupplierDoc)}
                       className="text-indigo-600 hover:underline text-xs font-medium"
                     >
                       Machines
                     </button>
+                    
                     {s.is_active && (
+                      
                       <Form
                         method="post"
                         onSubmit={(e) => {
                           if (!confirm("Deactivate this supplier?")) e.preventDefault();
                         }}
                       >
+                        &nbsp;|&nbsp;
                         <input type="hidden" name="intent" value="delete" />
                         <input type="hidden" name="id" value={s._id} />
                         <button type="submit" className="text-red-500 hover:underline text-xs font-medium">

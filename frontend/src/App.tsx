@@ -22,6 +22,7 @@ import TherapyLogs from './pages/TherapyLogs';
 import Settings from './pages/Settings';
 import Resources from './pages/Resources';
 import LockScreen from './pages/LockScreen';
+import LoginPage from './pages/LoginPage';
 
 import { useStore } from './store/useStore';
 import { checkModeOnBoot } from './services/modeCheck';
@@ -32,27 +33,32 @@ const App: React.FC = () => {
   const { machineId, modeStatus } = useStore();
 
   useEffect(() => {
-    checkModeOnBoot(machineId);
+    if (machineId) {
+      checkModeOnBoot(machineId);
+    }
   }, [machineId]);
 
   return (
     <IonApp>
-      {modeStatus.is_locked ? (
-        <LockScreen />
-      ) : (
-        <IonReactRouter>
-          <IonRouterOutlet>
-            <Route exact path="/dashboard" component={Dashboard} />
-            <Route exact path="/therapy" component={Therapy} />
-            <Route exact path="/logs" component={TherapyLogs} />
-            <Route exact path="/settings" component={Settings} />
-            <Route exact path="/resources" component={Resources} />
-            <Route exact path="/">
-              <Redirect to="/dashboard" />
-            </Route>
-          </IonRouterOutlet>
-        </IonReactRouter>
-      )}
+      <IonReactRouter>
+        <IonRouterOutlet>
+          <Route exact path="/login" component={LoginPage} />
+          {modeStatus.is_locked ? (
+            <Route component={LockScreen} />
+          ) : (
+            <>
+              <Route exact path="/dashboard" component={Dashboard} />
+              <Route exact path="/therapy" component={Therapy} />
+              <Route exact path="/logs" component={TherapyLogs} />
+              <Route exact path="/settings" component={Settings} />
+              <Route exact path="/resources" component={Resources} />
+              <Route exact path="/">
+                {machineId ? <Redirect to="/dashboard" /> : <Redirect to="/login" />}
+              </Route>
+            </>
+          )}
+        </IonRouterOutlet>
+      </IonReactRouter>
     </IonApp>
   );
 };

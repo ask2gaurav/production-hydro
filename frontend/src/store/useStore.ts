@@ -2,14 +2,19 @@ import { create } from 'zustand';
 
 interface AppState {
   machineId: string;
+  token: string;
   modeStatus: any;
   setModeStatus: (status: any) => void;
+  setMachineId: (id: string) => void;
+  setToken: (token: string) => void;
+  logout: () => void;
   online: boolean;
   setOnline: (status: boolean) => void;
 }
 
 export const useStore = create<AppState>((set) => ({
-  machineId: import.meta.env.VITE_MACHINE_ID || 'MACHINE_001', 
+  machineId: localStorage.getItem('machine_id') || '',
+  token: localStorage.getItem('token') || '',
   modeStatus: {
     mode: 'demo',
     is_locked: false,
@@ -19,6 +24,19 @@ export const useStore = create<AppState>((set) => ({
     lock_screen_contact: null
   },
   setModeStatus: (status) => set({ modeStatus: status }),
+  setMachineId: (id) => {
+    localStorage.setItem('machine_id', id);
+    set({ machineId: id });
+  },
+  setToken: (token) => {
+    localStorage.setItem('token', token);
+    set({ token });
+  },
+  logout: () => {
+    localStorage.removeItem('machine_id');
+    localStorage.removeItem('token');
+    set({ machineId: '', token: '' });
+  },
   online: navigator.onLine,
   setOnline: (status) => set({ online: status })
 }));

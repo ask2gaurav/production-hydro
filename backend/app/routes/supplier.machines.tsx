@@ -218,6 +218,7 @@ export default function SupplierMachines() {
                         method="post"
                         onSubmit={(e) => { if (!confirm("Activate full mode? This will unlock unlimited sessions.")) e.preventDefault(); }}
                       >
+                        &nbsp;|&nbsp;&nbsp;
                         <input type="hidden" name="intent" value="activate_full" />
                         <input type="hidden" name="machine_id" value={m._id} />
                         <button type="submit" className="text-teal-600 hover:underline text-xs font-medium" disabled={isSubmitting}>

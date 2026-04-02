@@ -12,7 +12,7 @@ export interface LocalSession {
   water_level_log: any[];
   session_note?: string;
   status: string;
-  synced: boolean;
+  synced: number;
   created_at: Date;
 }
 
@@ -25,7 +25,7 @@ export interface LocalSettings {
   flush_valve?: boolean;
   blower_switch?: boolean;
   heater_switch?: boolean;
-  
+
   // Demo Mode overrides
   mode?: string;
   demo_sessions_used?: number;
@@ -35,11 +35,37 @@ export interface LocalSettings {
   lock_screen_contact?: any;
 }
 
+export interface LocalTherapist {
+  id?: number;
+  server_id?: string;      // MongoDB _id once synced
+  machine_id: string;
+  first_name: string;
+  last_name: string;
+  phone: string;
+  email: string;
+  is_active: boolean;
+  synced: number;
+}
+
+export interface LocalPatient {
+  id?: number;
+  server_id?: string;      // MongoDB _id once synced
+  machine_id: string;
+  first_name: string;
+  last_name: string;
+  phone: string;
+  email: string;
+  dob?: string;
+  notes?: string;
+  is_active: boolean;
+  synced: number;
+}
+
 export class HydroDb extends Dexie {
   sessions!: Table<LocalSession, number>;
-  therapists!: Table<any, number>;
-  patients!: Table<any, number>;
-  settings!: Table<LocalSettings, string>; 
+  therapists!: Table<LocalTherapist, number>;
+  patients!: Table<LocalPatient, number>;
+  settings!: Table<LocalSettings, string>;
 
   constructor() {
     super('HydrotherapyDB');
@@ -47,6 +73,13 @@ export class HydroDb extends Dexie {
       sessions: '++id, machine_id, synced, created_at',
       therapists: '++id, machine_id',
       patients: '++id, machine_id',
+      settings: 'machine_id'
+    });
+    // Version 2: add synced + server_id indexes to therapists and patients
+    this.version(2).stores({
+      sessions: '++id, machine_id, synced, created_at',
+      therapists: '++id, machine_id, synced, server_id',
+      patients: '++id, machine_id, synced, server_id',
       settings: 'machine_id'
     });
   }

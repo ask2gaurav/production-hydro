@@ -6,6 +6,7 @@ export default [
   // Auth
   route("api/auth/login", "routes/api/auth.login.ts"),
   route("api/auth/logout", "routes/api/auth.logout.ts"),
+  route("api/auth/me", "routes/api/auth.me.ts"),
   route("api/auth/change-password", "routes/api/auth.change-password.ts"),
   
   // Users

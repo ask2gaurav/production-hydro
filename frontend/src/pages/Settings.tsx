@@ -33,6 +33,8 @@ const Settings: React.FC = () => {
     
     const newSettings = { ...settings, [key]: value };
     setSettings(newSettings);
+    console.log('Updated settings:', newSettings);
+    console.log('Machine ID:', machineId);
     localDB.settings.put({ machine_id: machineId, ...newSettings });
   };
 
@@ -50,7 +52,7 @@ const Settings: React.FC = () => {
           </IonListHeader>
           <IonItem>
             <IonLabel>Default Session Duration (min) - {settings.default_session_minutes}</IonLabel>
-            <IonRange min={20} max={60} value={settings.default_session_minutes} onIonChange={e => setSettings({...settings, default_session_minutes: e.detail.value})} />
+            <IonRange min={1} max={60} value={settings.default_session_minutes} onIonChange={e => setSettings({...settings, default_session_minutes: e.detail.value})} />
           </IonItem>
           <IonItem>
             <IonLabel>Default Temperature (°C)</IonLabel>

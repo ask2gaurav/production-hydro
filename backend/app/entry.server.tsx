@@ -20,17 +20,17 @@ export default function handleRequest(
 ) {
   // set, append global headers
   const allowedOrigins = ['http://localhost', 'http://localhost:3000', 'http://localhost:5173', 'http://hct.advaitsolutions.com']; // Whitelist your origins
-  const origin = request.headers.get('Origin');
+  const origin = request.headers.get('origin');
   console.log("Origin:", origin);
 
-  if (origin && allowedOrigins.includes(origin)) {
-    responseHeaders.set("Access-Control-Allow-Origin", origin);
-  }
+  // if (origin && allowedOrigins.includes(origin)) {
+  //   responseHeaders.set("Access-Control-Allow-Origin", origin);
+  // }
   responseHeaders.set("Access-Control-Allow-Origin", "*");
-  responseHeaders.set('Vary', 'Origin');
-  responseHeaders.set('Access-Control-Allow-Credentials', 'true');
-  responseHeaders.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  responseHeaders.set('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  // responseHeaders.set('Vary', 'Origin');
+  // responseHeaders.set('Access-Control-Allow-Credentials', 'true');
+  // responseHeaders.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  // responseHeaders.set('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
 
 
   responseHeaders.set("X-App-Version", routerContext.manifest.version);

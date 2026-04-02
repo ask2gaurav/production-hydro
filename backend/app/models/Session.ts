@@ -10,7 +10,7 @@ const SessionSchema = new mongoose.Schema({
   water_temp_log: [{ time: Date, temp: Number }],
   water_level_log: [{ time: Date, level: Number }],
   session_note: { type: String },
-  status: { type: String, enum: ['Completed', 'Abandoned', 'Incomplete'], default: 'Completed' },
+  status: { type: String },
   created_offline: { type: Boolean, default: false },
   synced_at: { type: Date, default: null }
 });

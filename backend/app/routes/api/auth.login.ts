@@ -3,9 +3,10 @@ import User from '../../models/User';
 import { connectDB } from '../../lib/db';
 export async function loader({ request }: { request: Request }) {
  
-  await connectDB();
-  const users = await User.find();
-  return new Response(JSON.stringify(users), { status: 200, headers: {'Content-Type': 'application/json'}});
+  //await connectDB();
+  //const users = await User.find();
+  //return new Response(JSON.stringify(users), { status: 200, headers: {'Content-Type': 'application/json'}});
+  return new Response(JSON.stringify({error:' permission denied'}), { status: 401, headers: { 'Content-Type': 'application/json' } });
 }
 export async function action({ request }: { request: Request }) {
   if (request.method !== 'POST') {

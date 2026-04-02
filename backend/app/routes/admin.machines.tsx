@@ -1,5 +1,5 @@
 import { useLoaderData, useActionData, Form, useNavigation } from "react-router";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { connectDB } from "../lib/db";
 import Machine from "../models/Machine";
 
@@ -130,7 +130,8 @@ export default function AdminMachines() {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editItem, setEditItem] = useState<MachineDoc | null>(null);
-
+  const installationDateRef = useRef<HTMLInputElement>(null);
+  const productionDateRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
     if (actionData?.success) {
       setModalOpen(false);
@@ -215,6 +216,7 @@ export default function AdminMachines() {
                     >
                       Edit
                     </button>
+                    &nbsp;|&nbsp;
                     {m.machine_status !== "Inactive" && (
                       <Form
                         method="post"
@@ -317,13 +319,15 @@ export default function AdminMachines() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Asset Type</label>
                   <input name="asset_type" defaultValue={editItem?.asset_type} className={inputCls} />
                 </div>
-                <div>
+                <div style={{position:'relative'}}>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Production Date</label>
-                  <input type="date" name="production_date" defaultValue={toInputDate(editItem?.production_date)} className={inputCls} />
+                  <input ref={productionDateRef} type="date" name="production_date" defaultValue={toInputDate(editItem?.production_date)} className={inputCls} />
+                  <span style={{ position: 'absolute', right: '10px', top: '70%', transform: 'translateY(-50%)', cursor: 'pointer' }} onClick={() => { productionDateRef.current?.showPicker() }}>📅</span>
                 </div>
-                <div>
+                <div style={{position:'relative'}}>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Installation Date</label>
-                  <input type="date" name="installation_date" defaultValue={toInputDate(editItem?.installation_date)} className={inputCls} />
+                  <input ref={installationDateRef} type="date" name="installation_date" defaultValue={toInputDate(editItem?.installation_date)} className={inputCls} />
+                  <span style={{ position: 'absolute', right: '10px', top: '70%', transform: 'translateY(-50%)', cursor: 'pointer' }} onClick={() => { installationDateRef.current?.showPicker() }}>📅</span>
                 </div>
                 <div className="col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Installation Location</label>

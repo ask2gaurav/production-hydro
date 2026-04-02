@@ -16,18 +16,19 @@ export async function action({ request }: { request: Request }) {
   if (request.method === 'POST') {
     const data = await request.json();
     
-    // Demo Mode Logic
+    // Demo Mode Logic — increment on session start regardless of status
     const machine = await Machine.findById(data.machine_id).catch(() => Machine.findOne({ serial_number: data.machine_id }));
     if (!machine) return new Response('Machine Not Found', { status: 404 });
-    
+
     let is_locked_now = false;
-    if (data.status === 'Completed' && machine.mode === 'demo') {
+    const session = await Session.create(data);
+    if (machine.mode === 'demo') {
         const updatedMachine = await Machine.findOneAndUpdate(
           { _id: machine._id, demo_sessions_used: { $lt: machine.demo_session_limit } },
           { $inc: { demo_sessions_used: 1 } },
           { new: true }
         );
-        
+
         if (!updatedMachine) {
            machine.operating_status = 'demo_locked';
            await machine.save();
@@ -39,7 +40,7 @@ export async function action({ request }: { request: Request }) {
         }
     }
     
-    const session = await Session.create(data);
+    
     return new Response(JSON.stringify({ session, demo_locked: is_locked_now }), { status: 201, headers: {'Content-Type':'application/json'} });
   }
   return new Response('Method Not Allowed', { status: 405 });
