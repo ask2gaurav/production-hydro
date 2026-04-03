@@ -20,7 +20,7 @@ export async function action({ request, params }: { request: Request, params: an
   
   if (request.method === 'PUT') {
     const data = await request.json();
-    const machine = await Machine.findByIdAndUpdate(id, data, { new: true });
+    const machine = await Machine.findByIdAndUpdate(id, data, { returnDocument: 'after' });
     return new Response(JSON.stringify(machine), { status: 200 });
   }
   return new Response('Method Not Allowed', { status: 405 });

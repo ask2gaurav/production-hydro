@@ -28,7 +28,7 @@ export async function action({ request }: { request: Request }) {
         const updatedMachine = await Machine.findOneAndUpdate(
           { _id: machine._id, demo_sessions_used: { $lt: machine.demo_session_limit } },
           { $inc: { demo_sessions_used: 1 } },
-          { new: true }
+          { returnDocument: 'after' }
         );
 
         if (!updatedMachine) {

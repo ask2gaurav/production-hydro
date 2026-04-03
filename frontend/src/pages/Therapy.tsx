@@ -168,7 +168,7 @@ const Therapy: React.FC = () => {
   const [pNotes, setPNotes] = useState('');
   const [pSaving, setPSaving] = useState(false);
   const [pError, setPError] = useState('');
-
+  const refPatientDob = useRef<HTMLIonInputElement>(null);
   const isLocked = state === 'ACTIVE' || state === 'PAUSED';
 
   const loadLocal = useCallback(async () => {
@@ -341,7 +341,7 @@ const Therapy: React.FC = () => {
     }
   };
 
-  const refPatientDob = useRef<HTMLDivElement>(null);
+  
 
   return (
     <IonPage>
@@ -560,8 +560,8 @@ const Therapy: React.FC = () => {
           </IonItem>
           <IonItem>
             <IonLabel position="floating">Date of Birth</IonLabel>
-            <IonInput ref={refPatientDob} className="ion-padding-top" onClick={() => refPatientDob.current?.showDatePicker()}   type="date" value={pDob} onIonChange={(e) => setPDob(e.detail.value || '')} />
-            <IonIcon name="calendarOutline" slot="end"></IonIcon>
+            <IonInput ref={refPatientDob} onClick={() => refPatientDob.current?.showPicker()} className="ion-padding-top" type="date" value={pDob} onIonChange={(e) => setPDob(e.detail.value || '')} />
+            <IonIcon name="calendar"></IonIcon>
           </IonItem>
           <IonItem>
             <IonLabel position="stacked">Notes</IonLabel>
@@ -575,6 +575,21 @@ const Therapy: React.FC = () => {
           </IonButton>
         </IonContent>
       </IonModal>
+      <style>{`
+      .sc-ion-label-md-h {color:#6e6565 !important;}
+        /* Hide number input spinners */
+        .native-input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1); /* Use 1 for white, 0 for black */
+}
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+          -webkit-appearance: none; 
+          margin: 0; 
+        }
+        input[type=number] {
+          -moz-appearance: textfield;
+        }
+      `}</style>
     </IonPage>
   );
 };

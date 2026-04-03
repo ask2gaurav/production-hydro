@@ -9,7 +9,7 @@ export async function action({ request, params }: { request: Request, params: an
   
   if (request.method === 'PUT') {
     const data = await request.json().catch(()=>({}));
-    const user = await User.findByIdAndUpdate(id, data, { new: true });
+    const user = await User.findByIdAndUpdate(id, data, { returnDocument: 'after' });
     return new Response(JSON.stringify(user), { status: 200 });
   }
   

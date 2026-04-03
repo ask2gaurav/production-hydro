@@ -14,7 +14,7 @@ export async function action({ request, params }: { request: Request, params: an
     const settings = await Settings.findOneAndUpdate(
       { machine_id: params.id }, 
       data, 
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: 'after' }
     );
     return new Response(JSON.stringify(settings), { status: 200 });
   }
