@@ -7,6 +7,8 @@ import UserType from "../models/UserType";
 import AuthCredential from "../models/AuthCredential";
 import Machine from "../models/Machine";
 import MachineSupplier from "../models/MachineSupplier";
+import Resource from "../models/Resource";
+import SupplierResource from "../models/SupplierResource";
 
 const LIMIT = 50;
 
@@ -138,6 +140,27 @@ export async function action({ request }: { request: Request }) {
     } catch {
       await User.findByIdAndDelete(user._id);
       return { error: "Failed to set up credentials. Supplier was not created." };
+    }
+
+    // Seed all active global resources into supplier's resource library
+    try {
+      const globalResources = await Resource.find({ is_active: true }).lean();
+      if (globalResources.length > 0) {
+        await SupplierResource.insertMany(
+          globalResources.map((r: any) => ({
+            supplier_id: user._id,
+            title: r.title,
+            slug: r.slug,
+            content: r.content,
+            category: r.category,
+            is_active: true,
+            updated_at: new Date(),
+          })),
+          { ordered: false }
+        );
+      }
+    } catch {
+      // Non-fatal — supplier and credentials already created successfully
     }
 
     return { success: true };

@@ -67,6 +67,39 @@ export async function action({ request }: { request: Request }) {
 
   const formData = await request.formData();
   const intent = formData.get("intent") as string;
+
+  if (intent === "add_machine") {
+    const serial_number = (formData.get("serial_number") as string)?.trim();
+    const model_name = (formData.get("model_name") as string)?.trim();
+    const machine_status = formData.get("machine_status") as string;
+    const mode = formData.get("mode") as string;
+    const demo_session_limit = parseInt(formData.get("demo_session_limit") as string) || 10;
+    const installation_location = (formData.get("installation_location") as string)?.trim() || undefined;
+    const production_date = (formData.get("production_date") as string) || undefined;
+
+    if (!serial_number) return { error: "Serial number is required.", intent };
+    if (!model_name) return { error: "Model name is required.", intent };
+    if (!["Active", "Inactive", "Maintenance"].includes(machine_status)) return { error: "Invalid status.", intent };
+    if (!["demo", "full"].includes(mode)) return { error: "Invalid mode.", intent };
+
+    const existing = await Machine.findOne({ serial_number });
+    if (existing) return { error: "A machine with this serial number already exists.", intent };
+
+    const machine = await Machine.create({
+      serial_number,
+      model_name,
+      machine_status,
+      mode,
+      demo_session_limit: mode === "demo" ? demo_session_limit : 10,
+      installation_location,
+      production_date: production_date ? new Date(production_date) : undefined,
+    });
+
+    await MachineSupplier.create({ machine_id: machine._id, supplier_id: supplierId });
+
+    return { success: true, intent };
+  }
+
   const machine_id = formData.get("machine_id") as string;
 
   // Verify machine belongs to this supplier
@@ -139,19 +172,34 @@ export default function SupplierMachines() {
   const [newLimit, setNewLimit] = useState("");
   const [reason, setReason] = useState("");
 
+  const [addModal, setAddModal] = useState(false);
+  const [addMode, setAddMode] = useState("demo");
+
   useEffect(() => {
     if (actionData?.success) {
       setExtendModal(null);
       setNewLimit("");
       setReason("");
+      if ((actionData as any).intent === "add_machine") {
+        setAddModal(false);
+        setAddMode("demo");
+      }
     }
   }, [actionData]);
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">My Machines</h1>
-        <p className="text-sm text-gray-500 mt-1">{machines.length} machine{machines.length !== 1 ? "s" : ""} assigned</p>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">My Machines</h1>
+          <p className="text-sm text-gray-500 mt-1">{machines.length} machine{machines.length !== 1 ? "s" : ""} assigned</p>
+        </div>
+        <button
+          onClick={() => { setAddModal(true); setAddMode("demo"); }}
+          className="px-4 py-2 bg-teal-700 text-white rounded hover:bg-teal-800 text-sm font-medium"
+        >
+          + Add Machine
+        </button>
       </div>
 
       {actionData?.error && (
@@ -245,6 +293,119 @@ export default function SupplierMachines() {
           </tbody>
         </table>
       </div>
+
+      {/* Add Machine Modal */}
+      {addModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+            <div className="flex items-center justify-between p-6 border-b">
+              <h2 className="text-lg font-semibold text-gray-800">Add New Machine</h2>
+              <button onClick={() => setAddModal(false)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">✕</button>
+            </div>
+
+            <Form method="post" className="p-6 flex flex-col gap-4">
+              <input type="hidden" name="intent" value="add_machine" />
+
+              {actionData?.error && (actionData as any).intent === "add_machine" && (
+                <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded text-sm">
+                  {actionData.error}
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Serial Number *</label>
+                <input
+                  name="serial_number"
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Model Name *</label>
+                <input
+                  name="model_name"
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Status *</label>
+                  <select
+                    name="machine_status"
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
+                  >
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
+                    <option value="Maintenance">Maintenance</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Mode *</label>
+                  <select
+                    name="mode"
+                    value={addMode}
+                    onChange={(e) => setAddMode(e.target.value)}
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
+                  >
+                    <option value="demo">Demo</option>
+                    <option value="full">Full</option>
+                  </select>
+                </div>
+              </div>
+
+              {addMode === "demo" && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Demo Session Limit *</label>
+                  <input
+                    name="demo_session_limit"
+                    type="number"
+                    min={1}
+                    defaultValue={10}
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Installation Location</label>
+                <input
+                  name="installation_location"
+                  placeholder="Optional"
+                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Production Date</label>
+                <input
+                  name="production_date"
+                  type="date"
+                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="flex-1 py-2 bg-teal-700 text-white rounded hover:bg-teal-800 font-medium text-sm disabled:opacity-50"
+                >
+                  {isSubmitting ? "Adding..." : "Add Machine"}
+                </button>
+                <button type="button" onClick={() => setAddModal(false)} className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50 text-sm">
+                  Cancel
+                </button>
+              </div>
+            </Form>
+          </div>
+        </div>
+      )}
 
       {/* Extend Demo Modal */}
       {extendModal && (

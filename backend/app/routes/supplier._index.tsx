@@ -73,6 +73,10 @@ export default function SupplierDashboard() {
           <h2 className="font-semibold text-gray-800 mb-1">Invoices</h2>
           <p className="text-sm text-gray-500">Create invoices, record payments, and track balances.</p>
         </a>
+        <a href="/supplier/resources" className="block bg-white rounded-lg border border-gray-200 p-5 shadow-sm hover:shadow-md transition-shadow">
+          <h2 className="font-semibold text-gray-800 mb-1">Resources</h2>
+          <p className="text-sm text-gray-500">Manage help articles and guides displayed to owners on the PWA.</p>
+        </a>
       </div>
     </div>
   );

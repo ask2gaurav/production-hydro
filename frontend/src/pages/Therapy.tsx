@@ -3,12 +3,47 @@ import {
   IonContent, IonIcon, IonHeader, IonPage, IonTitle, IonToolbar,
   IonGrid, IonRow, IonCol, IonButton, IonBadge, IonProgressBar,
   IonModal, IonItem, IonLabel, IonInput, IonTextarea, IonSpinner,
-  IonText
+  IonText, IonSelect, IonSelectOption
 } from '@ionic/react';
-import { arrowBack, addOutline, personOutline, personCircleOutline } from 'ionicons/icons';
+import {
+  arrowBack, addOutline, personOutline, personCircleOutline,
+  peopleOutline, pencilOutline, trashOutline, searchOutline
+} from 'ionicons/icons';
 import { useStore } from '../store/useStore';
 import { localDB, type LocalTherapist, type LocalPatient } from '../db/localDB';
 import { runSync } from '../services/syncService';
+
+// ---------- Helpers ----------
+
+const computeAge = (dob?: string): string => {
+  if (!dob) return '—';
+  const birth = new Date(dob);
+  if (isNaN(birth.getTime())) return '—';
+  const now = new Date();
+  let age = now.getFullYear() - birth.getFullYear();
+  const m = now.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) age--;
+  return String(age);
+};
+
+const formatDateTime = (d: Date | null): string => {
+  if (!d) return '—';
+  return new Date(d).toLocaleString(undefined, {
+    year: 'numeric', month: 'short', day: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  });
+};
+
+const thStyle: React.CSSProperties = {
+  padding: '0.6rem 0.75rem', textAlign: 'left', fontWeight: 600,
+  color: '#555', whiteSpace: 'nowrap', fontSize: '0.8rem',
+  backgroundColor: '#f4f5f8', borderBottom: '2px solid #ddd',
+};
+
+const tdStyle: React.CSSProperties = {
+  padding: '0.6rem 0.75rem', whiteSpace: 'nowrap', fontSize: '0.82rem',
+  verticalAlign: 'middle', borderBottom: '1px solid #eee',
+};
 
 // ---------- Searchable select ----------
 
@@ -29,7 +64,6 @@ function SearchSelect<T>({
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
-  
 
   const selected = items.find((i) => getId(i) === selectedId);
 
@@ -129,9 +163,8 @@ function SearchSelect<T>({
 // ---------- Main component ----------
 
 type SessionState = 'IDLE' | 'PREPARING' | 'ACTIVE' | 'PAUSED';
-//get the session duration from settings in localDB and use it here instead of hardcoding 40 minutes  
-//const TOTAL_SECONDS = 40 * 60;
 const TOTAL_SECONDS = 2 * 60;
+type StatMap = Record<string, { total: number; last: Date | null }>;
 
 const Therapy: React.FC = () => {
   const { modeStatus, machineId } = useStore();
@@ -145,7 +178,6 @@ const Therapy: React.FC = () => {
   const [selectedPatientId, setSelectedPatientId] = useState<number | null>(null);
   const [sessionNotes, setSessionNotes] = useState('');
 
-  // Local DB id of the active session record
   const activeSessionLocalId = useRef<number | null>(null);
   const sessionStartTime = useRef<Date | null>(null);
 
@@ -155,6 +187,7 @@ const Therapy: React.FC = () => {
   const [tLastName, setTLastName] = useState('');
   const [tPhone, setTPhone] = useState('');
   const [tEmail, setTEmail] = useState('');
+  const [tGender, setTGender] = useState('');
   const [tSaving, setTSaving] = useState(false);
   const [tError, setTError] = useState('');
 
@@ -164,12 +197,46 @@ const Therapy: React.FC = () => {
   const [pLastName, setPLastName] = useState('');
   const [pPhone, setPPhone] = useState('');
   const [pEmail, setPEmail] = useState('');
+  const [pGender, setPGender] = useState('');
   const [pDob, setPDob] = useState('');
   const [pNotes, setPNotes] = useState('');
   const [pSaving, setPSaving] = useState(false);
   const [pError, setPError] = useState('');
   const refPatientDob = useRef<HTMLIonInputElement>(null);
+
+  // Manage therapists modal
+  const [showManageTherapists, setShowManageTherapists] = useState(false);
+  const [tManageSearch, setTManageSearch] = useState('');
+  const [editTherapist, setEditTherapist] = useState<LocalTherapist | null>(null);
+  const [etFirstName, setEtFirstName] = useState('');
+  const [etLastName, setEtLastName] = useState('');
+  const [etPhone, setEtPhone] = useState('');
+  const [etEmail, setEtEmail] = useState('');
+  const [etGender, setEtGender] = useState('');
+  const [etSaving, setEtSaving] = useState(false);
+  const [etError, setEtError] = useState('');
+
+  // Manage patients modal
+  const [showManagePatients, setShowManagePatients] = useState(false);
+  const [pManageSearch, setPManageSearch] = useState('');
+  const [editPatient, setEditPatient] = useState<LocalPatient | null>(null);
+  const [epFirstName, setEpFirstName] = useState('');
+  const [epLastName, setEpLastName] = useState('');
+  const [epPhone, setEpPhone] = useState('');
+  const [epEmail, setEpEmail] = useState('');
+  const [epGender, setEpGender] = useState('');
+  const [epDob, setEpDob] = useState('');
+  const [epNotes, setEpNotes] = useState('');
+  const [epSaving, setEpSaving] = useState(false);
+  const [epError, setEpError] = useState('');
+  const refEpDob = useRef<HTMLIonInputElement>(null);
+
+  // Session stats
+  const [sessionStats, setSessionStats] = useState<StatMap>({});
+
   const isLocked = state === 'ACTIVE' || state === 'PAUSED';
+
+  // ---------- Data loading ----------
 
   const loadLocal = useCallback(async () => {
     const t = await localDB.therapists
@@ -183,6 +250,57 @@ const Therapy: React.FC = () => {
     setTherapists(t);
     setPatients(p);
   }, [machineId]);
+
+  const loadSessionStats = useCallback(async () => {
+    const sessions = await localDB.sessions.where('machine_id').equals(machineId).toArray();
+    const stats: StatMap = {};
+    const bump = (key: string, startTime: Date) => {
+      if (!stats[key]) stats[key] = { total: 0, last: null };
+      stats[key].total++;
+      const t = startTime instanceof Date ? startTime : new Date(startTime);
+      if (!stats[key].last || t > stats[key].last!) stats[key].last = t;
+    };
+    for (const s of sessions) {
+      const st = s.start_time instanceof Date ? s.start_time : new Date(s.start_time);
+      if (s.therapist_id) bump(`t_${s.therapist_id}`, st);
+      if (s.patient_id) bump(`p_${s.patient_id}`, st);
+    }
+    setSessionStats(stats);
+  }, [machineId]);
+
+  const getTherapistStats = (t: LocalTherapist) => {
+    const keys = [
+      t.server_id ? `t_${t.server_id}` : null,
+      t.id != null ? `t_${t.id}` : null,
+    ].filter(Boolean) as string[];
+    let total = 0;
+    let last: Date | null = null;
+    for (const key of keys) {
+      const s = sessionStats[key];
+      if (s) {
+        total += s.total;
+        if (s.last && (!last || s.last > last)) last = s.last;
+      }
+    }
+    return { total, last };
+  };
+
+  const getPatientStats = (p: LocalPatient) => {
+    const keys = [
+      p.server_id ? `p_${p.server_id}` : null,
+      p.id != null ? `p_${p.id}` : null,
+    ].filter(Boolean) as string[];
+    let total = 0;
+    let last: Date | null = null;
+    for (const key of keys) {
+      const s = sessionStats[key];
+      if (s) {
+        total += s.total;
+        if (s.last && (!last || s.last > last)) last = s.last;
+      }
+    }
+    return { total, last };
+  };
 
   useEffect(() => {
     if (!machineId) return;
@@ -212,7 +330,6 @@ const Therapy: React.FC = () => {
       runSync(machineId);
     }
 
-    // Reset all state
     activeSessionLocalId.current = null;
     sessionStartTime.current = null;
     setState('IDLE');
@@ -223,7 +340,6 @@ const Therapy: React.FC = () => {
     setSessionError('');
   }, [timeLeft, machineId]);
 
-  // Timer — only ticks when ACTIVE
   useEffect(() => {
     if (state !== 'ACTIVE') return;
     if (timeLeft <= 0) {
@@ -262,8 +378,6 @@ const Therapy: React.FC = () => {
 
     activeSessionLocalId.current = localId as number;
     setState('ACTIVE');
-
-    // Sync in background — therapist/patient first, then session
     runSync(machineId);
   };
 
@@ -274,7 +388,7 @@ const Therapy: React.FC = () => {
   // ---------- Add therapist ----------
 
   const openAddTherapist = () => {
-    setTFirstName(''); setTLastName(''); setTPhone(''); setTEmail(''); setTError('');
+    setTFirstName(''); setTLastName(''); setTPhone(''); setTEmail(''); setTGender(''); setTError('');
     setShowAddTherapist(true);
   };
 
@@ -291,6 +405,7 @@ const Therapy: React.FC = () => {
         last_name: tLastName.trim(),
         phone: tPhone.trim(),
         email: tEmail.trim(),
+        gender: tGender,
         is_active: true,
         synced: 0,
       });
@@ -308,7 +423,7 @@ const Therapy: React.FC = () => {
   // ---------- Add patient ----------
 
   const openAddPatient = () => {
-    setPFirstName(''); setPLastName(''); setPPhone(''); setPEmail(''); setPDob(''); setPNotes(''); setPError('');
+    setPFirstName(''); setPLastName(''); setPPhone(''); setPEmail(''); setPGender(''); setPDob(''); setPNotes(''); setPError('');
     setShowAddPatient(true);
   };
 
@@ -325,6 +440,7 @@ const Therapy: React.FC = () => {
         last_name: pLastName.trim(),
         phone: pPhone.trim(),
         email: pEmail.trim(),
+        gender: pGender,
         dob: pDob,
         notes: pNotes.trim(),
         is_active: true,
@@ -341,7 +457,142 @@ const Therapy: React.FC = () => {
     }
   };
 
-  
+  // ---------- Manage therapists ----------
+
+  const openManageTherapists = async () => {
+    await loadSessionStats();
+    setTManageSearch('');
+    setEditTherapist(null);
+    setShowManageTherapists(true);
+  };
+
+  const openEditTherapist = (t: LocalTherapist) => {
+    setEtFirstName(t.first_name);
+    setEtLastName(t.last_name);
+    setEtPhone(t.phone);
+    setEtEmail(t.email);
+    setEtGender(t.gender || '');
+    setEtError('');
+    setEditTherapist(t);
+  };
+
+  const saveEditTherapist = async () => {
+    if (!etFirstName.trim() || !etLastName.trim() || !etPhone.trim() || !etEmail.trim()) {
+      setEtError('First name, last name, phone and email are required.');
+      return;
+    }
+    setEtSaving(true);
+    try {
+      await localDB.therapists.update(editTherapist!.id!, {
+        first_name: etFirstName.trim(),
+        last_name: etLastName.trim(),
+        phone: etPhone.trim(),
+        email: etEmail.trim(),
+        gender: etGender,
+        synced: 0,
+      });
+      await loadLocal();
+      setEditTherapist(null);
+      runSync(machineId).then(loadLocal);
+    } catch {
+      setEtError('Failed to save. Please try again.');
+    } finally {
+      setEtSaving(false);
+    }
+  };
+
+  const deleteTherapist = async (t: LocalTherapist) => {
+    if (!window.confirm(`Delete ${t.first_name} ${t.last_name}? This cannot be undone.`)) return;
+    await localDB.therapists.update(t.id!, { is_active: false, synced: 0 });
+    if (selectedTherapistId === t.id) setSelectedTherapistId(null);
+    await loadLocal();
+    runSync(machineId).then(loadLocal);
+  };
+
+  // ---------- Manage patients ----------
+
+  const openManagePatients = async () => {
+    await loadSessionStats();
+    setPManageSearch('');
+    setEditPatient(null);
+    setShowManagePatients(true);
+  };
+
+  const openEditPatient = (p: LocalPatient) => {
+    setEpFirstName(p.first_name);
+    setEpLastName(p.last_name);
+    setEpPhone(p.phone);
+    setEpEmail(p.email);
+    setEpGender(p.gender || '');
+    setEpDob(p.dob || '');
+    setEpNotes(p.notes || '');
+    setEpError('');
+    setEditPatient(p);
+  };
+
+  const saveEditPatient = async () => {
+    if (!epFirstName.trim() || !epLastName.trim() || !epPhone.trim() || !epEmail.trim()) {
+      setEpError('First name, last name, phone and email are required.');
+      return;
+    }
+    setEpSaving(true);
+    try {
+      await localDB.patients.update(editPatient!.id!, {
+        first_name: epFirstName.trim(),
+        last_name: epLastName.trim(),
+        phone: epPhone.trim(),
+        email: epEmail.trim(),
+        gender: epGender,
+        dob: epDob,
+        notes: epNotes.trim(),
+        synced: 0,
+      });
+      await loadLocal();
+      setEditPatient(null);
+      runSync(machineId).then(loadLocal);
+    } catch {
+      setEpError('Failed to save. Please try again.');
+    } finally {
+      setEpSaving(false);
+    }
+  };
+
+  const deletePatient = async (p: LocalPatient) => {
+    if (!window.confirm(`Delete ${p.first_name} ${p.last_name}? This cannot be undone.`)) return;
+    await localDB.patients.update(p.id!, { is_active: false, synced: 0 });
+    if (selectedPatientId === p.id) setSelectedPatientId(null);
+    await loadLocal();
+    runSync(machineId).then(loadLocal);
+  };
+
+  // ---------- Filtered lists for manage modals ----------
+
+  const tFiltered = therapists.filter((t) => {
+    if (!tManageSearch.trim()) return true;
+    const q = tManageSearch.toLowerCase();
+    return `${t.first_name} ${t.last_name}`.toLowerCase().includes(q)
+      || t.phone.toLowerCase().includes(q)
+      || t.email.toLowerCase().includes(q);
+  });
+
+  const pFiltered = patients.filter((p) => {
+    if (!pManageSearch.trim()) return true;
+    const q = pManageSearch.toLowerCase();
+    return `${p.first_name} ${p.last_name}`.toLowerCase().includes(q)
+      || p.phone.toLowerCase().includes(q)
+      || p.email.toLowerCase().includes(q);
+  });
+
+  // ---------- Gender options (shared) ----------
+
+  const genderOptions = (
+    <>
+      <IonSelectOption value="">Prefer not to say</IonSelectOption>
+      <IonSelectOption value="Male">Male</IonSelectOption>
+      <IonSelectOption value="Female">Female</IonSelectOption>
+      <IonSelectOption value="Other">Other</IonSelectOption>
+    </>
+  );
 
   return (
     <IonPage>
@@ -369,39 +620,49 @@ const Therapy: React.FC = () => {
                   {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
                 </h1>
                 <IonProgressBar value={1 - (timeLeft / TOTAL_SECONDS)} color="primary" />
-                <small>40 min</small>
+                <small>{Math.floor(TOTAL_SECONDS / 60)}:{(TOTAL_SECONDS % 60).toString().padStart(2, '0')} min</small>
               </div>
 
               <div style={{ marginBottom: '1rem' }}>
-                <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#555' }}>Therapist</label>
-                <div style={{ marginTop: '0.4rem' }}>
-                  <SearchSelect
-                    items={therapists}
-                    selectedId={selectedTherapistId}
-                    onSelect={(t) => setSelectedTherapistId(t.id!)}
-                    onAddNew={openAddTherapist}
-                    placeholder="Select Therapist..."
-                    getLabel={(t) => `${t.first_name} ${t.last_name}`}
-                    getId={(t) => t.id!}
-                    disabled={isLocked}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#555' }}>Therapist</label>
+                  <IonIcon
+                    icon={peopleOutline}
+                    style={{ color: '#0a5c99', cursor: 'pointer', fontSize: '1.2rem' }}
+                    onClick={openManageTherapists}
                   />
                 </div>
+                <SearchSelect
+                  items={therapists}
+                  selectedId={selectedTherapistId}
+                  onSelect={(t) => setSelectedTherapistId(t.id!)}
+                  onAddNew={openAddTherapist}
+                  placeholder="Select Therapist..."
+                  getLabel={(t) => `${t.first_name} ${t.last_name}`}
+                  getId={(t) => t.id!}
+                  disabled={isLocked}
+                />
               </div>
 
               <div style={{ marginBottom: '1rem' }}>
-                <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#555' }}>Patient</label>
-                <div style={{ marginTop: '0.4rem' }}>
-                  <SearchSelect
-                    items={patients}
-                    selectedId={selectedPatientId}
-                    onSelect={(p) => setSelectedPatientId(p.id!)}
-                    onAddNew={openAddPatient}
-                    placeholder="Select Patient..."
-                    getLabel={(p) => `${p.first_name} ${p.last_name}`}
-                    getId={(p) => p.id!}
-                    disabled={isLocked}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#555' }}>Patient</label>
+                  <IonIcon
+                    icon={peopleOutline}
+                    style={{ color: '#0a5c99', cursor: 'pointer', fontSize: '1.2rem' }}
+                    onClick={openManagePatients}
                   />
                 </div>
+                <SearchSelect
+                  items={patients}
+                  selectedId={selectedPatientId}
+                  onSelect={(p) => setSelectedPatientId(p.id!)}
+                  onAddNew={openAddPatient}
+                  placeholder="Select Patient..."
+                  getLabel={(p) => `${p.first_name} ${p.last_name}`}
+                  getId={(p) => p.id!}
+                  disabled={isLocked}
+                />
               </div>
 
               <div style={{ marginBottom: '1rem' }}>
@@ -500,7 +761,7 @@ const Therapy: React.FC = () => {
       </IonContent>
 
       {/* Add Therapist Modal */}
-      <IonModal isOpen={showAddTherapist} onDidDismiss={() => setShowAddTherapist(false)}>
+      <IonModal isOpen={showAddTherapist} Class="borderedModal" onDidDismiss={() => setShowAddTherapist(false)}>
         <IonHeader>
           <IonToolbar color="primary">
             <IonTitle>Add Therapist</IonTitle>
@@ -524,6 +785,12 @@ const Therapy: React.FC = () => {
             <IonLabel position="floating">Email *</IonLabel>
             <IonInput className="ion-padding-top" type="email" value={tEmail} onIonChange={(e) => setTEmail(e.detail.value || '')} />
           </IonItem>
+          <IonItem>
+            <IonLabel>Gender</IonLabel>
+            <IonSelect value={tGender} onIonChange={(e) => setTGender(e.detail.value)} placeholder="Select...">
+              {genderOptions}
+            </IonSelect>
+          </IonItem>
           {tError && (
             <IonText color="danger"><p style={{ padding: '0.5rem 1rem', margin: 0 }}>{tError}</p></IonText>
           )}
@@ -534,7 +801,7 @@ const Therapy: React.FC = () => {
       </IonModal>
 
       {/* Add Patient Modal */}
-      <IonModal isOpen={showAddPatient} onDidDismiss={() => setShowAddPatient(false)}>
+      <IonModal style={{ '--height': '90%' }} isOpen={showAddPatient} className="ion-border" onDidDismiss={() => setShowAddPatient(false)}>
         <IonHeader>
           <IonToolbar color="primary">
             <IonTitle>Add Patient</IonTitle>
@@ -559,6 +826,12 @@ const Therapy: React.FC = () => {
             <IonInput className="ion-padding-top" type="email" value={pEmail} onIonChange={(e) => setPEmail(e.detail.value || '')} />
           </IonItem>
           <IonItem>
+            <IonLabel>Gender</IonLabel>
+            <IonSelect value={pGender} onIonChange={(e) => setPGender(e.detail.value)} placeholder="Select...">
+              {genderOptions}
+            </IonSelect>
+          </IonItem>
+          <IonItem>
             <IonLabel position="floating">Date of Birth</IonLabel>
             <IonInput ref={refPatientDob} onClick={() => refPatientDob.current?.showPicker()} className="ion-padding-top" type="date" value={pDob} onIonChange={(e) => setPDob(e.detail.value || '')} />
             <IonIcon name="calendar"></IonIcon>
@@ -575,16 +848,274 @@ const Therapy: React.FC = () => {
           </IonButton>
         </IonContent>
       </IonModal>
+
+      {/* Manage Therapists Modal */}
+      <IonModal isOpen={showManageTherapists} onDidDismiss={() => { setShowManageTherapists(false); setEditTherapist(null); setTManageSearch(''); }} style={{ '--height': '100%', '--width': '100%', '--border-radius': '0' }}>
+        <IonHeader>
+          <IonToolbar color="primary">
+            <IonTitle>{editTherapist ? 'Edit Therapist' : 'Manage Therapists'}</IonTitle>
+            {editTherapist && (
+              <IonButton slot="end" fill="clear" color="light" onClick={() => setEditTherapist(null)}><IonIcon icon={arrowBack} /></IonButton>
+            )}
+            {!editTherapist && (
+            <IonButton slot="end" fill="clear" color="light" onClick={() => { setShowManageTherapists(false); setEditTherapist(null); }}>
+              <IonIcon icon={arrowBack} />
+            </IonButton>)}
+          </IonToolbar>
+        </IonHeader>
+        <IonContent className="ion-padding">
+          {editTherapist ? (
+            <div>
+              <IonItem>
+                <IonLabel position="floating">First Name *</IonLabel>
+                <IonInput className="ion-padding-top" value={etFirstName} onIonChange={(e) => setEtFirstName(e.detail.value || '')} />
+              </IonItem>
+              <IonItem>
+                <IonLabel position="floating">Last Name *</IonLabel>
+                <IonInput className="ion-padding-top" value={etLastName} onIonChange={(e) => setEtLastName(e.detail.value || '')} />
+              </IonItem>
+              <IonItem>
+                <IonLabel position="floating">Phone *</IonLabel>
+                <IonInput className="ion-padding-top" type="tel" value={etPhone} onIonChange={(e) => setEtPhone(e.detail.value || '')} />
+              </IonItem>
+              <IonItem>
+                <IonLabel position="floating">Email *</IonLabel>
+                <IonInput className="ion-padding-top" type="email" value={etEmail} onIonChange={(e) => setEtEmail(e.detail.value || '')} />
+              </IonItem>
+              <IonItem>
+                <IonLabel>Gender</IonLabel>
+                <IonSelect value={etGender} onIonChange={(e) => setEtGender(e.detail.value)} placeholder="Select...">
+                  {genderOptions}
+                </IonSelect>
+              </IonItem>
+              {etError && (
+                <IonText color="danger"><p style={{ padding: '0.5rem 1rem', margin: 0 }}>{etError}</p></IonText>
+              )}
+              <IonButton expand="block" style={{ marginTop: '1.5rem' }} onClick={saveEditTherapist} disabled={etSaving}>
+                {etSaving ? <IonSpinner name="crescent" /> : 'Save Changes'}
+              </IonButton>
+            </div>
+          ) : (
+            <div>
+              <div style={{display:'flex',justifyContent:'space-between', alignItems:'center'}}>
+              <div style={{ display: 'flex',width:'70%', alignItems: 'center', gap: '0.5rem', border: '1px solid #ccc', borderRadius: '8px', padding: '0.4rem 0.75rem', backgroundColor: 'white', marginBottom: '1rem' }}>
+                <IonIcon icon={searchOutline} style={{ color: '#999', flexShrink: 0 }} />
+                <input
+                  value={tManageSearch}
+                  onChange={(e) => setTManageSearch(e.target.value)}
+                  placeholder="Search by name, mobile or email..."
+                  style={{ border: 'none', outline: 'none', flex: 1, fontSize: '0.9rem' }}
+                />
+              </div>
+                <IonButton style={{marginTop:'-11px'}} fill='outline' slot="end" color="primary" onClick={() => { openAddTherapist(); }}>
+                  <IonIcon icon={addOutline} />&nbsp;Add New Therapist
+                </IonButton>
+                </div>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr>
+                      <th style={thStyle}>Name</th>
+                      <th style={thStyle}>Mobile</th>
+                      <th style={thStyle}>Email</th>
+                      <th style={thStyle}>Gender</th>
+                      <th style={thStyle}>Total Sessions</th>
+                      <th style={thStyle}>Last Session</th>
+                      <th style={thStyle}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {tFiltered.length === 0 && (
+                      <tr>
+                        <td colSpan={7} style={{ ...tdStyle, textAlign: 'center', color: '#999', padding: '2rem' }}>
+                          No therapists found.
+                        </td>
+                      </tr>
+                    )}
+                    {tFiltered.map((t) => {
+                      const stats = getTherapistStats(t);
+                      return (
+                        <tr
+                          key={t.id}
+                          onClick={() => { setSelectedTherapistId(t.id!); setShowManageTherapists(false); }}
+                          style={{ cursor: 'pointer', backgroundColor: selectedTherapistId === t.id ? '#eef5f9' : 'white' }}
+                          onMouseEnter={(e) => { if (selectedTherapistId !== t.id) e.currentTarget.style.backgroundColor = '#f4f5f8'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = selectedTherapistId === t.id ? '#eef5f9' : 'white'; }}
+                        >
+                          <td style={tdStyle}>{t.first_name} {t.last_name}</td>
+                          <td style={tdStyle}>{t.phone}</td>
+                          <td style={tdStyle}>{t.email}</td>
+                          <td style={tdStyle}>{t.gender || '—'}</td>
+                          <td style={{ ...tdStyle, textAlign: 'center' }}>{stats.total}</td>
+                          <td style={tdStyle}>{formatDateTime(stats.last)}</td>
+                          <td style={tdStyle} onClick={(e) => e.stopPropagation()}>
+                            <IonIcon
+                              icon={pencilOutline}
+                              style={{ color: '#0a5c99', cursor: 'pointer', fontSize: '1.2rem', marginRight: '0.75rem' }}
+                              onClick={() => openEditTherapist(t)}
+                            />
+                            <IonIcon
+                              icon={trashOutline}
+                              style={{ color: '#eb445a', cursor: 'pointer', fontSize: '1.2rem' }}
+                              onClick={() => deleteTherapist(t)}
+                            />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </IonContent>
+      </IonModal>
+
+      {/* Manage Patients Modal */}
+      <IonModal isOpen={showManagePatients} onDidDismiss={() => { setShowManagePatients(false); setEditPatient(null); setPManageSearch(''); }} style={{ '--height': '100%', '--width': '100%', '--border-radius': '0' }}>
+        <IonHeader>
+          <IonToolbar color="primary">
+            <IonTitle>{editPatient ? 'Edit Patient' : 'Manage Patients'}</IonTitle>
+            {editPatient && (
+              <IonButton slot="end" fill="clear" color="light" onClick={() => setEditPatient(null)}><IonIcon icon={arrowBack} /></IonButton>
+            )}
+            {!editPatient && (
+            <IonButton slot="end" fill="clear" color="light" onClick={() => { setShowManagePatients(false); setEditPatient(null); }}>
+              <IonIcon icon={arrowBack} />
+            </IonButton>
+            )}
+          </IonToolbar>
+        </IonHeader>
+        <IonContent className="ion-padding">
+          {editPatient ? (
+            <div>
+              <IonItem>
+                <IonLabel position="floating">First Name *</IonLabel>
+                <IonInput className="ion-padding-top" value={epFirstName} onIonChange={(e) => setEpFirstName(e.detail.value || '')} />
+              </IonItem>
+              <IonItem>
+                <IonLabel position="floating">Last Name *</IonLabel>
+                <IonInput className="ion-padding-top" value={epLastName} onIonChange={(e) => setEpLastName(e.detail.value || '')} />
+              </IonItem>
+              <IonItem>
+                <IonLabel position="floating">Phone *</IonLabel>
+                <IonInput className="ion-padding-top" type="tel" value={epPhone} onIonChange={(e) => setEpPhone(e.detail.value || '')} />
+              </IonItem>
+              <IonItem>
+                <IonLabel position="floating">Email *</IonLabel>
+                <IonInput className="ion-padding-top" type="email" value={epEmail} onIonChange={(e) => setEpEmail(e.detail.value || '')} />
+              </IonItem>
+              <IonItem>
+                <IonLabel>Gender</IonLabel>
+                <IonSelect value={epGender} onIonChange={(e) => setEpGender(e.detail.value)} placeholder="Select...">
+                  {genderOptions}
+                </IonSelect>
+              </IonItem>
+              <IonItem>
+                <IonLabel position="floating">Date of Birth</IonLabel>
+                <IonInput ref={refEpDob} onClick={() => refEpDob.current?.showPicker()} className="ion-padding-top" type="date" value={epDob} onIonChange={(e) => setEpDob(e.detail.value || '')} />
+              </IonItem>
+              <IonItem>
+                <IonLabel position="stacked">Notes</IonLabel>
+                <IonTextarea rows={3} value={epNotes} onIonChange={(e) => setEpNotes(e.detail.value || '')} />
+              </IonItem>
+              {epError && (
+                <IonText color="danger"><p style={{ padding: '0.5rem 1rem', margin: 0 }}>{epError}</p></IonText>
+              )}
+              <IonButton expand="block" style={{ marginTop: '1.5rem' }} onClick={saveEditPatient} disabled={epSaving}>
+                {epSaving ? <IonSpinner name="crescent" /> : 'Save Changes'}
+              </IonButton>
+            </div>
+          ) : (
+            <div>
+              <div style={{ display: 'flex', alignItems: 'stretch', gap: '0.5rem',width:'100%',justifyContent:"space-between" }}>
+                  <div style={{ display: 'flex', width: '70%', alignItems: 'center', gap: '0.5rem', border: '1px solid #ccc', borderRadius: '8px', padding: '0.4rem 0.75rem', backgroundColor: 'white', marginBottom: '1rem' }}>
+                    <IonIcon icon={searchOutline} style={{ color: '#999', flexShrink: 0 }} />
+                    <input
+                  value={pManageSearch}
+                  onChange={(e) => setPManageSearch(e.target.value)}
+                  placeholder="Search by name, mobile or email..."
+                  style={{ border: 'none', outline: 'none', flex: 1, fontSize: '0.9rem' }}
+                />
+                  </div>
+                  <IonButton fill='clear' slot="end" color="primary" onClick={() => { openAddPatient(); }}>
+                    <IonIcon icon={addOutline} />&nbsp;Add New Patient
+                  </IonButton>
+              </div>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr>
+                      <th style={thStyle}>Name</th>
+                      <th style={thStyle}>Mobile</th>
+                      <th style={thStyle}>Email</th>
+                      <th style={thStyle}>Gender</th>
+                      <th style={thStyle}>Date of Birth</th>
+                      <th style={thStyle}>Age</th>
+                      <th style={thStyle}>Total Sessions</th>
+                      <th style={thStyle}>Last Session</th>
+                      <th style={thStyle}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pFiltered.length === 0 && (
+                      <tr>
+                        <td colSpan={9} style={{ ...tdStyle, textAlign: 'center', color: '#999', padding: '2rem' }}>
+                          No patients found.
+                        </td>
+                      </tr>
+                    )}
+                    {pFiltered.map((p) => {
+                      const stats = getPatientStats(p);
+                      return (
+                        <tr
+                          key={p.id}
+                          onClick={() => { setSelectedPatientId(p.id!); setShowManagePatients(false); }}
+                          style={{ cursor: 'pointer', backgroundColor: selectedPatientId === p.id ? '#eef5f9' : 'white' }}
+                          onMouseEnter={(e) => { if (selectedPatientId !== p.id) e.currentTarget.style.backgroundColor = '#f4f5f8'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = selectedPatientId === p.id ? '#eef5f9' : 'white'; }}
+                        >
+                          <td style={tdStyle}>{p.first_name} {p.last_name}</td>
+                          <td style={tdStyle}>{p.phone}</td>
+                          <td style={tdStyle}>{p.email}</td>
+                          <td style={tdStyle}>{p.gender || '—'}</td>
+                          <td style={tdStyle}>{p.dob || '—'}</td>
+                          <td style={{ ...tdStyle, textAlign: 'center' }}>{computeAge(p.dob)}</td>
+                          <td style={{ ...tdStyle, textAlign: 'center' }}>{stats.total}</td>
+                          <td style={tdStyle}>{formatDateTime(stats.last)}</td>
+                          <td style={tdStyle} onClick={(e) => e.stopPropagation()}>
+                            <IonIcon
+                              icon={pencilOutline}
+                              style={{ color: '#0a5c99', cursor: 'pointer', fontSize: '1.2rem', marginRight: '0.75rem' }}
+                              onClick={() => openEditPatient(p)}
+                            />
+                            <IonIcon
+                              icon={trashOutline}
+                              style={{ color: '#eb445a', cursor: 'pointer', fontSize: '1.2rem' }}
+                              onClick={() => deletePatient(p)}
+                            />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </IonContent>
+      </IonModal>
+
       <style>{`
       .sc-ion-label-md-h {color:#6e6565 !important;}
         /* Hide number input spinners */
         .native-input[type="date"]::-webkit-calendar-picker-indicator {
   filter: invert(1); /* Use 1 for white, 0 for black */
 }
-        input[type=number]::-webkit-inner-spin-button, 
-        input[type=number]::-webkit-outer-spin-button { 
-          -webkit-appearance: none; 
-          margin: 0; 
+        input[type=number]::-webkit-inner-spin-button,
+        input[type=number]::-webkit-outer-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
         }
         input[type=number] {
           -moz-appearance: textfield;
