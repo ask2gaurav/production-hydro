@@ -70,7 +70,7 @@ export default function SupplierDashboard() {
           <p className="text-sm text-gray-500">Manage owners, assign machines, and view session activity.</p>
         </a>
         <a href="/supplier/invoices" className="block bg-white rounded-lg border border-gray-200 p-5 shadow-sm hover:shadow-md transition-shadow">
-          <h2 className="font-semibold text-gray-800 mb-1">Invoicesss</h2>
+          <h2 className="font-semibold text-gray-800 mb-1">Invoices</h2>
           <p className="text-sm text-gray-500">Create invoices, record payments, and track balances.</p>
         </a>
         <a href="/supplier/resources" className="block bg-white rounded-lg border border-gray-200 p-5 shadow-sm hover:shadow-md transition-shadow">
