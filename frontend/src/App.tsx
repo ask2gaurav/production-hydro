@@ -43,20 +43,14 @@ const App: React.FC = () => {
       <IonReactRouter>
         <IonRouterOutlet>
           <Route exact path="/login" component={LoginPage} />
-          {modeStatus.is_locked ? (
-            <Route component={LockScreen} />
-          ) : (
-            <>
-              <Route exact path="/dashboard" component={Dashboard} />
-              <Route exact path="/therapy" component={Therapy} />
-              <Route exact path="/logs" component={TherapyLogs} />
-              <Route exact path="/settings" component={Settings} />
-              <Route exact path="/resources" component={Resources} />
-              <Route exact path="/">
-                {machineId ? <Redirect to="/dashboard" /> : <Redirect to="/login" />}
-              </Route>
-            </>
-          )}
+          <Route exact path="/dashboard" component={modeStatus.is_locked ? LockScreen : Dashboard} />
+          <Route exact path="/therapy" component={modeStatus.is_locked ? LockScreen : Therapy} />
+          <Route exact path="/logs" component={modeStatus.is_locked ? LockScreen : TherapyLogs} />
+          <Route exact path="/settings" component={modeStatus.is_locked ? LockScreen : Settings} />
+          <Route exact path="/resources" component={modeStatus.is_locked ? LockScreen : Resources} />
+          <Route exact path="/">
+            {machineId ? <Redirect to="/dashboard" /> : <Redirect to="/login" />}
+          </Route>
         </IonRouterOutlet>
       </IonReactRouter>
     </IonApp>

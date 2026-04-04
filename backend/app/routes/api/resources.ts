@@ -14,7 +14,9 @@ export async function loader({ request }: { request: Request }) {
     if (assignment) {
       const supplierId = (assignment as any).supplier_id;
       const resources = await SupplierResource.find({ supplier_id: supplierId, is_active: true }).lean();
-      return new Response(JSON.stringify(resources), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      if (resources.length > 0) {
+        return new Response(JSON.stringify(resources), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      }
     }
   }
 

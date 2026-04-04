@@ -54,6 +54,7 @@ export default [
       route("owners/:id", "routes/supplier.owners.$id.tsx"),
       route("machines", "routes/supplier.machines.tsx"),
       route("invoices", "routes/supplier.invoices.tsx"),
+      route("resources", "routes/supplier.resources.tsx"),
     ])
   ]),
 

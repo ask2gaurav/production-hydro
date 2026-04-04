@@ -23,6 +23,7 @@ export default function SupplierLayout() {
           <Link to="/supplier/machines" className="p-2 hover:bg-gray-200 rounded">My Machines</Link>
           <Link to="/supplier/owners" className="p-2 hover:bg-gray-200 rounded">My Owners</Link>
           <Link to="/supplier/invoices" className="p-2 hover:bg-gray-200 rounded">Invoices</Link>
+          <Link to="/supplier/resources" className="p-2 hover:bg-gray-200 rounded">Resources</Link>
         </nav>
       </aside>
 
