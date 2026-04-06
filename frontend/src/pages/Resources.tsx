@@ -2,8 +2,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   IonContent, IonHeader, IonPage, IonTitle, IonToolbar,
   IonAccordionGroup, IonAccordion, IonItem, IonLabel,
-  IonCard, IonCardContent, IonSpinner
+  IonCard, IonCardContent, IonSpinner, IonButton, IonIcon, IonBadge
 } from '@ionic/react';
+import { arrowBack } from 'ionicons/icons';
 import { useStore } from '../store/useStore';
 import { localDB, type LocalResource } from '../db/localDB';
 import api from '../services/api';
@@ -90,6 +91,9 @@ const Resources: React.FC = () => {
       <IonHeader>
         <IonToolbar color="primary">
           <IonTitle>Resources & Help</IonTitle>
+          <IonButton color="primary" slot="end" style={{ marginRight: '1rem' }} onClick={() => history.back()}>
+            <IonIcon icon={arrowBack} />
+          </IonButton>
         </IonToolbar>
       </IonHeader>
       <IonContent className="ion-padding">

@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+//import mongoose from 'mongoose';
 import bcrypt from 'bcrypt';
 import dotenv from 'dotenv';
 import { connectDB } from './app/lib/db';
@@ -7,8 +7,9 @@ import User from './app/models/User';
 import AuthCredential from './app/models/AuthCredential';
 import Resource from './app/models/Resource';
 import * as fs from 'fs';
-import * as path from 'path';
-import { DatabaseZap } from 'lucide-react';
+import { EJSON } from 'bson';
+//import * as path from 'path';
+//import { DatabaseZap } from 'lucide-react';
 
 dotenv.config({ path: '../.env' });
 
@@ -57,7 +58,9 @@ async function seed() {
     //const dataPath = path.join(__dirname, 'resources.json');
     let dataPath =  './resources.json';
     const rawData = fs.readFileSync(dataPath, 'utf8');
-    const data = JSON.parse(rawData);
+    const data = EJSON.parse(rawData);
+    
+
 
     // 2. Clear existing data (optional)
     await Resource.deleteMany({});

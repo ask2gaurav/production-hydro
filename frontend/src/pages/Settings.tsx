@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonList, IonItem, IonLabel, IonToggle, IonRange, IonInput, IonListHeader, useIonAlert, IonBadge } from '@ionic/react';
+import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonList, IonItem, IonLabel, IonToggle, IonRange, IonInput, IonListHeader, useIonAlert, IonBadge, IonButton, IonIcon } from '@ionic/react';
+import { arrowBack } from 'ionicons/icons';
 import { localDB } from '../db/localDB';
 import { useStore } from '../store/useStore';
 
@@ -43,6 +44,9 @@ const Settings: React.FC = () => {
       <IonHeader>
         <IonToolbar color="primary">
           <IonTitle>Machine Settings</IonTitle>
+          <IonButton color="primary" slot="end" style={{ marginRight: '1rem' }} onClick={() => history.back()}>
+            <IonIcon icon={arrowBack} />
+          </IonButton>
         </IonToolbar>
       </IonHeader>
       <IonContent>

@@ -604,7 +604,7 @@ const Therapy: React.FC = () => {
               DEMO MODE: {modeStatus.sessions_remaining} sessions left
             </IonBadge>
           )}
-          <IonButton color="tertiary" slot="end" style={{ marginRight: '1rem' }} onClick={() => history.back()}>
+          <IonButton color="primary" slot="end" style={{ marginRight: '1rem' }} onClick={() => history.back()}>
             <IonIcon icon={arrowBack} />
           </IonButton>
         </IonToolbar>
