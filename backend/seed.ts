@@ -6,6 +6,9 @@ import UserType from './app/models/UserType';
 import User from './app/models/User';
 import AuthCredential from './app/models/AuthCredential';
 import Resource from './app/models/Resource';
+import * as fs from 'fs';
+import * as path from 'path';
+import { DatabaseZap } from 'lucide-react';
 
 dotenv.config({ path: '../.env' });
 
@@ -50,26 +53,23 @@ async function seed() {
     }
 
     // 3. Resources
-    const sampleResources = [
-      {
-        title: 'How do I start a new Therapy Session?',
-        slug: 'start-therapy-session',
-        content: '<p>Go to the Therapy screen, select a therapist and patient, then click Start.</p>',
-        category: 'FAQ',
-        updated_by: admin._id
-      },
-      {
-        title: 'What is the recommended temperature range?',
-        slug: 'recommended-temp-range',
-        content: '<p>The recommended water temperature is between 35&deg;C and 38&deg;C.</p>',
-        category: 'FAQ',
-        updated_by: admin._id
-      }
-    ];
+   // 1. Read JSON file
+    //const dataPath = path.join(__dirname, 'resources.json');
+    let dataPath =  './resources.json';
+    const rawData = fs.readFileSync(dataPath, 'utf8');
+    const data = JSON.parse(rawData);
 
-    for (const res of sampleResources) {
-      await Resource.findOneAndUpdate({ slug: res.slug }, res, { upsert: true });
-    }
+    // 2. Clear existing data (optional)
+    await Resource.deleteMany({});
+    console.log('Old data cleared');
+
+    // 3. Insert new data
+    await Resource.insertMany(data);
+    console.log('Database seeded successfully!');
+
+    // for (const res of sampleResources) { 
+    //   await Resource.findOneAndUpdate({ slug: res.slug }, res, { upsert: true });
+    // }
     console.log('Sample resources seeded.');
 
     console.log('Seed complete!');
