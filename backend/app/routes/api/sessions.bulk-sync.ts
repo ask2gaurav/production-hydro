@@ -12,7 +12,11 @@ export async function action({ request }: { request: Request }) {
     for (const data of sessions) {
       data.synced_at = new Date();
       data.created_offline = true;
-      const s = await Session.create(data);
+      const s = await Session.findOneAndUpdate(
+        { machine_id: data.machine_id, start_time: data.start_time },
+        { $setOnInsert: data },
+        { upsert: true, new: true }
+      );
       created.push(s);
     }
     return new Response(JSON.stringify({ count: created.length }), { status: 201 });

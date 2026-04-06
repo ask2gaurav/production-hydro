@@ -20,6 +20,13 @@ export async function action({ request }: { request: Request }) {
     const machine = await Machine.findById(data.machine_id).catch(() => Machine.findOne({ serial_number: data.machine_id }));
     if (!machine) return new Response('Machine Not Found', { status: 404 });
 
+    // Dedup check — if a session for this machine at this start_time already exists,
+    // return it as-is without re-incrementing the demo counter.
+    const existing = await Session.findOne({ machine_id: data.machine_id, start_time: data.start_time });
+    if (existing) {
+      return new Response(JSON.stringify({ session: existing, demo_locked: false }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
+
     let is_locked_now = false;
     const session = await Session.create(data);
     //Update last_seen_date of machine on every session start

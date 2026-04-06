@@ -5,6 +5,15 @@ import { connectDB } from "../lib/db";
 import Machine from "../models/Machine";
 import MachineSupplier from "../models/MachineSupplier";
 import MachineOwner from "../models/MachineOwner";
+import User from "../models/User";
+
+type LockContact = {
+  supplier_name?: string;
+  supplier_email?: string;
+  supplier_phone?: string;
+  supplier_available_hours?: string;
+  custom_message?: string;
+};
 
 type MachineDoc = {
   _id: string;
@@ -15,6 +24,7 @@ type MachineDoc = {
   demo_sessions_used: number;
   demo_session_limit: number;
   installation_location?: string;
+  lock_screen_contact?: LockContact;
   owner?: { _id: string; first_name: string; last_name: string } | null;
 };
 
@@ -33,6 +43,8 @@ export async function loader({ request }: { request: Request }) {
     .populate("owner_id", "first_name last_name")
     .lean();
 
+  const supplierUser = await User.findById(supplierId).lean() as any;
+
   const machines = assignments
     .map((a: any) => {
       const m = a.machine_id as any;
@@ -50,6 +62,7 @@ export async function loader({ request }: { request: Request }) {
         demo_sessions_used: m.demo_sessions_used ?? 0,
         demo_session_limit: m.demo_session_limit ?? 10,
         installation_location: m.installation_location ?? null,
+        lock_screen_contact: m.lock_screen_contact ?? {},
         owner: o
           ? { _id: o._id.toString(), first_name: o.first_name, last_name: o.last_name }
           : null,
@@ -57,7 +70,13 @@ export async function loader({ request }: { request: Request }) {
     })
     .filter(Boolean);
 
-  return { machines, supplierId };
+  const supplierDefaults = {
+    supplier_name: `${supplierUser?.first_name ?? ''} ${supplierUser?.last_name ?? ''}`.trim(),
+    supplier_email: supplierUser?.email ?? '',
+    supplier_phone: supplierUser?.phone ?? '',
+  };
+
+  return { machines, supplierId, supplierDefaults };
 }
 
 export async function action({ request }: { request: Request }) {
@@ -148,6 +167,19 @@ export async function action({ request }: { request: Request }) {
     return { success: true };
   }
 
+  if (intent === "update_lock_contact") {
+    const supplier_name = (formData.get("supplier_name") as string)?.trim();
+    const supplier_email = (formData.get("supplier_email") as string)?.trim();
+    const supplier_phone = (formData.get("supplier_phone") as string)?.trim();
+    const supplier_available_hours = (formData.get("supplier_available_hours") as string)?.trim();
+    const custom_message = (formData.get("custom_message") as string)?.trim();
+
+    await Machine.findByIdAndUpdate(machine_id, {
+      lock_screen_contact: { supplier_name, supplier_email, supplier_phone, supplier_available_hours, custom_message },
+    });
+    return { success: true, intent };
+  }
+
   return { error: "Unknown intent." };
 }
 
@@ -163,7 +195,7 @@ const MODE_COLORS: Record<string, string> = {
 };
 
 export default function SupplierMachines() {
-  const { machines } = useLoaderData<typeof loader>();
+  const { machines, supplierDefaults } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
   const isSubmitting = navigation.state === "submitting";
@@ -175,6 +207,21 @@ export default function SupplierMachines() {
   const [addModal, setAddModal] = useState(false);
   const [addMode, setAddMode] = useState("demo");
 
+  const [contactModal, setContactModal] = useState<MachineDoc | null>(null);
+  const [contactForm, setContactForm] = useState<LockContact>({});
+
+  const openContactModal = (m: MachineDoc) => {
+    const existing = m.lock_screen_contact ?? {};
+    setContactForm({
+      supplier_name: existing.supplier_name || supplierDefaults.supplier_name,
+      supplier_email: existing.supplier_email || supplierDefaults.supplier_email,
+      supplier_phone: existing.supplier_phone || supplierDefaults.supplier_phone,
+      supplier_available_hours: existing.supplier_available_hours || '',
+      custom_message: existing.custom_message || '',
+    });
+    setContactModal(m);
+  };
+
   useEffect(() => {
     if (actionData?.success) {
       setExtendModal(null);
@@ -183,6 +230,10 @@ export default function SupplierMachines() {
       if ((actionData as any).intent === "add_machine") {
         setAddModal(false);
         setAddMode("demo");
+      }
+      if ((actionData as any).intent === "update_lock_contact") {
+        setContactModal(null);
+        setContactForm({});
       }
     }
   }, [actionData]);
@@ -253,6 +304,18 @@ export default function SupplierMachines() {
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">
+                    <a
+                      href={`/supplier/machines/${m._id}`}
+                      className="text-teal-600 hover:underline text-xs font-medium"
+                    >
+                      View
+                    </a>
+                    <button
+                      onClick={() => openContactModal(m)}
+                      className="text-gray-600 hover:underline text-xs font-medium"
+                    >
+                      Edit Contact
+                    </button>
                     {m.mode === "demo" && (
                       <button
                         onClick={() => { setExtendModal(m); setNewLimit(String(m.demo_session_limit)); setReason(""); }}
@@ -399,6 +462,104 @@ export default function SupplierMachines() {
                   {isSubmitting ? "Adding..." : "Add Machine"}
                 </button>
                 <button type="button" onClick={() => setAddModal(false)} className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50 text-sm">
+                  Cancel
+                </button>
+              </div>
+            </Form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Lock Screen Contact Modal */}
+      {contactModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+            <div className="flex items-center justify-between p-6 border-b">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-800">Lock Screen Contact</h2>
+                <p className="text-sm text-gray-500 mt-0.5 font-mono">{contactModal.serial_number}</p>
+              </div>
+              <button onClick={() => setContactModal(null)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">✕</button>
+            </div>
+
+            <Form method="post" className="p-6 flex flex-col gap-4">
+              <input type="hidden" name="intent" value="update_lock_contact" />
+              <input type="hidden" name="machine_id" value={contactModal._id} />
+
+              {actionData?.error && (actionData as any).intent === "update_lock_contact" && (
+                <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded text-sm">
+                  {actionData.error}
+                </div>
+              )}
+
+              <p className="text-xs text-gray-500">
+                Shown on the lock screen when demo sessions are exhausted. Defaults to your account info if left unchanged.
+              </p>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Supplier Name</label>
+                <input
+                  name="supplier_name"
+                  value={contactForm.supplier_name ?? ''}
+                  onChange={(e) => setContactForm((f) => ({ ...f, supplier_name: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input
+                  name="supplier_email"
+                  type="email"
+                  value={contactForm.supplier_email ?? ''}
+                  onChange={(e) => setContactForm((f) => ({ ...f, supplier_email: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                <input
+                  name="supplier_phone"
+                  type="tel"
+                  value={contactForm.supplier_phone ?? ''}
+                  onChange={(e) => setContactForm((f) => ({ ...f, supplier_phone: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Available Hours</label>
+                <input
+                  name="supplier_available_hours"
+                  placeholder="e.g. Mon–Fri, 9am–6pm"
+                  value={contactForm.supplier_available_hours ?? ''}
+                  onChange={(e) => setContactForm((f) => ({ ...f, supplier_available_hours: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Custom Message</label>
+                <textarea
+                  name="custom_message"
+                  rows={2}
+                  placeholder="e.g. Contact us to activate full mode."
+                  value={contactForm.custom_message ?? ''}
+                  onChange={(e) => setContactForm((f) => ({ ...f, custom_message: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm resize-none"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="flex-1 py-2 bg-teal-700 text-white rounded hover:bg-teal-800 font-medium text-sm disabled:opacity-50"
+                >
+                  {isSubmitting ? "Saving..." : "Save Contact"}
+                </button>
+                <button type="button" onClick={() => setContactModal(null)} className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50 text-sm">
                   Cancel
                 </button>
               </div>

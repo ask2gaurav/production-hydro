@@ -17,8 +17,12 @@ export async function action({ request }: { request: Request }) {
   
   if (request.method === 'POST') {
     const data = await request.json();
-    const patient = await Patient.create(data);
-    await Machine.findOneAndUpdate({ _id: data.machine_id }, { last_seen_date: new Date() });   
+    const patient = await Patient.findOneAndUpdate(
+      { machine_id: data.machine_id, email: data.email },
+      { $set: data },
+      { upsert: true, new: true }
+    );
+    await Machine.findOneAndUpdate({ _id: data.machine_id }, { last_seen_date: new Date() });
     return new Response(JSON.stringify(patient), { status: 201 });
   }
   return new Response('Method Not Allowed', { status: 405 });

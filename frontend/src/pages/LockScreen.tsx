@@ -41,12 +41,12 @@ const LockScreen: React.FC = () => {
               </IonButton>
            </div>
 
-           <div style={{ marginTop: '4rem', borderTop: '1px solid #ccc', paddingTop: '2rem', width: '100%', maxWidth: '600px' }}>
+           {/* {<div style={{ marginTop: '4rem', borderTop: '1px solid #ccc', paddingTop: '2rem', width: '100%', maxWidth: '600px' }}>
               <p>Admin / Supplier? Enter your credentials to unlock remotely.</p>
               <IonButton fill="outline" color="medium">
                 <IonIcon icon={keyOutline} slot="start" /> Staff Login
               </IonButton>
-           </div>
+           </div>} */}
         </div>
       </IonContent>
     </IonPage>

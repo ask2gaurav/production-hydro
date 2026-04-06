@@ -18,8 +18,12 @@ export async function action({ request }: { request: Request }) {
   await connectDB();
   if (request.method === 'POST') {
     const data = await request.json();
-    const therapist = await Therapist.create(data);
-    await Machine.findOneAndUpdate({ _id: data.machine_id }, { last_seen_date: new Date() });   
+    const therapist = await Therapist.findOneAndUpdate(
+      { machine_id: data.machine_id, email: data.email },
+      { $set: data },
+      { upsert: true, new: true }
+    );
+    await Machine.findOneAndUpdate({ _id: data.machine_id }, { last_seen_date: new Date() });
     return new Response(JSON.stringify(therapist), { status: 201 });
   }
   return new Response('Method Not Allowed', { status: 405 });

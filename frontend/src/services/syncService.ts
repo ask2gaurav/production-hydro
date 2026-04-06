@@ -1,5 +1,6 @@
 import api from './api';
 import { localDB, type LocalResource } from '../db/localDB';
+import { checkModeOnBoot } from './modeCheck';
 
 // Pull therapists from server and upsert into local DB
 export async function fetchAndCacheTherapists(machineId: string): Promise<void> {
@@ -221,7 +222,9 @@ export async function fetchAndCacheResources(machineId: string): Promise<void> {
   }
 }
 
-// Run full sync: therapists/patients first, then sessions, then pull latest
+// Run full sync: push pending data first, pull latest, then refresh mode status.
+// Mode status must be fetched LAST so the server has accurate session counts before
+// we evaluate is_locked — prevents stale "not locked" responses unlocking the app.
 export async function runSync(machineId: string): Promise<void> {
   if (!machineId || !navigator.onLine) return;
   await syncPendingTherapists(machineId);
@@ -229,4 +232,5 @@ export async function runSync(machineId: string): Promise<void> {
   await syncPendingSessions(machineId);
   await fetchAndCacheTherapists(machineId);
   await fetchAndCachePatients(machineId);
+  await checkModeOnBoot(machineId);
 }

@@ -7,7 +7,7 @@ import { useHistory } from 'react-router';
 import api from '../services/api';
 import { useStore } from '../store/useStore';
 import { checkModeOnBoot } from '../services/modeCheck';
-import { fetchAndCacheResources } from '../services/syncService';
+import { fetchAndCacheResources, runSync } from '../services/syncService';
 
 const LoginPage: React.FC = () => {
   const history = useHistory();
@@ -38,10 +38,14 @@ const LoginPage: React.FC = () => {
 
       setToken(token);
       setMachineId(machineId);
-      await Promise.all([
-        checkModeOnBoot(machineId),
-        fetchAndCacheResources(machineId),
-      ]);
+      await fetchAndCacheResources(machineId);
+      // runSync pushes any pending offline data first, then fetches fresh mode status.
+      // If offline, fall back to checkModeOnBoot which reads from local cache.
+      if (navigator.onLine) {
+        await runSync(machineId);
+      } else {
+        await checkModeOnBoot(machineId);
+      }
       history.replace('/dashboard');
     } catch (err: any) {
       const msg = err?.response?.data?.error || 'Login failed. Please try again.';
