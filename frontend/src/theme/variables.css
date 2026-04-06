@@ -2,6 +2,11 @@
 http://ionicframework.com/docs/theming/ */
 
 /* Force light mode regardless of OS dark mode preference */
+html,
+body {
+  color-scheme: light;
+}
+
 @media (prefers-color-scheme: dark) {
   body {
     --ion-background-color: #ffffff;

@@ -5,14 +5,14 @@ import { waterOutline, listOutline, settingsOutline, bookOutline, wifiOutline } 
 import { useHistory } from 'react-router';
 
 const Dashboard: React.FC = () => {
-  const { online, machineId } = useStore();
+  const { online, modeStatus } = useStore();
   const history = useHistory();
 
   return (
     <IonPage>
       <IonHeader>
         <IonToolbar color="primary">
-          <IonTitle>Dashboard - {machineId}</IonTitle>
+          <IonTitle>Dashboard - {modeStatus.serial_number}</IonTitle>
           <IonBadge slot="end" color={online ? 'success' : 'danger'} style={{ marginRight: '1rem' }}>
             <IonIcon icon={wifiOutline} /> {online ? 'Online' : 'Offline'}
           </IonBadge>

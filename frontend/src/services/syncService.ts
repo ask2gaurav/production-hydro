@@ -1,5 +1,5 @@
 import api from './api';
-import { localDB } from '../db/localDB';
+import { localDB, type LocalResource } from '../db/localDB';
 
 // Pull therapists from server and upsert into local DB
 export async function fetchAndCacheTherapists(machineId: string): Promise<void> {
@@ -182,6 +182,42 @@ export async function syncPendingSessions(machineId: string): Promise<void> {
     } catch {
       // Will retry next time sync runs
     }
+  }
+}
+
+// Pull resources from server and upsert into local DB
+export async function fetchAndCacheResources(machineId: string): Promise<void> {
+  try {
+    const res = await api.get(`/resources?machine_id=${machineId}`);
+    type ServerResource = Omit<LocalResource, 'id' | 'server_id'> & { _id: string };
+    const serverList: ServerResource[] = res.data;
+
+    for (const s of serverList) {
+      const existing = await localDB.resources
+        .where('server_id').equals(s._id).first();
+
+      if (existing) {
+        await localDB.resources.update(existing.id!, {
+          title: s.title,
+          slug: s.slug,
+          content: s.content,
+          category: s.category,
+          is_active: s.is_active,
+        });
+      } else {
+        await localDB.resources.add({
+          server_id: s._id,
+          machine_id: machineId,
+          title: s.title,
+          slug: s.slug ?? '',
+          content: s.content ?? '',
+          category: s.category ?? '',
+          is_active: s.is_active ?? true,
+        });
+      }
+    }
+  } catch {
+    // Offline or server error — silently continue with local data
   }
 }
 

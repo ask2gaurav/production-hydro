@@ -6,6 +6,8 @@ import {
 import { useHistory } from 'react-router';
 import api from '../services/api';
 import { useStore } from '../store/useStore';
+import { checkModeOnBoot } from '../services/modeCheck';
+import { fetchAndCacheResources } from '../services/syncService';
 
 const LoginPage: React.FC = () => {
   const history = useHistory();
@@ -36,6 +38,10 @@ const LoginPage: React.FC = () => {
 
       setToken(token);
       setMachineId(machineId);
+      await Promise.all([
+        checkModeOnBoot(machineId),
+        fetchAndCacheResources(machineId),
+      ]);
       history.replace('/dashboard');
     } catch (err: any) {
       const msg = err?.response?.data?.error || 'Login failed. Please try again.';
@@ -54,24 +60,31 @@ const LoginPage: React.FC = () => {
       </IonHeader>
       <IonContent className="ion-padding" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ maxWidth: 400, margin: '4rem auto' }}>
-          <IonItem>
-            <IonLabel position="floating">Email</IonLabel>
+          {/* {<IonItem>} */}
+            {/* {<IonLabel position="floating">Email</IonLabel>} */}
             <IonInput
+              label='Email:'
               type="email"
+              placeholder='Enter email address'
               value={email}
               onIonChange={(e) => setEmail(e.detail.value || '')}
               autocomplete="email"
+              fill="outline" 
+              style={{ marginBottom: "15px" }}
             />
-          </IonItem>
-          <IonItem>
-            <IonLabel position="floating">Password</IonLabel>
+          {/* {</IonItem>} */}
+          {/* {<IonItem>} */}
+            {/* <IonLabel position="floating">Password</IonLabel> */}
             <IonInput
+              label='Password:'
+              placeholder='Enter password'
+              fill="outline" 
               type="password"
               value={password}
               onIonChange={(e) => setPassword(e.detail.value || '')}
               onKeyDown={(e) => { if (e.key === 'Enter') handleLogin(); }}
             />
-          </IonItem>
+          {/* {</IonItem>} */}
           {error && (
             <IonText color="danger">
               <p style={{ padding: '0.5rem 1rem', margin: 0 }}>{error}</p>

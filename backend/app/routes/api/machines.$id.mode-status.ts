@@ -16,6 +16,7 @@ export async function loader({ request, params }: { request: Request, params: an
   const sessions_remaining = actualTarget.mode === 'demo' ? Math.max(0, actualTarget.demo_session_limit - actualTarget.demo_sessions_used) : null;
 
   return new Response(JSON.stringify({
+    serial_number: actualTarget.serial_number,
     mode: actualTarget.mode,
     demo_sessions_used: actualTarget.demo_sessions_used,
     demo_session_limit: actualTarget.demo_session_limit,

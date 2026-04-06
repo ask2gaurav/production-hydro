@@ -23,6 +23,12 @@ const Settings: React.FC = () => {
     });
   }, [machineId]);
 
+  const handleChange = (key: string, value: string | number | boolean) => {
+    const newSettings = { ...settings, [key]: value };
+    setSettings(newSettings);
+    localDB.settings.put({ machine_id: machineId, ...newSettings });
+  };
+
   const handleToggle = (key: string, value: boolean) => {
     if (!online) {
       presentAlert({
@@ -31,12 +37,7 @@ const Settings: React.FC = () => {
          buttons: ['OK']
       });
     }
-    
-    const newSettings = { ...settings, [key]: value };
-    setSettings(newSettings);
-    console.log('Updated settings:', newSettings);
-    console.log('Machine ID:', machineId);
-    localDB.settings.put({ machine_id: machineId, ...newSettings });
+    handleChange(key, value);
   };
 
   return (
@@ -56,15 +57,15 @@ const Settings: React.FC = () => {
           </IonListHeader>
           <IonItem>
             <IonLabel>Default Session Duration (min) - {settings.default_session_minutes}</IonLabel>
-            <IonRange min={1} max={60} value={settings.default_session_minutes} onIonChange={e => setSettings({...settings, default_session_minutes: e.detail.value})} />
+            <IonRange min={1} max={60} value={settings.default_session_minutes} onIonChange={e => handleChange('default_session_minutes', e.detail.value as number)} />
           </IonItem>
           <IonItem>
             <IonLabel>Default Temperature (°C)</IonLabel>
-            <IonInput type="number" value={settings.default_temperature} onIonChange={e => setSettings({...settings, default_temperature: parseInt(e.detail.value as string, 10)})} />
+            <IonInput type="number" value={settings.default_temperature} onIonChange={e => handleChange('default_temperature', parseInt(e.detail.value as string, 10))} />
           </IonItem>
           <IonItem>
             <IonLabel>Max Temperature Alert (°C)</IonLabel>
-            <IonInput type="number" value={settings.max_temperature} onIonChange={e => setSettings({...settings, max_temperature: parseInt(e.detail.value as string, 10)})} />
+            <IonInput type="number" value={settings.max_temperature} onIonChange={e => handleChange('max_temperature', parseInt(e.detail.value as string, 10))} />
           </IonItem>
           
           <IonListHeader>

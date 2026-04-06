@@ -16,6 +16,7 @@ export const useStore = create<AppState>((set) => ({
   machineId: localStorage.getItem('machine_id') || '',
   token: localStorage.getItem('token') || '',
   modeStatus: {
+    serial_number: '',
     mode: 'demo',
     is_locked: false,
     demo_sessions_used: 0,

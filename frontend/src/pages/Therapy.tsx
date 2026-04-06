@@ -3,15 +3,17 @@ import {
   IonContent, IonIcon, IonHeader, IonPage, IonTitle, IonToolbar,
   IonGrid, IonRow, IonCol, IonButton, IonBadge, IonProgressBar,
   IonModal, IonItem, IonLabel, IonInput, IonTextarea, IonSpinner,
-  IonText, IonSelect, IonSelectOption
+  IonText, IonSelect, IonSelectOption, useIonViewDidEnter
 } from '@ionic/react';
 import {
   arrowBack, addOutline, personOutline, personCircleOutline,
   peopleOutline, pencilOutline, trashOutline, searchOutline
 } from 'ionicons/icons';
+import { useHistory } from 'react-router';
 import { useStore } from '../store/useStore';
 import { localDB, type LocalTherapist, type LocalPatient } from '../db/localDB';
 import { runSync } from '../services/syncService';
+import { onSessionComplete } from '../services/modeCheck';
 
 // ---------- Helpers ----------
 
@@ -163,13 +165,15 @@ function SearchSelect<T>({
 // ---------- Main component ----------
 
 type SessionState = 'IDLE' | 'PREPARING' | 'ACTIVE' | 'PAUSED';
-const TOTAL_SECONDS = 2 * 60;
+const DEFAULT_TOTAL_SECONDS = 40 * 60;
 type StatMap = Record<string, { total: number; last: Date | null }>;
 
 const Therapy: React.FC = () => {
   const { modeStatus, machineId } = useStore();
+  const history = useHistory();
   const [state, setState] = useState<SessionState>('IDLE');
-  const [timeLeft, setTimeLeft] = useState(TOTAL_SECONDS);
+  const [totalSeconds, setTotalSeconds] = useState(DEFAULT_TOTAL_SECONDS);
+  const [timeLeft, setTimeLeft] = useState(DEFAULT_TOTAL_SECONDS);
   const [sessionError, setSessionError] = useState('');
 
   const [therapists, setTherapists] = useState<LocalTherapist[]>([]);
@@ -302,6 +306,15 @@ const Therapy: React.FC = () => {
     return { total, last };
   };
 
+  useIonViewDidEnter(() => {
+    if (!machineId) return;
+    localDB.settings.get(machineId).then((s) => {
+      const secs = s?.default_session_minutes ? s.default_session_minutes * 60 : DEFAULT_TOTAL_SECONDS;
+      setTotalSeconds(secs);
+      setTimeLeft(secs);
+    });
+  });
+
   useEffect(() => {
     if (!machineId) return;
     loadLocal();
@@ -317,7 +330,7 @@ const Therapy: React.FC = () => {
 
   const endSession = useCallback(async () => {
     const now = new Date();
-    const elapsed = TOTAL_SECONDS - timeLeft;
+    const elapsed = totalSeconds - timeLeft;
     const duration = Math.round(elapsed / 60);
 
     if (activeSessionLocalId.current !== null) {
@@ -330,15 +343,22 @@ const Therapy: React.FC = () => {
       runSync(machineId);
     }
 
+    await onSessionComplete(machineId);
+
     activeSessionLocalId.current = null;
     sessionStartTime.current = null;
     setState('IDLE');
-    setTimeLeft(TOTAL_SECONDS);
+    setTimeLeft(totalSeconds);
     setSelectedTherapistId(null);
     setSelectedPatientId(null);
     setSessionNotes('');
     setSessionError('');
-  }, [timeLeft, machineId]);
+
+    const updatedStatus = await localDB.settings.get(machineId);
+    if (updatedStatus?.is_locked) {
+      history.replace('/lockscreen');
+    }
+  }, [timeLeft, machineId, totalSeconds, history]);
 
   useEffect(() => {
     if (state !== 'ACTIVE') return;
@@ -604,7 +624,7 @@ const Therapy: React.FC = () => {
               DEMO MODE: {modeStatus.sessions_remaining} sessions left
             </IonBadge>
           )}
-          <IonButton color="primary" slot="end" style={{ marginRight: '1rem' }} onClick={() => history.back()}>
+          <IonButton color="primary" slot="end" style={{ marginRight: '1rem' }} onClick={(e) => { (e.currentTarget as HTMLElement).blur(); history.goBack(); }}>
             <IonIcon icon={arrowBack} />
           </IonButton>
         </IonToolbar>
@@ -619,8 +639,8 @@ const Therapy: React.FC = () => {
                 <h1 style={{ fontSize: '4rem', margin: 0, color: state === 'PAUSED' ? '#999' : '#000' }}>
                   {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
                 </h1>
-                <IonProgressBar value={1 - (timeLeft / TOTAL_SECONDS)} color="primary" />
-                <small>{Math.floor(TOTAL_SECONDS / 60)}:{(TOTAL_SECONDS % 60).toString().padStart(2, '0')} min</small>
+                <IonProgressBar value={1 - (timeLeft / totalSeconds)} color="primary" />
+                <small>{Math.floor(totalSeconds / 60)}:{(totalSeconds % 60).toString().padStart(2, '0')} min</small>
               </div>
 
               <div style={{ marginBottom: '1rem' }}>
@@ -761,7 +781,7 @@ const Therapy: React.FC = () => {
       </IonContent>
 
       {/* Add Therapist Modal */}
-      <IonModal isOpen={showAddTherapist} Class="borderedModal" onDidDismiss={() => setShowAddTherapist(false)}>
+      <IonModal isOpen={showAddTherapist} className="borderedModal" onDidDismiss={() => setShowAddTherapist(false)}>
         <IonHeader>
           <IonToolbar color="primary">
             <IonTitle>Add Therapist</IonTitle>
@@ -834,7 +854,6 @@ const Therapy: React.FC = () => {
           <IonItem>
             <IonLabel position="floating">Date of Birth</IonLabel>
             <IonInput ref={refPatientDob} onClick={() => refPatientDob.current?.showPicker()} className="ion-padding-top" type="date" value={pDob} onIonChange={(e) => setPDob(e.detail.value || '')} />
-            <IonIcon name="calendar"></IonIcon>
           </IonItem>
           <IonItem>
             <IonLabel position="stacked">Notes</IonLabel>
@@ -1110,7 +1129,7 @@ const Therapy: React.FC = () => {
       .sc-ion-label-md-h {color:#6e6565 !important;}
         /* Hide number input spinners */
         .native-input[type="date"]::-webkit-calendar-picker-indicator {
-  filter: invert(1); /* Use 1 for white, 0 for black */
+  filter: invert(0);
 }
         input[type=number]::-webkit-inner-spin-button,
         input[type=number]::-webkit-outer-spin-button {
