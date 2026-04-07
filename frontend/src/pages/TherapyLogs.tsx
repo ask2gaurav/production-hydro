@@ -5,6 +5,7 @@ import {
 } from '@ionic/react';
 import { arrowBack, searchOutline } from 'ionicons/icons';
 import { useStore } from '../store/useStore';
+import { useHistory } from 'react-router';
 import { localDB, type LocalSession, type LocalTherapist, type LocalPatient } from '../db/localDB';
 
 type EnrichedSession = LocalSession & {
@@ -44,7 +45,7 @@ const TherapyLogs: React.FC = () => {
   const [search, setSearch] = useState('');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
-
+const history = useHistory();
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
@@ -54,20 +55,22 @@ const TherapyLogs: React.FC = () => {
         localDB.patients.where('machine_id').equals(machineId).toArray(),
       ]);
 
-      const findTherapist = (id?: string): LocalTherapist | undefined => {
-        if (!id) return undefined;
-        return therapists.find((t) => t.server_id === id || String(t.id) === id);
+      const findTherapist = (s: LocalSession): LocalTherapist | undefined => {
+        if (s.therapist_server_id) return therapists.find((t) => t.server_id === s.therapist_server_id);
+        if (s.therapist_id) return therapists.find((t) => String(t.id) === s.therapist_id || t.server_id === s.therapist_id);
+        return undefined;
       };
 
-      const findPatient = (id?: string): LocalPatient | undefined => {
-        if (!id) return undefined;
-        return patients.find((p) => p.server_id === id || String(p.id) === id);
+      const findPatient = (s: LocalSession): LocalPatient | undefined => {
+        if (s.patient_server_id) return patients.find((p) => p.server_id === s.patient_server_id);
+        if (s.patient_id) return patients.find((p) => String(p.id) === s.patient_id || p.server_id === s.patient_id);
+        return undefined;
       };
 
       const enriched: EnrichedSession[] = rawSessions
         .map((s) => {
-          const t = findTherapist(s.therapist_id);
-          const p = findPatient(s.patient_id);
+          const t = findTherapist(s);
+          const p = findPatient(s);
           return {
             ...s,
             therapistName: t ? `${t.first_name} ${t.last_name}` : '—',
@@ -121,7 +124,7 @@ const TherapyLogs: React.FC = () => {
         <IonToolbar color="primary">
           <IonTitle>Therapy Logs</IonTitle>
           {/* <IonButton slot="end" onClick={handleExport} fill="clear" color="light">Export PDF</IonButton> */}
-          <IonButton color="primary" slot="end" style={{ marginRight: '1rem' }} onClick={() => history.back()}>
+          <IonButton color="primary" slot="end" style={{ marginRight: '1rem' }} onClick={(e) => { (e.currentTarget as HTMLElement).blur(); history.goBack(); }}>
               <IonIcon icon={arrowBack} />
             </IonButton>
         </IonToolbar>

@@ -26,7 +26,7 @@ import LoginPage from './pages/LoginPage';
 
 import { useStore } from './store/useStore';
 import { checkModeOnBoot } from './services/modeCheck';
-import OfflineBanner from './components/OfflineBanner';
+import { runSync } from './services/syncService';
 
 setupIonicReact();
 
@@ -34,14 +34,16 @@ const App: React.FC = () => {
   const { machineId, modeStatus } = useStore();
 
   useEffect(() => {
-    if (machineId) {
+    if (!machineId) return;
+    if (navigator.onLine) {
+      runSync(machineId);
+    } else {
       checkModeOnBoot(machineId);
     }
   }, [machineId]);
 
   return (
     <IonApp>
-      {/* <OfflineBanner /> */}
       <IonReactRouter>
         <IonRouterOutlet>
           <Route exact path="/login" component={LoginPage} />
@@ -50,7 +52,7 @@ const App: React.FC = () => {
           <Route exact path="/logs" component={machineId ? modeStatus.is_locked ? LockScreen : TherapyLogs : LoginPage} />
           <Route exact path="/settings" component={machineId ? modeStatus.is_locked ? LockScreen : Settings : LoginPage} />
           <Route exact path="/resources" component={machineId ? modeStatus.is_locked ? LockScreen : Resources : LoginPage} />
-          <Route exact path="/lockscreen" component={LockScreen} />
+          {/* <Route exact path="/lockscreen" component={LockScreen} /> */}
           <Route exact path="/">
             {machineId ? <Redirect to="/dashboard" /> : <Redirect to="/login" />}
           </Route>

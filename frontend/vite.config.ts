@@ -7,23 +7,26 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  server: {
+    proxy: {
+      '/esp32': {
+        target: process.env.VITE_ESP32_URL ?? 'http://localhost:5500',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/esp32/, ''),
+      },
+    },
+  },
   plugins: [
     react(),
     legacy(),
     VitePWA({
       registerType: 'autoUpdate',
       injectRegister: 'auto',
-      workbox: {
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
+      injectManifest: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
-        navigateFallback: '/index.html',
-        navigateFallbackDenylist: [/^\/api\//],
-        runtimeCaching: [
-          {
-            urlPattern: /\/api\/resources/,
-            handler: 'CacheFirst',
-            options: { cacheName: 'cms-resources-cache' }
-          }
-        ]
       },
       manifest: {
         name: 'Hydrotherapy System',
@@ -31,6 +34,10 @@ export default defineConfig({
         theme_color: '#0a5c99',
         orientation: 'landscape',
         display: 'standalone'
+      },
+      devOptions: {
+        enabled: true,
+        type: 'module',
       }
     })
   ],

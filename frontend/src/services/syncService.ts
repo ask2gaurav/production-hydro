@@ -133,37 +133,50 @@ export async function syncPendingPatients(machineId: string): Promise<void> {
   }
 }
 
-// Push any unsynced sessions to the server.
+// Push any unsynced completed sessions to the server.
 // Must be called AFTER syncPendingTherapists and syncPendingPatients so that
 // server_ids are available for the foreign key references.
+// Active sessions are skipped — they are only synced once completed.
 export async function syncPendingSessions(machineId: string): Promise<void> {
   const unsynced = await localDB.sessions
     .where('synced').equals(0)
-    .and((s) => s.machine_id === machineId)
+    .and((s) => s.machine_id === machineId && s.status !== 'active')
     .toArray();
 
   for (const session of unsynced) {
     try {
-      // Resolve therapist server_id
-      let therapist_server_id: string | undefined;
-      if (session.therapist_id) {
+      // Resolve therapist server_id — prefer dedicated field, fall back to local DB lookup
+      let therapist_server_id: string | undefined = session.therapist_server_id;
+      if (!therapist_server_id && session.therapist_id) {
         const localId = parseInt(session.therapist_id, 10);
-        const therapist = isNaN(localId)
-          ? await localDB.therapists.where('server_id').equals(session.therapist_id).first()
-          : await localDB.therapists.get(localId);
-        if (!therapist?.server_id) continue; // therapist not synced yet — skip this session
-        therapist_server_id = therapist.server_id;
+        if (!isNaN(localId)) {
+          const therapist = await localDB.therapists.get(localId);
+          if (!therapist?.server_id) {
+            console.warn('[sync] skipping session', session.id, '— therapist not synced yet, local id:', localId);
+            continue;
+          }
+          therapist_server_id = therapist.server_id;
+        }
       }
 
-      // Resolve patient server_id
-      let patient_server_id: string | undefined;
-      if (session.patient_id) {
+      // Resolve patient server_id — prefer dedicated field, fall back to local DB lookup
+      let patient_server_id: string | undefined = session.patient_server_id;
+      if (!patient_server_id && session.patient_id) {
         const localId = parseInt(session.patient_id, 10);
-        const patient = isNaN(localId)
-          ? await localDB.patients.where('server_id').equals(session.patient_id).first()
-          : await localDB.patients.get(localId);
-        if (!patient?.server_id) continue; // patient not synced yet — skip this session
-        patient_server_id = patient.server_id;
+        if (!isNaN(localId)) {
+          const patient = await localDB.patients.get(localId);
+          if (!patient?.server_id) {
+            console.warn('[sync] skipping session', session.id, '— patient not synced yet, local id:', localId);
+            continue;
+          }
+          patient_server_id = patient.server_id;
+        }
+      }
+
+      if (session.server_id) {
+        // Already on the server (e.g. legacy active-session push) — just mark synced locally
+        await localDB.sessions.update(session.id!, { synced: 1 });
+        continue;
       }
 
       const res = await api.post('/sessions', {
@@ -179,10 +192,76 @@ export async function syncPendingSessions(machineId: string): Promise<void> {
         water_level_log: session.water_level_log,
       });
 
-      await localDB.sessions.update(session.id!, { synced: 1 });
-    } catch {
+      // Server wraps response as { session, demo_locked }
+      const serverId: string = res.data?.session?._id ?? res.data?._id;
+      await localDB.sessions.update(session.id!, { server_id: serverId, synced: 1 });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error('[syncPendingSessions] Failed to sync session id', session.id, '—', msg);
       // Will retry next time sync runs
     }
+  }
+}
+
+interface ServerSession {
+  _id: string;
+  machine_id: string;
+  therapist_id?: string;
+  patient_id?: string;
+  start_time: string;
+  end_time?: string;
+  duration_minutes: number;
+  water_temp_log: number[];
+  water_level_log: number[];
+  session_note?: string;
+  status: string;
+}
+
+// Pull sessions from server and upsert into local DB
+export async function fetchAndCacheSessions(machineId: string): Promise<void> {
+  try {
+    const res = await api.get(`/sessions?machine_id=${machineId}`);
+    const serverList: ServerSession[] = res.data;
+
+    for (const s of serverList) {
+      const existing = await localDB.sessions
+        .where('server_id').equals(s._id).first();
+
+      if (existing) {
+        await localDB.sessions.update(existing.id!, {
+          end_time: s.end_time ? new Date(s.end_time) : undefined,
+          duration_minutes: s.duration_minutes,
+          session_note: s.session_note ?? '',
+          status: s.status,
+          synced: 1,
+        });
+      } else {
+        // therapist_id/patient_id may be populated objects from the server — extract _id string
+        const therapistServerId = s.therapist_id
+          ? (typeof s.therapist_id === 'object' ? (s.therapist_id as { _id: string })._id : s.therapist_id)
+          : undefined;
+        const patientServerId = s.patient_id
+          ? (typeof s.patient_id === 'object' ? (s.patient_id as { _id: string })._id : s.patient_id)
+          : undefined;
+        await localDB.sessions.add({
+          server_id: s._id,
+          machine_id: machineId,
+          therapist_server_id: therapistServerId,
+          patient_server_id: patientServerId,
+          start_time: new Date(s.start_time),
+          end_time: s.end_time ? new Date(s.end_time) : undefined,
+          duration_minutes: s.duration_minutes ?? 0,
+          water_temp_log: s.water_temp_log ?? [],
+          water_level_log: s.water_level_log ?? [],
+          session_note: s.session_note ?? '',
+          status: s.status ?? 'completed',
+          synced: 1,
+          created_at: new Date(s.start_time),
+        });
+      }
+    }
+  } catch {
+    // Offline or server error — silently continue with local data
   }
 }
 
@@ -232,5 +311,6 @@ export async function runSync(machineId: string): Promise<void> {
   await syncPendingSessions(machineId);
   await fetchAndCacheTherapists(machineId);
   await fetchAndCachePatients(machineId);
+  await fetchAndCacheSessions(machineId);
   await checkModeOnBoot(machineId);
 }

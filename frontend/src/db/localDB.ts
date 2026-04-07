@@ -2,14 +2,17 @@ import Dexie, { type Table } from 'dexie';
 
 export interface LocalSession {
   id?: number;
+  server_id?: string;       // MongoDB _id once synced
   machine_id: string;
-  therapist_id?: string;
-  patient_id?: string;
+  therapist_id?: string;         // local Dexie numeric id (as string) for local lookups
+  patient_id?: string;           // local Dexie numeric id (as string) for local lookups
+  therapist_server_id?: string;  // MongoDB ObjectId of therapist
+  patient_server_id?: string;    // MongoDB ObjectId of patient
   start_time: Date;
   end_time?: Date;
   duration_minutes: number;
-  water_temp_log: any[];
-  water_level_log: any[];
+  water_temp_log: number[];
+  water_level_log: number[];
   session_note?: string;
   status: string;
   synced: number;
@@ -25,6 +28,8 @@ export interface LocalSettings {
   flush_valve?: boolean;
   blower_switch?: boolean;
   heater_switch?: boolean;
+  pump_switch?: boolean;
+  flush_frequency?: number;
 
   // Demo Mode overrides
   mode?: string;
@@ -32,7 +37,7 @@ export interface LocalSettings {
   demo_session_limit?: number;
   sessions_remaining?: number | null;
   is_locked?: boolean;
-  lock_screen_contact?: any;
+  lock_screen_contact?: Record<string, string>;
 }
 
 export interface LocalTherapist {
@@ -99,6 +104,22 @@ export class HydroDb extends Dexie {
     // Version 3: add resources table
     this.version(3).stores({
       sessions: '++id, machine_id, synced, created_at',
+      therapists: '++id, machine_id, synced, server_id',
+      patients: '++id, machine_id, synced, server_id',
+      settings: 'machine_id',
+      resources: '++id, machine_id, server_id',
+    });
+    // Version 4: add server_id index to sessions
+    this.version(4).stores({
+      sessions: '++id, machine_id, synced, created_at, server_id',
+      therapists: '++id, machine_id, synced, server_id',
+      patients: '++id, machine_id, synced, server_id',
+      settings: 'machine_id',
+      resources: '++id, machine_id, server_id',
+    });
+    // Version 5: add therapist_server_id and patient_server_id indexes to sessions
+    this.version(5).stores({
+      sessions: '++id, machine_id, synced, created_at, server_id, therapist_server_id, patient_server_id',
       therapists: '++id, machine_id, synced, server_id',
       patients: '++id, machine_id, synced, server_id',
       settings: 'machine_id',

@@ -14,6 +14,7 @@ import { useStore } from '../store/useStore';
 import { localDB, type LocalTherapist, type LocalPatient } from '../db/localDB';
 import { runSync } from '../services/syncService';
 import { onSessionComplete } from '../services/modeCheck';
+import { fetchMachineInfo } from '../services/esp32Service';
 
 // ---------- Helpers ----------
 
@@ -164,12 +165,12 @@ function SearchSelect<T>({
 
 // ---------- Main component ----------
 
-type SessionState = 'IDLE' | 'PREPARING' | 'ACTIVE' | 'PAUSED';
+type SessionState = 'PREPARATION' | 'PREPARING' | 'IDLE' | 'ACTIVE' | 'PAUSED';
 const DEFAULT_TOTAL_SECONDS = 40 * 60;
 type StatMap = Record<string, { total: number; last: Date | null }>;
 
 const Therapy: React.FC = () => {
-  const { modeStatus, machineId } = useStore();
+  const { modeStatus, machineId, machineConnected, machineInfo, setMachineConnected, setMachineInfo } = useStore();
   const history = useHistory();
   const [state, setState] = useState<SessionState>('IDLE');
   const [totalSeconds, setTotalSeconds] = useState(DEFAULT_TOTAL_SECONDS);
@@ -238,7 +239,9 @@ const Therapy: React.FC = () => {
   // Session stats
   const [sessionStats, setSessionStats] = useState<StatMap>({});
 
-  const isLocked = state === 'ACTIVE' || state === 'PAUSED';
+  const isLocked = state === 'ACTIVE' || state === 'PAUSED' || state === 'PREPARING' || state === 'IDLE';
+  const [defaultTemp, setDefaultTemp] = useState(37);
+  const [showMachineAlert, setShowMachineAlert] = useState(false);
 
   // ---------- Data loading ----------
 
@@ -312,19 +315,43 @@ const Therapy: React.FC = () => {
       const secs = s?.default_session_minutes ? s.default_session_minutes * 60 : DEFAULT_TOTAL_SECONDS;
       setTotalSeconds(secs);
       setTimeLeft(secs);
+      if (s?.default_temperature) setDefaultTemp(s.default_temperature);
     });
   });
 
   useEffect(() => {
     if (!machineId) return;
     loadLocal();
-    console.log('Checking for pending sync on boot...', machineId);
     runSync(machineId).then(loadLocal);
 
     const handleOnline = () => runSync(machineId).then(loadLocal);
     window.addEventListener('online', handleOnline);
     return () => window.removeEventListener('online', handleOnline);
   }, [machineId, loadLocal]);
+
+  // ESP32 polling — 3s during PREPARING, 5s otherwise
+  useEffect(() => {
+    const interval = state === 'PREPARING' ? 3000 : 5000;
+    const poll = async () => {
+      try {
+        const info = await fetchMachineInfo();
+        setMachineInfo(info);
+        setMachineConnected(true);
+        setShowMachineAlert(false);
+        // Auto-advance: water high level reached AND temperature met
+        if (state === 'PREPARING' && info.water_hl === 1 && info.temp >= defaultTemp) {
+          setState('IDLE');
+        }
+      } catch {
+        setMachineConnected(false);
+        setMachineInfo(null);
+        setShowMachineAlert(true);
+      }
+    };
+    poll();
+    const id = setInterval(poll, interval);
+    return () => clearInterval(id);
+  }, [state, defaultTemp, setMachineConnected, setMachineInfo]);
 
   // ---------- Session lifecycle ----------
 
@@ -340,25 +367,26 @@ const Therapy: React.FC = () => {
         status: 'completed',
         synced: 0,
       });
-      runSync(machineId);
+      await runSync(machineId);
     }
 
     await onSessionComplete(machineId);
 
     activeSessionLocalId.current = null;
     sessionStartTime.current = null;
-    setState('IDLE');
+    setState('PREPARATION');
     setTimeLeft(totalSeconds);
     setSelectedTherapistId(null);
     setSelectedPatientId(null);
     setSessionNotes('');
     setSessionError('');
 
-    const updatedStatus = await localDB.settings.get(machineId);
-    if (updatedStatus?.is_locked) {
-      history.replace('/lockscreen');
-    }
-  }, [timeLeft, machineId, totalSeconds, history]);
+    // const updatedStatus = await localDB.settings.get(machineId);
+    // if (updatedStatus?.is_locked) {
+    //   history.replace('/lockscreen');
+    // }
+  // }, [timeLeft, machineId, totalSeconds, history]);
+  }, [timeLeft, machineId, totalSeconds]);
 
   useEffect(() => {
     if (state !== 'ACTIVE') return;
@@ -384,8 +412,10 @@ const Therapy: React.FC = () => {
 
     const localId = await localDB.sessions.add({
       machine_id: machineId,
-      therapist_id: therapist?.server_id ?? String(selectedTherapistId),
-      patient_id: patient?.server_id ?? String(selectedPatientId),
+      therapist_id: String(selectedTherapistId),
+      patient_id: String(selectedPatientId),
+      therapist_server_id: therapist?.server_id,
+      patient_server_id: patient?.server_id,
       start_time: now,
       duration_minutes: 0,
       water_temp_log: [],
@@ -398,7 +428,6 @@ const Therapy: React.FC = () => {
 
     activeSessionLocalId.current = localId as number;
     setState('ACTIVE');
-    runSync(machineId);
   };
 
   const handlePauseResume = () => {
@@ -619,8 +648,15 @@ const Therapy: React.FC = () => {
       <IonHeader>
         <IonToolbar color="primary">
           <IonTitle>Therapy Session</IonTitle>
+          <IonBadge
+            slot="end"
+            color={machineConnected ? 'success' : 'danger'}
+            style={{ marginRight: '0.5rem' }}
+          >
+            {machineConnected ? 'Machine Connected' : 'Machine Disconnected'}
+          </IonBadge>
           {modeStatus && modeStatus.mode === 'demo' && (
-            <IonBadge color="warning" slot="end" style={{ marginRight: '1rem' }}>
+            <IonBadge color="warning" slot="end" style={{ marginRight: '0.5rem' }}>
               DEMO MODE: {modeStatus.sessions_remaining} sessions left
             </IonBadge>
           )}
@@ -715,7 +751,7 @@ const Therapy: React.FC = () => {
 
               <IonRow>
                 <IonCol>
-                  <IonButton expand="block" color="warning" onClick={() => setState('PREPARING')} disabled={state !== 'IDLE'}>
+                  <IonButton expand="block" color="warning" onClick={() => setState('PREPARING')} disabled={state !== 'PREPARATION'}>
                     PREPARE
                   </IonButton>
                 </IonCol>
@@ -725,7 +761,7 @@ const Therapy: React.FC = () => {
                       {state === 'ACTIVE' ? 'PAUSE' : 'RESUME'}
                     </IonButton>
                   ) : (
-                    <IonButton expand="block" color="success" onClick={handleStart} disabled={state !== 'PREPARING'}>
+                    <IonButton expand="block" color="success" onClick={handleStart} disabled={state !== 'IDLE'}>
                       START
                     </IonButton>
                   )}
@@ -733,7 +769,7 @@ const Therapy: React.FC = () => {
               </IonRow>
               <IonRow>
                 <IonCol>
-                  <IonButton expand="block" color="medium" onClick={endSession} disabled={state === 'IDLE'}>
+                  <IonButton expand="block" color="medium" onClick={endSession} disabled={state === 'PREPARATION' || state === 'PREPARING'}>
                     END THERAPY
                   </IonButton>
                 </IonCol>
@@ -745,29 +781,85 @@ const Therapy: React.FC = () => {
 
             {/* Right panel */}
             <IonCol size="7" style={{ backgroundColor: '#f4f5f8', display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', padding: '2rem' }}>
-              {state === 'IDLE' && (
+              {state === 'PREPARATION' && (
                 <div style={{ textAlign: 'center' }}>
-                  <h2 style={{ color: '#999' }}>System Ready - Idle</h2>
-                  <div style={{ width: '200px', height: '200px', backgroundColor: '#eef5f9', borderRadius: '50%', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>[GIF]</div>
+                  <h2 style={{ color: '#999' }}>System in Preparation Mode</h2>
+                  <p style={{ color: '#aaa', fontSize: '0.95rem' }}>Click PREPARE to begin filling and heating the water.</p>
+                  <div style={{ width: '200px', height: '200px', backgroundColor: '#eef5f9', borderRadius: '50%', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0a5c99', fontSize: '3rem' }}>
+                    💧
+                  </div>
                 </div>
               )}
               {state === 'PREPARING' && (
-                <div style={{ width: '100%', display: 'flex', justifyContent: 'space-around' }}>
-                  <div style={{ textAlign: 'center' }}>
-                    <h3>Water Temperature (°C)</h3>
-                    <div style={{ width: '150px', height: '150px', border: '10px solid #2dd36f', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem' }}>36°</div>
+                <div style={{ width: '100%' }}>
+                  <h3 style={{ textAlign: 'center', marginBottom: '1.5rem', color: '#555' }}>
+                    Preparing… waiting for water level and temperature
+                  </h3>
+                  <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center' }}>
+                    {/* Temperature gauge */}
+                    <div style={{ textAlign: 'center' }}>
+                      <p style={{ fontWeight: 600, color: '#555', marginBottom: '0.5rem' }}>Water Temperature</p>
+                      <div style={{
+                        width: '150px', height: '150px', borderRadius: '50%',
+                        border: `10px solid ${machineInfo && machineInfo.temp >= defaultTemp ? '#2dd36f' : '#ffc409'}`,
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                      }}>
+                        <span style={{ fontSize: '2.2rem', fontWeight: 700 }}>{machineInfo ? `${machineInfo.temp}°C` : '—'}</span>
+                        <span style={{ fontSize: '0.75rem', color: '#888' }}>Target: {defaultTemp}°C</span>
+                      </div>
+                      {machineInfo && machineInfo.temp >= defaultTemp && (
+                        <p style={{ color: '#2dd36f', fontWeight: 600, marginTop: '0.5rem' }}>✓ Ready</p>
+                      )}
+                    </div>
+                    {/* Water level indicator */}
+                    <div style={{ textAlign: 'center' }}>
+                      <p style={{ fontWeight: 600, color: '#555', marginBottom: '0.5rem' }}>Water Level</p>
+                      <div style={{ width: '80px', height: '180px', border: '2px solid #ccc', borderRadius: '4px', margin: '0 auto', position: 'relative', backgroundColor: '#f9f9f9' }}>
+                        {/* Low level marker */}
+                        <div style={{ position: 'absolute', bottom: '30%', left: 0, right: 0, borderTop: '1px dashed #f0a500', zIndex: 1 }} />
+                        {/* High level marker */}
+                        <div style={{ position: 'absolute', bottom: '80%', left: 0, right: 0, borderTop: '1px dashed #2dd36f', zIndex: 1 }} />
+                        {/* Water fill */}
+                        <div style={{
+                          position: 'absolute', bottom: 0, width: '100%',
+                          height: machineInfo ? (machineInfo.water_hl === 1 ? '85%' : machineInfo.water_ll === 1 ? '35%' : '5%') : '0%',
+                          backgroundColor: '#3880ff', borderRadius: '0 0 2px 2px',
+                          transition: 'height 0.5s ease',
+                        }} />
+                      </div>
+                      <div style={{ marginTop: '0.5rem', fontSize: '0.8rem' }}>
+                        <span style={{ color: machineInfo?.water_ll ? '#2dd36f' : '#ccc', marginRight: '0.5rem' }}>● Low</span>
+                        <span style={{ color: machineInfo?.water_hl ? '#2dd36f' : '#ccc' }}>● High</span>
+                      </div>
+                      {machineInfo?.water_hl === 1 && (
+                        <p style={{ color: '#2dd36f', fontWeight: 600, marginTop: '0.5rem' }}>✓ Ready</p>
+                      )}
+                    </div>
                   </div>
-                  <div style={{ textAlign: 'center' }}>
-                    <h3>Water Level (%)</h3>
-                    <div style={{ width: '100px', height: '200px', border: '2px solid #ccc', margin: '0 auto', position: 'relative' }}>
-                      <div style={{ position: 'absolute', bottom: 0, width: '100%', height: '70%', backgroundColor: '#3880ff' }} />
+                </div>
+              )}
+              {state === 'IDLE' && (
+                <div style={{ textAlign: 'center' }}>
+                  <h2 style={{ color: '#2dd36f' }}>System Ready</h2>
+                  <p style={{ color: '#666' }}>Water level and temperature reached. Select therapist, patient, add notes and press START.</p>
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: '2rem', marginTop: '1rem' }}>
+                    <div style={{ textAlign: 'center' }}>
+                      <span style={{ fontSize: '1.8rem', fontWeight: 700, color: '#2dd36f' }}>{machineInfo ? `${machineInfo.temp}°C` : '—'}</span>
+                      <p style={{ fontSize: '0.8rem', color: '#888', margin: 0 }}>Temperature</p>
+                    </div>
+                    <div style={{ textAlign: 'center' }}>
+                      <span style={{ fontSize: '1.8rem', fontWeight: 700, color: '#2dd36f' }}>✓</span>
+                      <p style={{ fontSize: '0.8rem', color: '#888', margin: 0 }}>Water Level</p>
                     </div>
                   </div>
                 </div>
               )}
               {state === 'ACTIVE' && (
-                <div style={{ width: '100%', height: '100%', backgroundColor: '#e0f7fa', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '5px solid #2dd36f' }}>
-                  <h2 style={{ color: '#00838f' }}>Active Therapy Visualization...</h2>
+                <div style={{ width: '100%', height: '100%', backgroundColor: '#e0f7fa', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '5px solid #2dd36f' }}>
+                  <h2 style={{ color: '#00838f' }}>Active Therapy</h2>
+                  {machineInfo && (
+                    <p style={{ color: '#00838f', fontSize: '1.1rem' }}>Temp: {machineInfo.temp}°C</p>
+                  )}
                 </div>
               )}
               {state === 'PAUSED' && (
@@ -1140,6 +1232,27 @@ const Therapy: React.FC = () => {
           -moz-appearance: textfield;
         }
       `}</style>
+
+      {/* Machine disconnected alert */}
+      {showMachineAlert && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9999,
+          backgroundColor: '#d32f2f', color: 'white',
+          padding: '0.75rem 1.25rem',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+        }}>
+          <span style={{ fontWeight: 600 }}>
+            ⚠ Machine not reachable — please switch on the machine and ensure it is connected to the same network.
+          </span>
+          <button
+            onClick={() => setShowMachineAlert(false)}
+            style={{ background: 'none', border: 'none', color: 'white', fontSize: '1.2rem', cursor: 'pointer', marginLeft: '1rem' }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
     </IonPage>
   );
 };

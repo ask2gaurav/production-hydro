@@ -7,6 +7,7 @@ import MachineSupplier from "../models/MachineSupplier";
 import Patient from "../models/Patient";
 import Therapist from "../models/Therapist";
 import Session from "../models/Session";
+import User from "../models/User";
 
 // ---------- Helpers ----------
 
@@ -52,18 +53,58 @@ export async function loader({ request, params }: { request: Request; params: an
     Session.find({ machine_id: id }).sort({ start_time: -1 }).lean(),
   ]);
 
+  // Populate extended_by user names for demo history
+  const rawDemoHistory: any[] = (machine as any).demo_extended_at ?? [];
+  const extenderIds = rawDemoHistory
+    .map((e: any) => e.extended_by?.toString())
+    .filter(Boolean);
+  const extenderUsers = extenderIds.length
+    ? await User.find({ _id: { $in: extenderIds } }).select("first_name last_name email").lean()
+    : [];
+  const extenderMap: Record<string, string> = {};
+  (extenderUsers as any[]).forEach((u: any) => {
+    extenderMap[u._id.toString()] = `${u.first_name} ${u.last_name}`;
+  });
+
+  const demoHistory = rawDemoHistory.map((e: any) => ({
+    extended_by: e.extended_by ? (extenderMap[e.extended_by.toString()] ?? "Unknown") : "—",
+    previous_limit: e.previous_limit ?? null,
+    new_limit: e.new_limit ?? null,
+    reason: e.reason ?? "",
+    timestamp: e.timestamp instanceof Date ? e.timestamp.toISOString() : (e.timestamp ?? null),
+  })).reverse(); // most recent first
+
   // Compute per-patient stats
   const patients = rawPatients.map((p: any) => {
     const pSessions = rawSessions.filter((s: any) => s.patient_id?.toString() === p._id.toString());
     const last = pSessions.length > 0 ? pSessions[0].start_time : null;
-    return { ...p, _id: p._id.toString(), total_sessions: pSessions.length, last_session: last };
+    return {
+      _id: p._id.toString(),
+      first_name: p.first_name,
+      last_name: p.last_name,
+      phone: p.phone ?? null,
+      email: p.email ?? null,
+      gender: p.gender ?? null,
+      dob: p.dob instanceof Date ? p.dob.toISOString() : (p.dob ?? null),
+      total_sessions: pSessions.length,
+      last_session: last instanceof Date ? last.toISOString() : (last ?? null),
+    };
   });
 
   // Compute per-therapist stats
   const therapists = rawTherapists.map((t: any) => {
     const tSessions = rawSessions.filter((s: any) => s.therapist_id?.toString() === t._id.toString());
     const last = tSessions.length > 0 ? tSessions[0].start_time : null;
-    return { ...t, _id: t._id.toString(), total_sessions: tSessions.length, last_session: last };
+    return {
+      _id: t._id.toString(),
+      first_name: t.first_name,
+      last_name: t.last_name,
+      phone: t.phone ?? null,
+      email: t.email ?? null,
+      gender: t.gender ?? null,
+      total_sessions: tSessions.length,
+      last_session: last instanceof Date ? last.toISOString() : (last ?? null),
+    };
   });
 
   // Build a lookup for patient/therapist names in sessions
@@ -75,8 +116,8 @@ export async function loader({ request, params }: { request: Request; params: an
 
   const sessions = rawSessions.map((s: any) => ({
     _id: s._id.toString(),
-    start_time: s.start_time,
-    end_time: s.end_time ?? null,
+    start_time: s.start_time instanceof Date ? s.start_time.toISOString() : (s.start_time ?? null),
+    end_time: s.end_time instanceof Date ? s.end_time.toISOString() : (s.end_time ?? null),
     duration_minutes: s.duration_minutes,
     status: s.status,
     session_note: s.session_note ?? "",
@@ -89,6 +130,7 @@ export async function loader({ request, params }: { request: Request; params: an
     patients,
     therapists,
     sessions,
+    demoHistory,
   };
 }
 
@@ -111,12 +153,12 @@ const STATUS_COLORS: Record<string, string> = {
   paused: "bg-yellow-100 text-yellow-700",
 };
 
-type Tab = "patients" | "therapists" | "sessions";
+type Tab = "patients" | "therapists" | "sessions" | "demo_history";
 
 // ---------- Component ----------
 
 export default function SupplierMachineDetail() {
-  const { machine, patients, therapists, sessions } = useLoaderData<typeof loader>();
+  const { machine, patients, therapists, sessions, demoHistory } = useLoaderData<typeof loader>();
 
   const [activeTab, setActiveTab] = useState<Tab>("patients");
 
@@ -193,6 +235,9 @@ export default function SupplierMachineDetail() {
           </button>
           <button className={tabClass("sessions")} onClick={() => setActiveTab("sessions")}>
             Session Logs <span className="ml-1 text-xs text-gray-400">({sessions.length})</span>
+          </button>
+          <button className={tabClass("demo_history")} onClick={() => setActiveTab("demo_history")}>
+            Demo Extensions <span className="ml-1 text-xs text-gray-400">({demoHistory.length})</span>
           </button>
         </nav>
       </div>
@@ -305,6 +350,61 @@ export default function SupplierMachineDetail() {
                       <td style={tdStyle}>{t.gender || "—"}</td>
                       <td style={{ ...tdStyle, textAlign: "center" }}>{t.total_sessions}</td>
                       <td style={tdStyle}>{formatDateTime(t.last_session)}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Demo Extensions Tab */}
+      {activeTab === "demo_history" && (
+        <div>
+          <p className="text-xs text-gray-400 mb-3">
+            {demoHistory.length} extension{demoHistory.length !== 1 ? "s" : ""} recorded
+          </p>
+          <div className="overflow-x-auto bg-white rounded-lg border border-gray-200">
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead>
+                <tr>
+                  <th style={thStyle}>Date &amp; Time</th>
+                  <th style={thStyle}>Extended By</th>
+                  <th style={{ ...thStyle, textAlign: "center" }}>Previous Limit</th>
+                  <th style={{ ...thStyle, textAlign: "center" }}>New Limit</th>
+                  <th style={{ ...thStyle, textAlign: "center" }}>Sessions Added</th>
+                  <th style={thStyle}>Reason</th>
+                </tr>
+              </thead>
+              <tbody>
+                {demoHistory.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} style={{ ...tdStyle, textAlign: "center", color: "#999", padding: "3rem" }}>
+                      No demo extensions recorded.
+                    </td>
+                  </tr>
+                ) : (
+                  demoHistory.map((e: any, i: number) => (
+                    <tr key={i}
+                      style={{ backgroundColor: "white" }}
+                      onMouseEnter={(ev) => (ev.currentTarget.style.backgroundColor = "#f9fafb")}
+                      onMouseLeave={(ev) => (ev.currentTarget.style.backgroundColor = "white")}
+                    >
+                      <td style={tdStyle}>{formatDateTime(e.timestamp)}</td>
+                      <td style={{ ...tdStyle, fontWeight: 500 }}>{e.extended_by}</td>
+                      <td style={{ ...tdStyle, textAlign: "center" }}>{e.previous_limit ?? "—"}</td>
+                      <td style={{ ...tdStyle, textAlign: "center" }}>{e.new_limit ?? "—"}</td>
+                      <td style={{ ...tdStyle, textAlign: "center" }}>
+                        {e.previous_limit != null && e.new_limit != null
+                          ? <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-teal-100 text-teal-700">
+                              +{e.new_limit - e.previous_limit}
+                            </span>
+                          : "—"}
+                      </td>
+                      <td style={{ ...tdStyle, maxWidth: 300, whiteSpace: "normal", wordBreak: "break-word", color: e.reason ? "#333" : "#aaa" }}>
+                        {e.reason || "—"}
+                      </td>
                     </tr>
                   ))
                 )}

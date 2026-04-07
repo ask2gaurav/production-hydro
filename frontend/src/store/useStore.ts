@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import type { MachineInfo } from '../services/esp32Service';
 
 interface AppState {
   machineId: string;
@@ -10,6 +11,10 @@ interface AppState {
   logout: () => void;
   online: boolean;
   setOnline: (status: boolean) => void;
+  machineConnected: boolean;
+  machineInfo: MachineInfo | null;
+  setMachineConnected: (connected: boolean) => void;
+  setMachineInfo: (info: MachineInfo | null) => void;
 }
 
 export const useStore = create<AppState>((set) => ({
@@ -39,7 +44,11 @@ export const useStore = create<AppState>((set) => ({
     set({ machineId: '', token: '' });
   },
   online: navigator.onLine,
-  setOnline: (status) => set({ online: status })
+  setOnline: (status) => set({ online: status }),
+  machineConnected: false,
+  machineInfo: null,
+  setMachineConnected: (connected) => set({ machineConnected: connected }),
+  setMachineInfo: (info) => set({ machineInfo: info }),
 }));
 
 window.addEventListener('online', () => useStore.getState().setOnline(true));

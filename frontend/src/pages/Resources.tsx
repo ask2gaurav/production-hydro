@@ -8,6 +8,7 @@ import { arrowBack } from 'ionicons/icons';
 import { useStore } from '../store/useStore';
 import { localDB, type LocalResource } from '../db/localDB';
 import api from '../services/api';
+import { useHistory } from 'react-router-dom';
 
 const CATEGORIES = ['FAQ', 'Guide', 'Help', 'Troubleshooting'];
 
@@ -51,7 +52,7 @@ const Resources: React.FC = () => {
   const { machineId } = useStore();
   const [resources, setResources] = useState<LocalResource[]>([]);
   const [loading, setLoading] = useState(true);
-
+  const history = useHistory();
   const loadLocal = useCallback(async () => {
     const local = await localDB.resources
       .where('machine_id').equals(machineId)
@@ -91,7 +92,7 @@ const Resources: React.FC = () => {
       <IonHeader>
         <IonToolbar color="primary">
           <IonTitle>Resources & Help</IonTitle>
-          <IonButton color="primary" slot="end" style={{ marginRight: '1rem' }} onClick={() => history.back()}>
+          <IonButton color="primary" slot="end" style={{ marginRight: '1rem' }} onClick={(e) => { (e.currentTarget as HTMLElement).blur(); history.goBack(); }}>
             <IonIcon icon={arrowBack} />
           </IonButton>
         </IonToolbar>
