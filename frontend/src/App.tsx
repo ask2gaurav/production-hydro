@@ -26,6 +26,7 @@ import LoginPage from './pages/LoginPage';
 
 import { useStore } from './store/useStore';
 import { checkModeOnBoot } from './services/modeCheck';
+import OfflineBanner from './components/OfflineBanner';
 
 setupIonicReact();
 
@@ -40,6 +41,7 @@ const App: React.FC = () => {
 
   return (
     <IonApp>
+      {/* <OfflineBanner /> */}
       <IonReactRouter>
         <IonRouterOutlet>
           <Route exact path="/login" component={LoginPage} />
