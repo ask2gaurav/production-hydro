@@ -3,16 +3,18 @@ import {
   IonContent, IonHeader, IonPage, IonTitle, IonToolbar,
   IonButton, IonIcon, IonBadge, useIonAlert
 } from '@ionic/react';
-import { arrowBack } from 'ionicons/icons';
+import { arrowBack, wifiOutline } from 'ionicons/icons';
 import { localDB } from '../db/localDB';
 import { useStore } from '../store/useStore';
 import { useHistory } from 'react-router-dom';
 import { sendCommand } from '../services/esp32Service';
+import MachineInfoModal from '../components/MachineInfoModal';
 
 const Settings: React.FC = () => {
   const [presentAlert] = useIonAlert();
-  const { machineId, online, machineConnected, machineInfo } = useStore();
+  const { machineId, machineConnected, machineInfo, setMachineInfo } = useStore();
   const history = useHistory();
+  const [showMachineInfo, setShowMachineInfo] = useState(false);
 
   const [settings, setSettings] = useState({
     default_session_minutes: 40,
@@ -44,20 +46,18 @@ const Settings: React.FC = () => {
     persistSettings(updated);
   };
 
-  const handleHardwareToggle = async (param: string, key: keyof typeof settings, value: boolean) => {
-    if (!online) {
+  const handleHardwareToggle = async (param: string, value: boolean) => {
+    if (!machineConnected) {
       presentAlert({
-        header: 'Offline Warning',
-        message: 'You are currently offline. This command cannot be sent to the machine right now.',
+        header: 'Machine Disconnected',
+        message: 'Cannot send command — machine is not connected.',
         buttons: ['OK'],
       });
       return;
     }
-    const updated = { ...settings, [key]: value };
-    setSettings(updated);
-    persistSettings(updated);
     try {
-      await sendCommand(param, value ? 1 : 0);
+      const updated = await sendCommand(param, value ? 1 : 0);
+      setMachineInfo(updated);
     } catch {
       presentAlert({ header: 'Command Failed', message: 'Could not reach the machine. Check the connection.', buttons: ['OK'] });
     }
@@ -140,8 +140,10 @@ const Settings: React.FC = () => {
           <IonBadge
             slot="end"
             color={machineConnected ? 'success' : 'danger'}
-            style={{ marginRight: '0.5rem' }}
+            style={{ marginRight: '0.5rem', cursor: 'pointer' }}
+            onClick={() => setShowMachineInfo(true)}
           >
+            <IonIcon icon={wifiOutline} style={{ fontSize: '0.7rem', marginRight:'10px',display:'inline-block' }} />
             {machineConnected ? 'Machine Connected' : 'Machine Disconnected'}
           </IonBadge>
           <IonButton color="primary" slot="end" style={{ marginRight: '1rem' }} onClick={(e) => { (e.currentTarget as HTMLElement).blur(); history.goBack(); }}>
@@ -198,21 +200,24 @@ const Settings: React.FC = () => {
             <p style={colHeaderStyle}>Hardware Controls</p>
 
             {[
-              { label: 'Heater', key: 'heater_switch' as const, param: 'heater' },
-              { label: 'Pump', key: 'pump_switch' as const, param: 'pump' },
-              { label: 'Blower', key: 'blower_switch' as const, param: 'blower' },
-              { label: 'Water In Valve', key: 'water_inlet_valve' as const, param: 'water_in_valve' },
-              { label: 'Flush Valve', key: 'flush_valve' as const, param: 'flush_valve' },
-            ].map(({ label, key, param }) => (
-              <div
-                key={key}
-                style={hwButtonStyle(settings[key] as boolean)}
-                onClick={() => handleHardwareToggle(param, key, !(settings[key] as boolean))}
-              >
-                <span>{label}</span>
-                {toggleDot(settings[key] as boolean)}
-              </div>
-            ))}
+              { label: 'Heater', param: 'heater', infoKey: 'heater' as const },
+              { label: 'Pump', param: 'pump', infoKey: 'pump' as const },
+              { label: 'Blower', param: 'blower', infoKey: 'blower' as const },
+              { label: 'Water In Valve', param: 'water_in_valve', infoKey: 'water_in_valve' as const },
+              { label: 'Flush Valve', param: 'flush_valve', infoKey: 'flush_valve' as const },
+            ].map(({ label, param, infoKey }) => {
+              const active = machineInfo ? machineInfo[infoKey] === 1 : false;
+              return (
+                <div
+                  key={param}
+                  style={hwButtonStyle(active)}
+                  onClick={() => handleHardwareToggle(param, !active)}
+                >
+                  <span>{label}</span>
+                  {toggleDot(active)}
+                </div>
+              );
+            })}
 
             <div style={{ ...hwButtonStyle(false), cursor: 'default', opacity: 0.5, marginTop: '1rem' }}>
               <span>Reset</span>
@@ -286,6 +291,7 @@ const Settings: React.FC = () => {
           </div>
         </div>
       </IonContent>
+      <MachineInfoModal isOpen={showMachineInfo} onClose={() => setShowMachineInfo(false)} />
     </IonPage>
   );
 };

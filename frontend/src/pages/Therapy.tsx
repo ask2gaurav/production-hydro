@@ -7,14 +7,16 @@ import {
 } from '@ionic/react';
 import {
   arrowBack, addOutline, personOutline, personCircleOutline,
-  peopleOutline, pencilOutline, trashOutline, searchOutline
+  peopleOutline, pencilOutline, trashOutline, searchOutline,
+  wifiOutline, cloudOfflineOutline, checkmarkCircleOutline
 } from 'ionicons/icons';
 import { useHistory } from 'react-router';
 import { useStore } from '../store/useStore';
 import { localDB, type LocalTherapist, type LocalPatient } from '../db/localDB';
 import { runSync } from '../services/syncService';
 import { onSessionComplete } from '../services/modeCheck';
-import { fetchMachineInfo } from '../services/esp32Service';
+import { fetchMachineInfo, sendPrepareParams } from '../services/esp32Service';
+import MachineInfoModal from '../components/MachineInfoModal';
 
 // ---------- Helpers ----------
 
@@ -165,14 +167,14 @@ function SearchSelect<T>({
 
 // ---------- Main component ----------
 
-type SessionState = 'PREPARATION' | 'PREPARING' | 'IDLE' | 'ACTIVE' | 'PAUSED';
+type SessionState = 'INIT' | 'READY' | 'PREPARING' | 'IDLE' | 'ACTIVE' | 'PAUSED';
 const DEFAULT_TOTAL_SECONDS = 40 * 60;
 type StatMap = Record<string, { total: number; last: Date | null }>;
 
 const Therapy: React.FC = () => {
   const { modeStatus, machineId, machineConnected, machineInfo, setMachineConnected, setMachineInfo } = useStore();
   const history = useHistory();
-  const [state, setState] = useState<SessionState>('IDLE');
+  const [state, setState] = useState<SessionState>('INIT');
   const [totalSeconds, setTotalSeconds] = useState(DEFAULT_TOTAL_SECONDS);
   const [timeLeft, setTimeLeft] = useState(DEFAULT_TOTAL_SECONDS);
   const [sessionError, setSessionError] = useState('');
@@ -239,9 +241,19 @@ const Therapy: React.FC = () => {
   // Session stats
   const [sessionStats, setSessionStats] = useState<StatMap>({});
 
-  const isLocked = state === 'ACTIVE' || state === 'PAUSED' || state === 'PREPARING' || state === 'IDLE';
+  const isLocked = state === 'INIT' || state === 'ACTIVE' || state === 'PAUSED';
   const [defaultTemp, setDefaultTemp] = useState(37);
   const [showMachineAlert, setShowMachineAlert] = useState(false);
+
+  const [showMachineInfo, setShowMachineInfo] = useState(false);
+  const [bgIndex, setBgIndex] = useState(0);
+  useEffect(() => {
+    const images = ['/healthy_gut_1024x683.png', '/hydrad_soften_1024x683.png'];
+    const interval = setInterval(() => {
+      setBgIndex((prev) => (prev + 1) % images.length);
+    }, 20000);
+    return () => clearInterval(interval);
+  }, []);
 
   // ---------- Data loading ----------
 
@@ -329,15 +341,18 @@ const Therapy: React.FC = () => {
     return () => window.removeEventListener('online', handleOnline);
   }, [machineId, loadLocal]);
 
-  // ESP32 polling — 3s during PREPARING, 5s otherwise
+  // ESP32 polling — 3s during PREPARING, 15s otherwise
   useEffect(() => {
-    const interval = state === 'PREPARING' ? 3000 : 5000;
+    const interval = state === 'PREPARING' ? 3000 : 15000;
     const poll = async () => {
       try {
         const info = await fetchMachineInfo();
         setMachineInfo(info);
         setMachineConnected(true);
         setShowMachineAlert(false);
+        if (state === 'INIT') {
+          setState('READY');
+        }
         // Auto-advance: water high level reached AND temperature met
         if (state === 'PREPARING' && info.water_hl === 1 && info.temp >= defaultTemp) {
           setState('IDLE');
@@ -345,7 +360,12 @@ const Therapy: React.FC = () => {
       } catch {
         setMachineConnected(false);
         setMachineInfo(null);
-        setShowMachineAlert(true);
+        if (state === 'READY') {
+          setState('INIT');
+        } else if (state !== 'INIT') {
+          // Show alert banner when connection drops mid-session
+          setShowMachineAlert(true);
+        }
       }
     };
     poll();
@@ -374,7 +394,7 @@ const Therapy: React.FC = () => {
 
     activeSessionLocalId.current = null;
     sessionStartTime.current = null;
-    setState('PREPARATION');
+    setState('READY');
     setTimeLeft(totalSeconds);
     setSelectedTherapistId(null);
     setSelectedPatientId(null);
@@ -432,6 +452,30 @@ const Therapy: React.FC = () => {
 
   const handlePauseResume = () => {
     setState((s) => (s === 'ACTIVE' ? 'PAUSED' : 'ACTIVE'));
+  };
+
+  const handlePrepare = async () => {
+    setState('PREPARING');
+    try {
+      const s = await localDB.settings.get(machineId);
+      const therapyTemp = s?.default_temperature ?? defaultTemp;
+      const maxTemp = s?.max_temperature ?? 40;
+      const flushFreq = s?.flush_frequency ?? 30;
+      const current = machineInfo;
+
+      const params: Record<string, number> = {
+        default_temperature: therapyTemp,
+        max_temperature: maxTemp,
+        flush_frequency: flushFreq,
+      };
+      if (!current || current.temp < therapyTemp) params.heater = 1;
+      if (!current || current.water_hl === 0) params.water_in_valve = 1;
+
+      const updated = await sendPrepareParams(params);
+      setMachineInfo(updated);
+    } catch {
+      // Polling will handle reconnection; stay in PREPARING
+    }
   };
 
   // ---------- Add therapist ----------
@@ -647,12 +691,14 @@ const Therapy: React.FC = () => {
     <IonPage>
       <IonHeader>
         <IonToolbar color="primary">
-          <IonTitle>Therapy Session</IonTitle>
+          <IonTitle slot="start" style={{textAlign:'left'}}>Therapy Session</IonTitle>
           <IonBadge
             slot="end"
             color={machineConnected ? 'success' : 'danger'}
-            style={{ marginRight: '0.5rem' }}
+            style={{ marginRight: '0.5rem', cursor: 'pointer' }}
+            onClick={() => setShowMachineInfo(true)}
           >
+            <IonIcon icon={wifiOutline} style={{ fontSize: '0.7rem', marginRight:'10px',display:'inline-block' }} />
             {machineConnected ? 'Machine Connected' : 'Machine Disconnected'}
           </IonBadge>
           {modeStatus && modeStatus.mode === 'demo' && (
@@ -751,7 +797,7 @@ const Therapy: React.FC = () => {
 
               <IonRow>
                 <IonCol>
-                  <IonButton expand="block" color="warning" onClick={() => setState('PREPARING')} disabled={state !== 'PREPARATION'}>
+                  <IonButton expand="block" color="warning" onClick={handlePrepare} disabled={state !== 'READY'}>
                     PREPARE
                   </IonButton>
                 </IonCol>
@@ -769,25 +815,55 @@ const Therapy: React.FC = () => {
               </IonRow>
               <IonRow>
                 <IonCol>
-                  <IonButton expand="block" color="medium" onClick={endSession} disabled={state === 'PREPARATION' || state === 'PREPARING'}>
+                  <IonButton expand="block" color="medium" onClick={endSession} disabled={state === 'INIT' || state === 'READY' || state === 'PREPARING'}>
                     END THERAPY
                   </IonButton>
                 </IonCol>
                 <IonCol>
-                  <IonButton expand="block" color="danger">FLUSH</IonButton>
+                  <IonButton expand="block" color="danger" disabled={state === 'INIT' || state === 'READY'}>FLUSH</IonButton>
                 </IonCol>
               </IonRow>
             </IonCol>
 
             {/* Right panel */}
-            <IonCol size="7" style={{ backgroundColor: '#f4f5f8', display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', padding: '2rem' }}>
-              {state === 'PREPARATION' && (
-                <div style={{ textAlign: 'center' }}>
-                  <h2 style={{ color: '#999' }}>System in Preparation Mode</h2>
-                  <p style={{ color: '#aaa', fontSize: '0.95rem' }}>Click PREPARE to begin filling and heating the water.</p>
-                  <div style={{ width: '200px', height: '200px', backgroundColor: '#eef5f9', borderRadius: '50%', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0a5c99', fontSize: '3rem' }}>
-                    💧
+            <IonCol size="7" style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'start', padding: '2rem', backgroundImage: `url(${['/healthy_gut_1024x683.png', '/hydrad_soften_1024x683.png'][bgIndex]})`, backgroundSize: 'contain', backgroundRepeat: 'no-repeat', backgroundPosition: 'bottom center', transition: 'background-image 0.8s ease-in-out' }}>
+              {state === 'INIT' && (
+                <div style={{ textAlign: 'center', backgroundColor: 'rgba(255,255,255,0.88)', borderRadius: '16px', padding: '2rem', maxWidth: '420px' }}>
+                  <IonIcon icon={cloudOfflineOutline} style={{ fontSize: '5rem', color: '#d32f2f' }} />
+                  <h2 style={{ color: '#d32f2f', margin: '0.75rem 0 0.25rem' }}>Machine Not Connected</h2>
+                  <p style={{ color: '#666', fontSize: '0.95rem', marginBottom: '1.5rem' }}>
+                    Cannot reach the ESP32 device. Follow the steps below to connect.
+                  </p>
+                  <div style={{ textAlign: 'left', backgroundColor: '#fff3f3', border: '1px solid #f5c2c2', borderRadius: '10px', padding: '1rem 1.25rem' }}>
+                    <p style={{ fontWeight: 700, color: '#555', marginBottom: '0.5rem' }}>Troubleshooting Steps:</p>
+                    <ol style={{ margin: 0, paddingLeft: '1.2rem', color: '#444', fontSize: '0.9rem', lineHeight: '1.8' }}>
+                      <li>Enable the <strong>hotspot</strong> on this tablet.</li>
+                      <li>Set hotspot <strong>SSID</strong> to: <code style={{ backgroundColor: '#f0f0f0', padding: '0 4px', borderRadius: '4px' }}>{import.meta.env.VITE_HOTSPOT_SSID}</code></li>
+                      <li>Set hotspot <strong>Password</strong> to: <code style={{ backgroundColor: '#f0f0f0', padding: '0 4px', borderRadius: '4px' }}>{import.meta.env.VITE_HOTSPOT_PASSWORD}</code></li>
+                      <li>Turn on the <strong>ESP32 machine</strong> and wait for it to connect.</li>
+                    </ol>
                   </div>
+                </div>
+              )}
+              {state === 'READY' && (
+                <div style={{ textAlign: 'center', backgroundColor: 'rgba(255,255,255,0.88)', borderRadius: '16px', padding: '2rem', maxWidth: '360px' }}>
+                  <IonIcon icon={checkmarkCircleOutline} style={{ fontSize: '5rem', color: '#2dd36f' }} />
+                  <h2 style={{ color: '#2dd36f', margin: '0.75rem 0 0.25rem' }}>Machine Connected</h2>
+                  <p style={{ color: '#666', fontSize: '0.95rem' }}>
+                    ESP32 is online. Select a therapist and patient, add session notes, then press <strong>PREPARE</strong> to begin.
+                  </p>
+                  {machineInfo && (
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: '2rem', marginTop: '1rem' }}>
+                      <div>
+                        <span style={{ fontSize: '1.6rem', fontWeight: 700, color: '#0a5c99' }}>{machineInfo.temp}°C</span>
+                        <p style={{ fontSize: '0.8rem', color: '#888', margin: 0 }}>Temperature</p>
+                      </div>
+                      <div>
+                        <IonIcon icon={wifiOutline} style={{ fontSize: '1.6rem', color: '#2dd36f' }} />
+                        <p style={{ fontSize: '0.8rem', color: '#888', margin: 0 }}>Connected</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
               {state === 'PREPARING' && (
@@ -855,7 +931,7 @@ const Therapy: React.FC = () => {
                 </div>
               )}
               {state === 'ACTIVE' && (
-                <div style={{ width: '100%', height: '100%', backgroundColor: '#e0f7fa', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '5px solid #2dd36f' }}>
+                <div style={{ width: '100%', height: '40%', backgroundColor: '#e0f7fa', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '5px solid #2dd36f' }}>
                   <h2 style={{ color: '#00838f' }}>Active Therapy</h2>
                   {machineInfo && (
                     <p style={{ color: '#00838f', fontSize: '1.1rem' }}>Temp: {machineInfo.temp}°C</p>
@@ -863,7 +939,7 @@ const Therapy: React.FC = () => {
                 </div>
               )}
               {state === 'PAUSED' && (
-                <div style={{ width: '100%', height: '100%', backgroundColor: '#fff8e1', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '5px solid #ffc409' }}>
+                <div style={{ width: '100%', height: '40%', backgroundColor: '#fff8e1', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '5px solid #ffc409' }}>
                   <h2 style={{ color: '#b28900' }}>Session Paused</h2>
                 </div>
               )}
@@ -1232,6 +1308,8 @@ const Therapy: React.FC = () => {
           -moz-appearance: textfield;
         }
       `}</style>
+
+      <MachineInfoModal isOpen={showMachineInfo} onClose={() => setShowMachineInfo(false)} />
 
       {/* Machine disconnected alert */}
       {showMachineAlert && (
