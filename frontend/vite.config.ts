@@ -10,11 +10,12 @@ export default defineConfig({
   server: {
     proxy: {
       '/esp32': {
-        target: process.env.VITE_ESP32_URL ?? 'http://localhost:5500',
+        target: process.env.VITE_ESP32_URL ?? 'http://advaithydro.local:8091',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/esp32/, ''),
       },
     },
+    allowedHosts: true
   },
   plugins: [
     react(),
