@@ -1178,7 +1178,7 @@ const Therapy: React.FC = () => {
           </IonItem>
           <IonItem>
             <IonLabel position="floating">Date of Birth</IonLabel>
-            <IonInput ref={refPatientDob} onClick={() => refPatientDob.current?.showPicker()} className="ion-padding-top" type="date" value={pDob} onIonChange={(e) => setPDob(e.detail.value || '')} />
+            <IonInput ref={refPatientDob} className="ion-padding-top" type="date" value={pDob} onIonChange={(e) => setPDob(e.detail.value || '')} />
           </IonItem>
           <IonItem>
             <IonLabel position="stacked">Notes</IonLabel>
@@ -1357,7 +1357,7 @@ const Therapy: React.FC = () => {
               </IonItem>
               <IonItem>
                 <IonLabel position="floating">Date of Birth</IonLabel>
-                <IonInput ref={refEpDob} onClick={() => refEpDob.current?.showPicker()} className="ion-padding-top" type="date" value={epDob} onIonChange={(e) => setEpDob(e.detail.value || '')} />
+                <IonInput ref={refEpDob} className="ion-padding-top" type="date" value={epDob} onIonChange={(e) => setEpDob(e.detail.value || '')} />
               </IonItem>
               <IonItem>
                 <IonLabel position="stacked">Notes</IonLabel>
