@@ -26,6 +26,12 @@ const Settings: React.FC = () => {
     blower_switch: false,
     water_inlet_valve: false,
     flush_valve: false,
+    auto_flush: false,
+    flush_duration: 10,
+    blower_auto: false,
+    blower_frequency_mode: 'continuous' as 'continuous' | 'interval',
+    blower_interval: 30,
+    blower_duration: 10,
   });
 
   useEffect(() => {
@@ -40,7 +46,7 @@ const Settings: React.FC = () => {
     });
   };
 
-  const handleSetting = (key: keyof typeof settings, value: number) => {
+  const handleSetting = (key: keyof typeof settings, value: number | boolean | string) => {
     const updated = { ...settings, [key]: value };
     setSettings(updated);
     persistSettings(updated);
@@ -272,6 +278,33 @@ const Settings: React.FC = () => {
             </div>
 
             <div style={rowStyle}>
+              <span style={labelStyle}>Flush Duration</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <input
+                  type="number"
+                  min={1} max={300}
+                  value={settings.flush_duration}
+                  onChange={(e) => handleSetting('flush_duration', parseInt(e.target.value, 10) || 10)}
+                  style={inputStyle}
+                />
+                <span style={{ fontSize: '0.8rem', color: '#888' }}>sec</span>
+              </div>
+            </div>
+
+            {/* Auto Flush */}
+            <p style={{ ...colHeaderStyle, marginTop: '1.25rem' }}>Auto Flush</p>
+
+            <div style={rowStyle}>
+              <span style={labelStyle}>Auto Flush</span>
+              <div
+                style={{ cursor: 'pointer' }}
+                onClick={() => handleSetting('auto_flush', !settings.auto_flush)}
+              >
+                {toggleDot(settings.auto_flush)}
+              </div>
+            </div>
+
+            <div style={rowStyle}>
               <span style={labelStyle}>Flush Frequency</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                 <input
@@ -284,6 +317,76 @@ const Settings: React.FC = () => {
                 <span style={{ fontSize: '0.8rem', color: '#888' }}>sec</span>
               </div>
             </div>
+
+            {/* Blower Settings */}
+            <p style={{ ...colHeaderStyle, marginTop: '1.25rem' }}>Blower</p>
+
+            <div style={rowStyle}>
+              <span style={labelStyle}>Blower Auto</span>
+              <div
+                style={{ cursor: 'pointer' }}
+                onClick={() => handleSetting('blower_auto', !settings.blower_auto)}
+              >
+                {toggleDot(settings.blower_auto)}
+              </div>
+            </div>
+
+            <div style={rowStyle}>
+              <span style={labelStyle}>Blower Mode</span>
+              <div style={{ display: 'flex', gap: '0.4rem' }}>
+                {(['continuous', 'interval'] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    onClick={() => handleSetting('blower_frequency_mode', mode)}
+                    style={{
+                      padding: '0.25rem 0.6rem',
+                      borderRadius: '6px',
+                      fontSize: '0.78rem',
+                      fontWeight: 600,
+                      border: `1px solid ${settings.blower_frequency_mode === mode ? '#3880ff' : '#ddd'}`,
+                      backgroundColor: settings.blower_frequency_mode === mode ? '#e8f0ff' : '#fafafa',
+                      color: settings.blower_frequency_mode === mode ? '#3880ff' : '#888',
+                      cursor: 'pointer',
+                      textTransform: 'capitalize',
+                    }}
+                  >
+                    {mode.charAt(0).toUpperCase() + mode.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {settings.blower_frequency_mode === 'interval' && (
+              <>
+                <div style={rowStyle}>
+                  <span style={labelStyle}>Blower Interval</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <input
+                      type="number"
+                      min={5} max={600}
+                      value={settings.blower_interval}
+                      onChange={(e) => handleSetting('blower_interval', parseInt(e.target.value, 10) || 30)}
+                      style={inputStyle}
+                    />
+                    <span style={{ fontSize: '0.8rem', color: '#888' }}>sec</span>
+                  </div>
+                </div>
+
+                <div style={rowStyle}>
+                  <span style={labelStyle}>Blower Duration</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <input
+                      type="number"
+                      min={1} max={300}
+                      value={settings.blower_duration}
+                      onChange={(e) => handleSetting('blower_duration', parseInt(e.target.value, 10) || 10)}
+                      style={inputStyle}
+                    />
+                    <span style={{ fontSize: '0.8rem', color: '#888' }}>sec</span>
+                  </div>
+                </div>
+              </>
+            )}
 
             <p style={{ fontSize: '0.78rem', color: '#aaa', marginTop: '1.5rem' }}>
               Machine ID: {machineId}

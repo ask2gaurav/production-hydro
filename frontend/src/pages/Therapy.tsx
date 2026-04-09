@@ -3,7 +3,7 @@ import {
   IonContent, IonIcon, IonHeader, IonPage, IonTitle, IonToolbar,
   IonGrid, IonRow, IonCol, IonButton, IonBadge, IonProgressBar,
   IonModal, IonItem, IonLabel, IonInput, IonTextarea, IonSpinner,
-  IonText, IonSelect, IonSelectOption, useIonViewDidEnter
+  IonText, IonSelect, IonSelectOption, useIonViewDidEnter, useIonAlert
 } from '@ionic/react';
 import {
   arrowBack, addOutline, personOutline, personCircleOutline,
@@ -15,7 +15,7 @@ import { useStore } from '../store/useStore';
 import { localDB, type LocalTherapist, type LocalPatient } from '../db/localDB';
 import { runSync } from '../services/syncService';
 import { onSessionComplete } from '../services/modeCheck';
-import { fetchMachineInfo, sendPrepareParams } from '../services/esp32Service';
+import { fetchMachineInfo, sendPrepareParams, sendCommand } from '../services/esp32Service';
 import MachineInfoModal from '../components/MachineInfoModal';
 
 // ---------- Helpers ----------
@@ -172,6 +172,7 @@ const DEFAULT_TOTAL_SECONDS = 40 * 60;
 type StatMap = Record<string, { total: number; last: Date | null }>;
 
 const Therapy: React.FC = () => {
+  const [presentAlert] = useIonAlert();
   const { modeStatus, machineId, machineConnected, machineInfo, setMachineConnected, setMachineInfo } = useStore();
   const history = useHistory();
   const [state, setState] = useState<SessionState>('INIT');
@@ -244,6 +245,10 @@ const Therapy: React.FC = () => {
   const isLocked = state === 'INIT' || state === 'ACTIVE' || state === 'PAUSED';
   const [defaultTemp, setDefaultTemp] = useState(37);
   const [showMachineAlert, setShowMachineAlert] = useState(false);
+  const [blowerAuto, setBlowerAuto] = useState(false);
+  const [blowerMode, setBlowerMode] = useState<'continuous' | 'interval'>('continuous');
+  const [blowerInterval, setBlowerInterval] = useState(30);
+  const [blowerDuration, setBlowerDuration] = useState(10);
 
   const [showMachineInfo, setShowMachineInfo] = useState(false);
   const [bgIndex, setBgIndex] = useState(0);
@@ -254,6 +259,21 @@ const Therapy: React.FC = () => {
     }, 20000);
     return () => clearInterval(interval);
   }, []);
+
+  const buildAllParams = useCallback(async (): Promise<Record<string, number>> => {
+    const s = await localDB.settings.get(machineId);
+    return {
+      default_temperature: s?.default_temperature ?? defaultTemp,
+      max_temperature: s?.max_temperature ?? 40,
+      flush_frequency: s?.flush_frequency ?? 30,
+      flush_duration: s?.flush_duration ?? 10,
+      auto_flush: s?.auto_flush ? 1 : 0,
+      blower_auto: s?.blower_auto ? 1 : 0,
+      blower_frequency_mode: s?.blower_frequency_mode === 'interval' ? 1 : 0,
+      blower_interval: s?.blower_interval ?? blowerInterval,
+      blower_duration: s?.blower_duration ?? blowerDuration,
+    };
+  }, [machineId, defaultTemp, blowerInterval, blowerDuration]);
 
   // ---------- Data loading ----------
 
@@ -328,6 +348,10 @@ const Therapy: React.FC = () => {
       setTotalSeconds(secs);
       setTimeLeft(secs);
       if (s?.default_temperature) setDefaultTemp(s.default_temperature);
+      setBlowerAuto(s?.blower_auto ?? false);
+      setBlowerMode(s?.blower_frequency_mode ?? 'continuous');
+      setBlowerInterval(s?.blower_interval ?? 30);
+      setBlowerDuration(s?.blower_duration ?? 10);
     });
   });
 
@@ -356,6 +380,10 @@ const Therapy: React.FC = () => {
         // Auto-advance: water high level reached AND temperature met
         if (state === 'PREPARING' && info.water_hl === 1 && info.temp >= defaultTemp) {
           setState('IDLE');
+        }
+        // Degrade: conditions drop while IDLE (System Ready) → back to PREPARING
+        if (state === 'IDLE' && (info.temp < defaultTemp || info.water_hl !== 1)) {
+          setState('PREPARING');
         }
       } catch {
         setMachineConnected(false);
@@ -411,18 +439,28 @@ const Therapy: React.FC = () => {
   useEffect(() => {
     if (state !== 'ACTIVE') return;
     if (timeLeft <= 0) {
+      buildAllParams().then((params) => sendPrepareParams({ ...params, end_session: 1 }).catch(() => {}));
       endSession();
       return;
     }
     const t = setInterval(() => setTimeLeft((s) => s - 1), 1000);
     return () => clearInterval(t);
-  }, [state, timeLeft, endSession]);
+  }, [state, timeLeft, endSession, buildAllParams]);
 
   const handleStart = async () => {
     setSessionError('');
     if (!selectedTherapistId) { setSessionError('Please select a therapist.'); return; }
     if (!selectedPatientId) { setSessionError('Please select a patient.'); return; }
     if (!sessionNotes.trim()) { setSessionError('Session notes are required.'); return; }
+
+    try {
+      const params = await buildAllParams();
+      const updated = await sendPrepareParams({ ...params, start_session: 1 });
+      setMachineInfo(updated);
+    } catch {
+      presentAlert({ header: 'Command Failed', message: 'Could not start session on the machine. Check the connection.', buttons: ['OK'] });
+      return;
+    }
 
     const therapist = therapists.find((t) => t.id === selectedTherapistId);
     const patient = patients.find((p) => p.id === selectedPatientId);
@@ -450,8 +488,17 @@ const Therapy: React.FC = () => {
     setState('ACTIVE');
   };
 
-  const handlePauseResume = () => {
-    setState((s) => (s === 'ACTIVE' ? 'PAUSED' : 'ACTIVE'));
+  const handlePauseResume = async () => {
+    const isPausing = state === 'ACTIVE';
+    try {
+      const params = await buildAllParams();
+      const updated = await sendPrepareParams({ ...params, pause_session: isPausing ? 1 : 0 });
+      setMachineInfo(updated);
+    } catch {
+      presentAlert({ header: 'Command Failed', message: `Could not ${isPausing ? 'pause' : 'resume'} session on the machine. Check the connection.`, buttons: ['OK'] });
+      return;
+    }
+    setState(isPausing ? 'PAUSED' : 'ACTIVE');
   };
 
   const handlePrepare = async () => {
@@ -475,6 +522,60 @@ const Therapy: React.FC = () => {
       setMachineInfo(updated);
     } catch {
       // Polling will handle reconnection; stay in PREPARING
+    }
+  };
+
+  const handleEndSession = async () => {
+    try {
+      const params = await buildAllParams();
+      const updated = await sendPrepareParams({ ...params, end_session: 1 });
+      setMachineInfo(updated);
+    } catch {
+      presentAlert({ header: 'Command Failed', message: 'Could not end session on the machine. Check the connection.', buttons: ['OK'] });
+      return;
+    }
+    await endSession();
+  };
+
+  const handleFlush = async () => {
+    try {
+      const params = await buildAllParams();
+      const updated = await sendPrepareParams({ ...params, flush_button_hit: 1 });
+      setMachineInfo(updated);
+    } catch {
+      presentAlert({ header: 'Command Failed', message: 'Could not trigger flush on the machine. Check the connection.', buttons: ['OK'] });
+    }
+  };
+
+  // ---------- Blower manual controls ----------
+
+  const handleBlowerToggle = async () => {
+    const newVal: 0 | 1 = machineInfo?.blower === 1 ? 0 : 1;
+    try {
+      const updated = await sendCommand('blower', newVal);
+      setMachineInfo(updated);
+    } catch {
+      setShowMachineAlert(true);
+    }
+  };
+
+  const handleBlowerPulse = async () => {
+    try {
+      const s = await localDB.settings.get(machineId);
+      const params: Record<string, number> = {
+        blower: 1,
+        blower_duration: s?.blower_duration ?? blowerDuration,
+        blower_interval: s?.blower_interval ?? blowerInterval,
+        default_temperature: s?.default_temperature ?? defaultTemp,
+        max_temperature: s?.max_temperature ?? 40,
+        flush_frequency: s?.flush_frequency ?? 30,
+        flush_duration: s?.flush_duration ?? 10,
+        auto_flush: s?.auto_flush ? 1 : 0,
+      };
+      const updated = await sendPrepareParams(params);
+      setMachineInfo(updated);
+    } catch {
+      setShowMachineAlert(true);
     }
   };
 
@@ -706,7 +807,21 @@ const Therapy: React.FC = () => {
               DEMO MODE: {modeStatus.sessions_remaining} sessions left
             </IonBadge>
           )}
-          <IonButton color="primary" slot="end" style={{ marginRight: '1rem' }} onClick={(e) => { (e.currentTarget as HTMLElement).blur(); history.goBack(); }}>
+          <IonButton color="primary" slot="end" style={{ marginRight: '1rem' }} onClick={(e) => {
+            (e.currentTarget as HTMLElement).blur();
+            if (state === 'ACTIVE' || state === 'PAUSED') {
+              presentAlert({
+                header: 'End Therapy Session?',
+                message: 'A session is in progress. Are you sure you want to end it and go back?',
+                buttons: [
+                  { text: 'Cancel', role: 'cancel' },
+                  { text: 'End & Go Back', role: 'destructive', handler: () => { handleEndSession().then(() => history.goBack()); } },
+                ],
+              });
+            } else {
+              history.goBack();
+            }
+          }}>
             <IonIcon icon={arrowBack} />
           </IonButton>
         </IonToolbar>
@@ -815,14 +930,56 @@ const Therapy: React.FC = () => {
               </IonRow>
               <IonRow>
                 <IonCol>
-                  <IonButton expand="block" color="medium" onClick={endSession} disabled={state === 'INIT' || state === 'READY' || state === 'PREPARING'}>
+                  <IonButton expand="block" color="medium" disabled={state === 'INIT' || state === 'READY' || state === 'PREPARING'} onClick={() =>
+                    presentAlert({
+                      header: 'End Therapy Session?',
+                      message: 'Are you sure you want to end the current therapy session?',
+                      buttons: [
+                        { text: 'Cancel', role: 'cancel' },
+                        { text: 'End Session', role: 'destructive', handler: handleEndSession },
+                      ],
+                    })
+                  }>
                     END THERAPY
                   </IonButton>
                 </IonCol>
                 <IonCol>
-                  <IonButton expand="block" color="danger" disabled={state === 'INIT' || state === 'READY'}>FLUSH</IonButton>
+                  <IonButton expand="block" color="danger" disabled={state === 'INIT' || state === 'READY'} onClick={handleFlush}>FLUSH</IonButton>
                 </IonCol>
               </IonRow>
+
+              {!blowerAuto && (
+                <IonRow>
+                  <IonCol>
+                    {blowerMode === 'continuous' ? (
+                      <>
+                        <IonLabel style={{ fontSize: '0.95rem', color: '#555', marginBottom: '0.3rem', marginLeft: '0.5rem' }}>Blower Mode: Continuous</IonLabel>
+                        <IonLabel style={{ fontSize: '0.95rem', color: '#555', marginBottom: '0.3rem', marginLeft: '0.5rem' }}>Blower is {machineInfo?.blower === 1 ? 'ON' : 'OFF'}</IonLabel>
+                      <IonButton
+                        expand="block"
+                          color={machineInfo?.blower === 1 ? 'medium' : 'success'}
+                        disabled={state === 'INIT' || state === 'READY'}
+                        onClick={handleBlowerToggle}
+                      >
+                          TURN BLOWER {machineInfo?.blower === 1 ? 'OFF' :  'ON' }
+                      </IonButton>
+                      </>
+                    ) : (
+                      <>
+                          <IonLabel style={{ fontSize: '0.95rem', color: '#555', marginBottom: '0.3rem', marginLeft: '0.5rem' }}>Blower Mode: Interval</IonLabel>
+                        <IonButton
+                          expand="block"
+                          color="tertiary"
+                          disabled={state === 'INIT' || state === 'READY'}
+                          onClick={handleBlowerPulse}
+                          >
+                          BLOWER
+                        </IonButton>
+                      </>
+                    )}
+                  </IonCol>
+                </IonRow>
+              )}
             </IonCol>
 
             {/* Right panel */}

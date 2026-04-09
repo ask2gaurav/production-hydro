@@ -30,6 +30,12 @@ export interface LocalSettings {
   heater_switch?: boolean;
   pump_switch?: boolean;
   flush_frequency?: number;
+  auto_flush?: boolean;
+  flush_duration?: number;
+  blower_auto?: boolean;
+  blower_frequency_mode?: 'continuous' | 'interval';
+  blower_interval?: number;
+  blower_duration?: number;
 
   // Demo Mode overrides
   mode?: string;
