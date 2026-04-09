@@ -7,13 +7,14 @@ services:
   #   volumes:
   #     - /var/run/docker.sock:/var/run/docker.sock
   backend:
+    image: backend
     build:
       context: ./backend
-      target: backend-dev
+      target: ${VITE_DOCKER_COMPOSE_BACKEND_STAGE}
     environment:
       MONGODB_URI: mongodb://${MONGO_USER}:${MONGO_PASS}@mongodb:27017/hydrotherapy?authSource=admin
       JWT_SECRET: ${JWT_SECRET}
-      NODE_ENV: development
+      NODE_ENV: ${RUNENV}
     ports:
       - "3000:3000"
     depends_on:
@@ -31,9 +32,12 @@ services:
     #   traefik.http.services.backend.loadbalancer.server.port: 3000
 
   frontend:
+    image: frontend
     build:
       context: ./frontend
-      target: frontend-dev
+      target: ${VITE_DOCKER_COMPOSE_FRONTEND_STAGE}
+    environment:
+      NODE_ENV: ${RUNENV}
     ports:
       - "5173:5173"
     develop:
