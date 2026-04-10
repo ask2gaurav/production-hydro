@@ -515,7 +515,7 @@ const Therapy: React.FC = () => {
     try {
       const params = await buildAllParams();
       const current = machineInfo;
-      params.start_session = 1;
+      params.prepare_session = 1;
       if (!current || current.temp < params.default_temperature) params.heater = 1;
       if (!current || current.water_hl === 0) params.water_in_valve = 1;
 
