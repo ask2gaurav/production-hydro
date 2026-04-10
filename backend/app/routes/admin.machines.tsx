@@ -15,6 +15,8 @@ type MachineDoc = {
   asset_type?: string;
   installation_date?: string;
   installation_location?: string;
+  ssid?: string;
+  password?: string;
 };
 
 export async function loader({ request }: { request: Request }) {
@@ -60,6 +62,8 @@ export async function action({ request }: { request: Request }) {
         installation_date: formData.get("installation_date") || undefined,
         installation_location:
           (formData.get("installation_location") as string)?.trim() || undefined,
+        ssid: (formData.get("ssid") as string)?.trim() || undefined,
+        password: (formData.get("password") as string)?.trim() || undefined,
       });
       return { success: true };
     } catch (e: any) {
@@ -76,7 +80,8 @@ export async function action({ request }: { request: Request }) {
       return { error: "Model name and serial number are required." };
     }
     try {
-      await Machine.findByIdAndUpdate(id, {
+      const existing = await Machine.findById(id);
+      const updateData: any = {
         model_name,
         serial_number,
         machine_status: formData.get("machine_status"),
@@ -86,7 +91,10 @@ export async function action({ request }: { request: Request }) {
         installation_date: formData.get("installation_date") || undefined,
         installation_location:
           (formData.get("installation_location") as string)?.trim() || undefined,
-      });
+      };
+      if (!existing?.ssid) updateData.ssid = (formData.get("ssid") as string)?.trim() || undefined;
+      if (!existing?.password) updateData.password = (formData.get("password") as string)?.trim() || undefined;
+      await Machine.findByIdAndUpdate(id, updateData);
       return { success: true };
     } catch (e: any) {
       if (e.code === 11000) return { error: "Serial number already exists." };
@@ -119,6 +127,15 @@ function toInputDate(val?: string) {
   return new Date(val).toISOString().split("T")[0];
 }
 
+function genSsid() {
+  return "Colonima" + String(Math.floor(1000 + Math.random() * 9000));
+}
+
+function genPassword() {
+  const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+  return Array.from({ length: 9 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+}
+
 const inputCls =
   "w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm";
 
@@ -130,6 +147,8 @@ export default function AdminMachines() {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editItem, setEditItem] = useState<MachineDoc | null>(null);
+  const [newSsid, setNewSsid] = useState("");
+  const [newPassword, setNewPassword] = useState("");
   const installationDateRef = useRef<HTMLInputElement>(null);
   const productionDateRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
@@ -141,6 +160,8 @@ export default function AdminMachines() {
 
   const openCreate = () => {
     setEditItem(null);
+    setNewSsid(genSsid());
+    setNewPassword(genPassword());
     setModalOpen(true);
   };
   const openEdit = (m: MachineDoc) => {
@@ -172,13 +193,15 @@ export default function AdminMachines() {
               <th className="text-left px-4 py-3 font-semibold text-gray-600">Status</th>
               <th className="text-left px-4 py-3 font-semibold text-gray-600">Mode</th>
               <th className="text-left px-4 py-3 font-semibold text-gray-600">Location</th>
+              <th className="text-left px-4 py-3 font-semibold text-gray-600">SSID</th>
+              <th className="text-left px-4 py-3 font-semibold text-gray-600">Password</th>
               <th className="text-left px-4 py-3 font-semibold text-gray-600">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {machines.length === 0 && (
               <tr>
-                <td colSpan={6} className="text-center py-10 text-gray-400">
+                <td colSpan={8} className="text-center py-10 text-gray-400">
                   No machines found.
                 </td>
               </tr>
@@ -208,6 +231,8 @@ export default function AdminMachines() {
                 <td className="px-4 py-3 text-gray-600 text-sm">
                   {m.installation_location || "—"}
                 </td>
+                <td className="px-4 py-3 font-mono text-xs text-gray-700">{m.ssid || "—"}</td>
+                <td className="px-4 py-3 font-mono text-xs text-gray-700">{m.password || "—"}</td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">
                     <button
@@ -332,6 +357,32 @@ export default function AdminMachines() {
                 <div className="col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Installation Location</label>
                   <input name="installation_location" defaultValue={editItem?.installation_location} className={inputCls} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">SSID</label>
+                  {editItem?.ssid ? (
+                    <>
+                      <input value={editItem.ssid} readOnly className={inputCls + " bg-gray-100 cursor-not-allowed text-gray-500"} />
+                      <p className="text-xs text-gray-400 mt-1">Cannot be changed once set.</p>
+                    </>
+                  ) : editItem ? (
+                    <input name="ssid" className={inputCls} />
+                  ) : (
+                    <input name="ssid" value={newSsid} onChange={(e) => setNewSsid(e.target.value)} className={inputCls} />
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                  {editItem?.password ? (
+                    <>
+                      <input value={editItem.password} readOnly className={inputCls + " bg-gray-100 cursor-not-allowed text-gray-500"} />
+                      <p className="text-xs text-gray-400 mt-1">Cannot be changed once set.</p>
+                    </>
+                  ) : editItem ? (
+                    <input name="password" className={inputCls} />
+                  ) : (
+                    <input name="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className={inputCls} />
+                  )}
                 </div>
               </div>
 

@@ -32,10 +32,15 @@ export interface LocalSettings {
   flush_frequency?: number;
   auto_flush?: boolean;
   flush_duration?: number;
+  flush_mode?: 'continuous' | 'interval';
   blower_auto?: boolean;
   blower_frequency_mode?: 'continuous' | 'interval';
   blower_interval?: number;
   blower_duration?: number;
+
+  // WiFi credentials synced from server
+  ssid?: string;
+  password?: string;
 
   // Demo Mode overrides
   mode?: string;

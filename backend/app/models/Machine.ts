@@ -30,6 +30,8 @@ const MachineSchema = new mongoose.Schema({
     custom_message: String
   },
   last_seen_date: { type: Date },
+  ssid: { type: String },
+  password: { type: String },
 }, { timestamps: true });
 
 export default mongoose.models.Machine || mongoose.model('Machine', MachineSchema);

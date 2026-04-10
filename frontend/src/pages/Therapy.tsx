@@ -249,6 +249,10 @@ const Therapy: React.FC = () => {
   const [blowerMode, setBlowerMode] = useState<'continuous' | 'interval'>('continuous');
   const [blowerInterval, setBlowerInterval] = useState(30);
   const [blowerDuration, setBlowerDuration] = useState(10);
+  const [flushMode, setFlushMode] = useState<'continuous' | 'interval'>('continuous');
+
+  const [hotspotSsid, setHotspotSsid] = useState<string | null>(null);
+  const [hotspotPassword, setHotspotPassword] = useState<string | null>(null);
 
   const [showMachineInfo, setShowMachineInfo] = useState(false);
   const [bgIndex, setBgIndex] = useState(0);
@@ -263,11 +267,13 @@ const Therapy: React.FC = () => {
   const buildAllParams = useCallback(async (): Promise<Record<string, number>> => {
     const s = await localDB.settings.get(machineId);
     return {
+      session_duration: s?.default_session_minutes ?? 40,
       default_temperature: s?.default_temperature ?? defaultTemp,
       max_temperature: s?.max_temperature ?? 40,
+      auto_flush: s?.auto_flush ? 1 : 0,
+      flush_mode: s?.flush_mode === 'interval' ? 1 : 0,
       flush_frequency: s?.flush_frequency ?? 30,
       flush_duration: s?.flush_duration ?? 10,
-      auto_flush: s?.auto_flush ? 1 : 0,
       blower_auto: s?.blower_auto ? 1 : 0,
       blower_frequency_mode: s?.blower_frequency_mode === 'interval' ? 1 : 0,
       blower_interval: s?.blower_interval ?? blowerInterval,
@@ -352,6 +358,9 @@ const Therapy: React.FC = () => {
       setBlowerMode(s?.blower_frequency_mode ?? 'continuous');
       setBlowerInterval(s?.blower_interval ?? 30);
       setBlowerDuration(s?.blower_duration ?? 10);
+      setFlushMode(s?.flush_mode ?? 'continuous');
+      setHotspotSsid(s?.ssid ?? null);
+      setHotspotPassword(s?.password ?? null);
     });
   });
 
@@ -367,7 +376,7 @@ const Therapy: React.FC = () => {
 
   // ESP32 polling — 3s during PREPARING, 15s otherwise
   useEffect(() => {
-    const interval = state === 'PREPARING' ? 3000 : 15000;
+    const interval = state === 'PREPARING' ? 2000 : 3000;
     const poll = async () => {
       try {
         const info = await fetchMachineInfo();
@@ -504,18 +513,10 @@ const Therapy: React.FC = () => {
   const handlePrepare = async () => {
     setState('PREPARING');
     try {
-      const s = await localDB.settings.get(machineId);
-      const therapyTemp = s?.default_temperature ?? defaultTemp;
-      const maxTemp = s?.max_temperature ?? 40;
-      const flushFreq = s?.flush_frequency ?? 30;
+      const params = await buildAllParams();
       const current = machineInfo;
-
-      const params: Record<string, number> = {
-        default_temperature: therapyTemp,
-        max_temperature: maxTemp,
-        flush_frequency: flushFreq,
-      };
-      if (!current || current.temp < therapyTemp) params.heater = 1;
+      params.start_session = 1;
+      if (!current || current.temp < params.default_temperature) params.heater = 1;
       if (!current || current.water_hl === 0) params.water_in_valve = 1;
 
       const updated = await sendPrepareParams(params);
@@ -544,6 +545,16 @@ const Therapy: React.FC = () => {
       setMachineInfo(updated);
     } catch {
       presentAlert({ header: 'Command Failed', message: 'Could not trigger flush on the machine. Check the connection.', buttons: ['OK'] });
+    }
+  };
+
+  const handleFlushToggle = async () => {
+    const newVal: 0 | 1 = machineInfo?.flush_valve === 1 ? 0 : 1;
+    try {
+      const updated = await sendCommand('flush_valve', newVal);
+      setMachineInfo(updated);
+    } catch {
+      setShowMachineAlert(true);
     }
   };
 
@@ -943,10 +954,38 @@ const Therapy: React.FC = () => {
                     END THERAPY
                   </IonButton>
                 </IonCol>
-                <IonCol>
-                  <IonButton expand="block" color="danger" disabled={state === 'INIT' || state === 'READY'} onClick={handleFlush}>FLUSH</IonButton>
-                </IonCol>
               </IonRow>
+
+              <IonRow>
+                  <IonCol>
+                    {flushMode === 'continuous' ? (
+                      <>
+                        <IonLabel style={{ fontSize: '0.95rem', color: '#555', marginBottom: '0.3rem', marginLeft: '0.5rem' }}>Flush Mode: Continuous</IonLabel>
+                        <IonLabel style={{ fontSize: '0.95rem', color: '#555', marginBottom: '0.3rem', marginLeft: '0.5rem' }}>Flush Valve is {machineInfo?.flush_valve === 1 ? 'ON' : 'OFF'}</IonLabel>
+                        <IonButton
+                          expand="block"
+                          color={machineInfo?.flush_valve === 1 ? 'medium' : 'danger'}
+                          disabled={state === 'INIT' || state === 'READY'}
+                          onClick={handleFlushToggle}
+                        >
+                          TURN FLUSH {machineInfo?.flush_valve === 1 ? 'OFF' : 'ON'}
+                        </IonButton>
+                      </>
+                    ) : (
+                      <>
+                        <IonLabel style={{ fontSize: '0.95rem', color: '#555', marginBottom: '0.3rem', marginLeft: '0.5rem' }}>Flush Mode: Interval</IonLabel>
+                        <IonButton
+                          expand="block"
+                          color="danger"
+                          disabled={state === 'INIT' || state === 'READY'}
+                          onClick={handleFlush}
+                        >
+                          FLUSH
+                        </IonButton>
+                      </>
+                    )}
+                  </IonCol>
+                </IonRow>
 
               {!blowerAuto && (
                 <IonRow>
@@ -989,15 +1028,15 @@ const Therapy: React.FC = () => {
                   <IonIcon icon={cloudOfflineOutline} style={{ fontSize: '5rem', color: '#d32f2f' }} />
                   <h2 style={{ color: '#d32f2f', margin: '0.75rem 0 0.25rem' }}>Machine Not Connected</h2>
                   <p style={{ color: '#666', fontSize: '0.95rem', marginBottom: '1.5rem' }}>
-                    Cannot reach the ESP32 device. Follow the steps below to connect.
+                    Cannot reach the Colonima device. Follow the steps below to connect.
                   </p>
                   <div style={{ textAlign: 'left', backgroundColor: '#fff3f3', border: '1px solid #f5c2c2', borderRadius: '10px', padding: '1rem 1.25rem' }}>
                     <p style={{ fontWeight: 700, color: '#555', marginBottom: '0.5rem' }}>Troubleshooting Steps:</p>
                     <ol style={{ margin: 0, paddingLeft: '1.2rem', color: '#444', fontSize: '0.9rem', lineHeight: '1.8' }}>
                       <li>Enable the <strong>hotspot</strong> on this tablet.</li>
-                      <li>Set hotspot <strong>SSID</strong> to: <code style={{ backgroundColor: '#f0f0f0', padding: '0 4px', borderRadius: '4px' }}>{import.meta.env.VITE_HOTSPOT_SSID}</code></li>
-                      <li>Set hotspot <strong>Password</strong> to: <code style={{ backgroundColor: '#f0f0f0', padding: '0 4px', borderRadius: '4px' }}>{import.meta.env.VITE_HOTSPOT_PASSWORD}</code></li>
-                      <li>Turn on the <strong>ESP32 machine</strong> and wait for it to connect.</li>
+                      <li>Set hotspot <strong>SSID</strong> to: <code style={{ backgroundColor: '#f0f0f0', padding: '0 4px', borderRadius: '4px' }}>{hotspotSsid ?? <em style={{ color: '#999' }}>Contact your supplier for SSID</em>}</code></li>
+                      <li>Set hotspot <strong>Password</strong> to: <code style={{ backgroundColor: '#f0f0f0', padding: '0 4px', borderRadius: '4px' }}>{hotspotPassword ?? <em style={{ color: '#999' }}>Contact your supplier for Password</em>}</code></li>
+                      <li>Turn on the <strong>Colonima machine</strong> and wait for it to connect.</li>
                     </ol>
                   </div>
                 </div>
@@ -1007,7 +1046,7 @@ const Therapy: React.FC = () => {
                   <IonIcon icon={checkmarkCircleOutline} style={{ fontSize: '5rem', color: '#2dd36f' }} />
                   <h2 style={{ color: '#2dd36f', margin: '0.75rem 0 0.25rem' }}>Machine Connected</h2>
                   <p style={{ color: '#666', fontSize: '0.95rem' }}>
-                    ESP32 is online. Select a therapist and patient, add session notes, then press <strong>PREPARE</strong> to begin.
+                    Colonima is online. Select a therapist and patient, add session notes, then press <strong>PREPARE</strong> to begin. Use by professionals only.
                   </p>
                   {machineInfo && (
                     <div style={{ display: 'flex', justifyContent: 'center', gap: '2rem', marginTop: '1rem' }}>
@@ -1069,6 +1108,7 @@ const Therapy: React.FC = () => {
                       )}
                     </div>
                   </div>
+                  <p style={{ color: '#666' }}>Note: Close tank drain valve. Ensure steady water supply from overhead tank.</p>
                 </div>
               )}
               {state === 'IDLE' && (

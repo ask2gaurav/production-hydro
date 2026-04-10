@@ -28,6 +28,7 @@ const Settings: React.FC = () => {
     flush_valve: false,
     auto_flush: false,
     flush_duration: 10,
+    flush_mode: 'continuous' as 'continuous' | 'interval',
     blower_auto: false,
     blower_frequency_mode: 'continuous' as 'continuous' | 'interval',
     blower_interval: 30,
@@ -250,7 +251,7 @@ const Settings: React.FC = () => {
             </div>
 
             <div style={rowStyle}>
-              <span style={labelStyle}>Default Temperature</span>
+              <span style={labelStyle}>Set Therapy Temperature</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                 <input
                   type="number"
@@ -305,18 +306,45 @@ const Settings: React.FC = () => {
             </div>
 
             <div style={rowStyle}>
-              <span style={labelStyle}>Flush Frequency</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <input
-                  type="number"
-                  min={5} max={300}
-                  value={settings.flush_frequency}
-                  onChange={(e) => handleSetting('flush_frequency', parseInt(e.target.value, 10) || 30)}
-                  style={inputStyle}
-                />
-                <span style={{ fontSize: '0.8rem', color: '#888' }}>sec</span>
+              <span style={labelStyle}>Flush Mode</span>
+              <div style={{ display: 'flex', gap: '0.4rem' }}>
+                {(['continuous', 'interval'] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    onClick={() => handleSetting('flush_mode', mode)}
+                    style={{
+                      padding: '0.25rem 0.6rem',
+                      borderRadius: '6px',
+                      fontSize: '0.78rem',
+                      fontWeight: 600,
+                      border: `1px solid ${settings.flush_mode === mode ? '#3880ff' : '#ddd'}`,
+                      backgroundColor: settings.flush_mode === mode ? '#e8f0ff' : '#fafafa',
+                      color: settings.flush_mode === mode ? '#3880ff' : '#888',
+                      cursor: 'pointer',
+                      textTransform: 'capitalize',
+                    }}
+                  >
+                    {mode.charAt(0).toUpperCase() + mode.slice(1)}
+                  </button>
+                ))}
               </div>
             </div>
+
+            {settings.flush_mode === 'interval' && (
+              <div style={rowStyle}>
+                <span style={labelStyle}>Flush Frequency</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <input
+                    type="number"
+                    min={5} max={300}
+                    value={settings.flush_frequency}
+                    onChange={(e) => handleSetting('flush_frequency', parseInt(e.target.value, 10) || 30)}
+                    style={inputStyle}
+                  />
+                  <span style={{ fontSize: '0.8rem', color: '#888' }}>sec</span>
+                </div>
+              </div>
+            )}
 
             {/* Blower Settings */}
             <p style={{ ...colHeaderStyle, marginTop: '1.25rem' }}>Blower</p>

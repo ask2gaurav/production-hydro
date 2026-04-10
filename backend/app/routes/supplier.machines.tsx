@@ -23,7 +23,10 @@ type MachineDoc = {
   mode: string;
   demo_sessions_used: number;
   demo_session_limit: number;
+  production_date?: string;
   installation_location?: string;
+  ssid?: string;
+  password?: string;
   lock_screen_contact?: LockContact;
   owner?: { _id: string; first_name: string; last_name: string } | null;
 };
@@ -61,7 +64,10 @@ export async function loader({ request }: { request: Request }) {
         mode: m.mode,
         demo_sessions_used: m.demo_sessions_used ?? 0,
         demo_session_limit: m.demo_session_limit ?? 10,
+        production_date: m.production_date?.toISOString() ?? null,
         installation_location: m.installation_location ?? null,
+        ssid: m.ssid ?? null,
+        password: m.password ?? null,
         lock_screen_contact: m.lock_screen_contact ?? {},
         owner: o
           ? { _id: o._id.toString(), first_name: o.first_name, last_name: o.last_name }
@@ -104,6 +110,9 @@ export async function action({ request }: { request: Request }) {
     const existing = await Machine.findOne({ serial_number });
     if (existing) return { error: "A machine with this serial number already exists.", intent };
 
+    const ssid = (formData.get("ssid") as string)?.trim() || undefined;
+    const password = (formData.get("password") as string)?.trim() || undefined;
+
     const machine = await Machine.create({
       serial_number,
       model_name,
@@ -112,6 +121,8 @@ export async function action({ request }: { request: Request }) {
       demo_session_limit: mode === "demo" ? demo_session_limit : 10,
       installation_location,
       production_date: production_date ? new Date(production_date) : undefined,
+      ssid,
+      password,
     });
 
     await MachineSupplier.create({ machine_id: machine._id, supplier_id: supplierId });
@@ -167,6 +178,40 @@ export async function action({ request }: { request: Request }) {
     return { success: true };
   }
 
+  if (intent === "update_machine") {
+    const model_name = (formData.get("model_name") as string)?.trim();
+    const machine_status = formData.get("machine_status") as string;
+    const mode = formData.get("mode") as string;
+    const installation_location = (formData.get("installation_location") as string)?.trim() || undefined;
+    const production_date = (formData.get("production_date") as string) || undefined;
+
+    if (!model_name) return { error: "Model name is required.", intent };
+    if (!["Active", "Inactive", "Maintenance"].includes(machine_status)) return { error: "Invalid status.", intent };
+    if (!["demo", "full"].includes(mode)) return { error: "Invalid mode.", intent };
+
+    const existingMachine = await Machine.findById(machine_id);
+    if (!existingMachine) return { error: "Machine not found.", intent };
+
+    const updateData: any = {
+      model_name,
+      machine_status,
+      mode,
+      installation_location,
+      production_date: production_date ? new Date(production_date) : undefined,
+    };
+
+    if (mode === "demo") {
+      const demo_session_limit = parseInt(formData.get("demo_session_limit") as string);
+      if (demo_session_limit >= 1) updateData.demo_session_limit = demo_session_limit;
+    }
+
+    if (!existingMachine.ssid) updateData.ssid = (formData.get("ssid") as string)?.trim() || undefined;
+    if (!existingMachine.password) updateData.password = (formData.get("password") as string)?.trim() || undefined;
+
+    await Machine.findByIdAndUpdate(machine_id, updateData);
+    return { success: true, intent };
+  }
+
   if (intent === "update_lock_contact") {
     const supplier_name = (formData.get("supplier_name") as string)?.trim();
     const supplier_email = (formData.get("supplier_email") as string)?.trim();
@@ -182,6 +227,23 @@ export async function action({ request }: { request: Request }) {
 
   return { error: "Unknown intent." };
 }
+
+function toInputDate(val?: string) {
+  if (!val) return "";
+  return new Date(val).toISOString().split("T")[0];
+}
+
+function genSsid() {
+  return "Colonima" + String(Math.floor(1000 + Math.random() * 9000));
+}
+
+function genPassword() {
+  const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+  return Array.from({ length: 9 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+}
+
+const supplierInputCls =
+  "w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm";
 
 const STATUS_COLORS: Record<string, string> = {
   Active: "bg-green-100 text-green-700",
@@ -206,6 +268,16 @@ export default function SupplierMachines() {
 
   const [addModal, setAddModal] = useState(false);
   const [addMode, setAddMode] = useState("demo");
+  const [addSsid, setAddSsid] = useState("");
+  const [addPassword, setAddPassword] = useState("");
+
+  const [editModal, setEditModal] = useState<MachineDoc | null>(null);
+  const [editModeField, setEditModeField] = useState("demo");
+
+  const openEditModal = (m: MachineDoc) => {
+    setEditModeField(m.mode);
+    setEditModal(m);
+  };
 
   const [contactModal, setContactModal] = useState<MachineDoc | null>(null);
   const [contactForm, setContactForm] = useState<LockContact>({});
@@ -230,10 +302,15 @@ export default function SupplierMachines() {
       if ((actionData as any).intent === "add_machine") {
         setAddModal(false);
         setAddMode("demo");
+        setAddSsid("");
+        setAddPassword("");
       }
       if ((actionData as any).intent === "update_lock_contact") {
         setContactModal(null);
         setContactForm({});
+      }
+      if ((actionData as any).intent === "update_machine") {
+        setEditModal(null);
       }
     }
   }, [actionData]);
@@ -246,7 +323,7 @@ export default function SupplierMachines() {
           <p className="text-sm text-gray-500 mt-1">{machines.length} machine{machines.length !== 1 ? "s" : ""} assigned</p>
         </div>
         <button
-          onClick={() => { setAddModal(true); setAddMode("demo"); }}
+          onClick={() => { setAddModal(true); setAddMode("demo"); setAddSsid(genSsid()); setAddPassword(genPassword()); }}
           className="px-4 py-2 bg-teal-700 text-white rounded hover:bg-teal-800 text-sm font-medium"
         >
           + Add Machine
@@ -269,13 +346,15 @@ export default function SupplierMachines() {
               <th className="text-left px-4 py-3 font-semibold text-gray-600">Mode</th>
               <th className="text-left px-4 py-3 font-semibold text-gray-600">Demo Sessions</th>
               <th className="text-left px-4 py-3 font-semibold text-gray-600">Owner</th>
+              <th className="text-left px-4 py-3 font-semibold text-gray-600">SSID</th>
+              <th className="text-left px-4 py-3 font-semibold text-gray-600">Password</th>
               <th className="text-left px-4 py-3 font-semibold text-gray-600">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {machines.length === 0 && (
               <tr>
-                <td colSpan={7} className="text-center py-10 text-gray-400">
+                <td colSpan={9} className="text-center py-10 text-gray-400">
                   No machines assigned to you yet.
                 </td>
               </tr>
@@ -302,6 +381,8 @@ export default function SupplierMachines() {
                     ? <a href={`/supplier/owners/${m.owner._id}`} className="text-teal-600 hover:underline">{m.owner.first_name} {m.owner.last_name}</a>
                     : <span className="text-gray-400">Unassigned</span>}
                 </td>
+                <td className="px-4 py-3 font-mono text-xs text-gray-700">{m.ssid || "—"}</td>
+                <td className="px-4 py-3 font-mono text-xs text-gray-700">{m.password || "—"}</td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">
                     <a
@@ -310,6 +391,13 @@ export default function SupplierMachines() {
                     >
                       View
                     </a>
+                    |
+                    <button
+                      onClick={() => openEditModal(m)}
+                      className="text-blue-600 hover:underline text-xs font-medium"
+                    >
+                      Edit
+                    </button>
                     |
                     <button
                       onClick={() => openContactModal(m)}
@@ -343,7 +431,7 @@ export default function SupplierMachines() {
                       <Form
                         method="post"
                         onSubmit={(e) => { if (!confirm("Switch back to demo mode?")) e.preventDefault(); }}
-                      >
+                      >|&nbsp;&nbsp;
                         <input type="hidden" name="intent" value="set_demo" />
                         <input type="hidden" name="machine_id" value={m._id} />
                         <button type="submit" className="text-yellow-600 hover:underline text-xs font-medium" disabled={isSubmitting}>
@@ -358,6 +446,133 @@ export default function SupplierMachines() {
           </tbody>
         </table>
       </div>
+
+      {/* Edit Machine Modal */}
+      {editModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-6 border-b">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-800">Edit Machine</h2>
+                <p className="text-sm text-gray-500 mt-0.5 font-mono">{editModal.serial_number}</p>
+              </div>
+              <button onClick={() => setEditModal(null)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">✕</button>
+            </div>
+
+            <Form method="post" className="p-6 flex flex-col gap-4">
+              <input type="hidden" name="intent" value="update_machine" />
+              <input type="hidden" name="machine_id" value={editModal._id} />
+
+              {actionData?.error && (actionData as any).intent === "update_machine" && (
+                <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded text-sm">
+                  {actionData.error}
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Serial Number</label>
+                <input
+                  value={editModal.serial_number}
+                  readOnly
+                  className={supplierInputCls + " bg-gray-100 cursor-not-allowed text-gray-500"}
+                />
+                <p className="text-xs text-gray-400 mt-1">Cannot be changed after creation.</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Model Name *</label>
+                <input name="model_name" defaultValue={editModal.model_name} required className={supplierInputCls} />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Status *</label>
+                  <select name="machine_status" defaultValue={editModal.machine_status} required className={supplierInputCls}>
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
+                    <option value="Maintenance">Maintenance</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Mode *</label>
+                  <select
+                    name="mode"
+                    value={editModeField}
+                    onChange={(e) => setEditModeField(e.target.value)}
+                    required
+                    className={supplierInputCls}
+                  >
+                    <option value="demo">Demo</option>
+                    <option value="full">Full</option>
+                  </select>
+                </div>
+              </div>
+
+              {editModeField === "demo" && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Demo Session Limit *</label>
+                  <input
+                    name="demo_session_limit"
+                    type="number"
+                    min={1}
+                    defaultValue={editModal.demo_session_limit}
+                    required
+                    className={supplierInputCls}
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Installation Location</label>
+                <input name="installation_location" defaultValue={editModal.installation_location ?? ""} placeholder="Optional" className={supplierInputCls} />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Production Date</label>
+                <input name="production_date" type="date" defaultValue={toInputDate(editModal.production_date)} className={supplierInputCls} />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">SSID</label>
+                  {editModal.ssid ? (
+                    <>
+                      <input value={editModal.ssid} readOnly className={supplierInputCls + " bg-gray-100 cursor-not-allowed text-gray-500"} />
+                      <p className="text-xs text-gray-400 mt-1">Cannot be changed once set.</p>
+                    </>
+                  ) : (
+                    <input name="ssid" placeholder="Optional" className={supplierInputCls} />
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                  {editModal.password ? (
+                    <>
+                      <input value={editModal.password} readOnly className={supplierInputCls + " bg-gray-100 cursor-not-allowed text-gray-500"} />
+                      <p className="text-xs text-gray-400 mt-1">Cannot be changed once set.</p>
+                    </>
+                  ) : (
+                    <input name="password" placeholder="Optional" className={supplierInputCls} />
+                  )}
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="flex-1 py-2 bg-teal-700 text-white rounded hover:bg-teal-800 font-medium text-sm disabled:opacity-50"
+                >
+                  {isSubmitting ? "Saving..." : "Update Machine"}
+                </button>
+                <button type="button" onClick={() => setEditModal(null)} className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50 text-sm">
+                  Cancel
+                </button>
+              </div>
+            </Form>
+          </div>
+        </div>
+      )}
 
       {/* Add Machine Modal */}
       {addModal && (
@@ -453,6 +668,27 @@ export default function SupplierMachines() {
                   type="date"
                   className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
                 />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">SSID</label>
+                  <input
+                    name="ssid"
+                    value={addSsid}
+                    onChange={(e) => setAddSsid(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                  <input
+                    name="password"
+                    value={addPassword}
+                    onChange={(e) => setAddPassword(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
+                  />
+                </div>
               </div>
 
               <div className="flex gap-3 pt-2">

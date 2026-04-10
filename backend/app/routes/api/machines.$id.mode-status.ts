@@ -44,5 +44,7 @@ export async function loader({ request, params }: { request: Request, params: an
     sessions_remaining,
     is_locked,
     lock_screen_contact,
+    ssid: actualTarget.ssid ?? null,
+    password: actualTarget.password ?? null,
   }), { status: 200, headers: {'Content-Type':'application/json'} });
 }

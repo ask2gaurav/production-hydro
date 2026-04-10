@@ -29,14 +29,32 @@ export async function fetchMachineInfo(): Promise<MachineInfo> {
   const res = await fetch(`${BASE}/${ENDPOINT}`, { signal: AbortSignal.timeout(3000) });
   if (!res.ok) throw new Error(`ESP32 responded with ${res.status}`);
   const text = await res.text();
-  return parseLooseJson(text);
+  const jsonResp = parseLooseJson(text);
+  // jsonResp['temp'] = jsonResp['temperature'];
+  // jsonResp['water_ll'] = jsonResp['water_level_low'];
+  // jsonResp['water_hl'] = jsonResp['water_level_high'];
+  // jsonResp['water_in_valve'] = !Number(jsonResp['water_in_s1']);
+  // jsonResp['pump'] = !Number(jsonResp['water_pump_out']);
+  // jsonResp['flush_valve'] = !Number(jsonResp['flush']);
+  // jsonResp['blower'] = !Number(jsonResp['blower']);
+  // jsonResp['heater'] = !Number(jsonResp['heater']);
+  return jsonResp;
 }
 
 export async function sendCommand(param: string, value: 0 | 1): Promise<MachineInfo> {
   const res = await fetch(`${BASE}/${ENDPOINT}?${param}=${value}`, { signal: AbortSignal.timeout(3000) });
   if (!res.ok) throw new Error(`ESP32 responded with ${res.status}`);
   const text = await res.text();
-  return parseLooseJson(text);
+  const jsonResp = parseLooseJson(text);
+  // jsonResp['temp'] = jsonResp['temperature'];
+  // jsonResp['water_ll'] = jsonResp['water_level_low'];
+  // jsonResp['water_hl'] = jsonResp['water_level_high'];
+  // jsonResp['water_in_valve'] = !Number(jsonResp['water_in_s1']);
+  // jsonResp['pump'] = !Number(jsonResp['water_pump_out']);
+  // jsonResp['flush_valve'] = !Number(jsonResp['flush']);
+  // jsonResp['blower'] = !Number(jsonResp['blower']);
+  // jsonResp['heater'] = !Number(jsonResp['heater']);
+  return jsonResp;
 }
 
 export async function sendPrepareParams(params: Record<string, number>): Promise<MachineInfo> {
@@ -44,5 +62,14 @@ export async function sendPrepareParams(params: Record<string, number>): Promise
   const res = await fetch(`${BASE}/${ENDPOINT}?${qs}`, { signal: AbortSignal.timeout(5000) });
   if (!res.ok) throw new Error(`ESP32 responded with ${res.status}`);
   const text = await res.text();
-  return parseLooseJson(text);
+  const jsonResp = parseLooseJson(text);
+  // jsonResp['temp'] = jsonResp['temperature'];
+  // jsonResp['water_ll'] = jsonResp['water_level_low'];
+  // jsonResp['water_hl'] = jsonResp['water_level_high'];
+  // jsonResp['water_in_valve'] = !Number(jsonResp['water_in_s1']);
+  // jsonResp['pump'] = !Number(jsonResp['water_pump_out']);
+  // jsonResp['flush_valve'] = !Number(jsonResp['flush']);
+  // jsonResp['blower'] = !Number(jsonResp['blower']);
+  // jsonResp['heater'] = !Number(jsonResp['heater']);
+  return jsonResp;
 }
