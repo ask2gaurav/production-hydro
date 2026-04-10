@@ -56,6 +56,7 @@ export default [
       route("machines/:id", "routes/supplier.machines.$id.tsx"),
       route("invoices", "routes/supplier.invoices.tsx"),
       route("resources", "routes/supplier.resources.tsx"),
+      route("profile", "routes/supplier.profile.tsx"),
     ])
   ]),
 
@@ -69,7 +70,8 @@ export default [
       route("owners", "routes/admin.owners.tsx"),
       route("suppliers", "routes/admin.suppliers.tsx"),
       route("invoices", "routes/admin.invoices.tsx"),
-      route("resources", "routes/admin.resources.tsx")
+      route("resources", "routes/admin.resources.tsx"),
+      route("profile", "routes/admin.profile.tsx"),
     ])
   ])
 ] satisfies RouteConfig;

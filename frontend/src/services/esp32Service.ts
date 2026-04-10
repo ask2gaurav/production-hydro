@@ -3,7 +3,7 @@
 // calls it directly, so we use the configured URL.
 const BASE = import.meta.env.DEV
   ? import.meta.env.VITE_ESP32_URL
-  : (import.meta.env.VITE_ESP32_URL ?? 'http://advaithydro.local:5500');
+  : (import.meta.env.VITE_ESP32_URL ?? 'http://advaithydro.local:8091');
 
 const ENDPOINT = import.meta.env.VITE_ESP32_ENDPOINT ?? 'machineinfo.html';
 

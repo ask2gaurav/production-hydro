@@ -376,7 +376,7 @@ const Therapy: React.FC = () => {
 
   // ESP32 polling — 3s during PREPARING, 15s otherwise
   useEffect(() => {
-    const interval = state === 'PREPARING' ? 2000 : 3000;
+    const interval = state === 'PREPARING' ? 3000 : 15000;
     const poll = async () => {
       try {
         const info = await fetchMachineInfo();
@@ -437,6 +437,7 @@ const Therapy: React.FC = () => {
     setSelectedPatientId(null);
     setSessionNotes('');
     setSessionError('');
+    
 
     // const updatedStatus = await localDB.settings.get(machineId);
     // if (updatedStatus?.is_locked) {
