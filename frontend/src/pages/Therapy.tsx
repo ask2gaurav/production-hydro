@@ -245,7 +245,9 @@ const Therapy: React.FC = () => {
   const isLocked = state === 'INIT' || state === 'ACTIVE' || state === 'PAUSED';
   const [defaultTemp, setDefaultTemp] = useState(37);
   const [showMachineAlert, setShowMachineAlert] = useState(false);
+  const [showDisconnectPauseModal, setShowDisconnectPauseModal] = useState(false);
   const [blowerAuto, setBlowerAuto] = useState(false);
+  const [flushAuto, setFlushAuto] = useState(false);
   const [blowerMode, setBlowerMode] = useState<'continuous' | 'interval'>('continuous');
   const [blowerInterval, setBlowerInterval] = useState(30);
   const [blowerDuration, setBlowerDuration] = useState(10);
@@ -355,6 +357,7 @@ const Therapy: React.FC = () => {
       setTimeLeft(secs);
       if (s?.default_temperature) setDefaultTemp(s.default_temperature);
       setBlowerAuto(s?.blower_auto ?? false);
+      setFlushAuto(s?.auto_flush ?? false);
       setBlowerMode(s?.blower_frequency_mode ?? 'continuous');
       setBlowerInterval(s?.blower_interval ?? 30);
       setBlowerDuration(s?.blower_duration ?? 10);
@@ -376,7 +379,7 @@ const Therapy: React.FC = () => {
 
   // ESP32 polling — 3s during PREPARING, 15s otherwise
   useEffect(() => {
-    const interval = state === 'PREPARING' ? 3000 : 15000;
+    const interval = state === 'PREPARING' ? 500 : 3000;
     const poll = async () => {
       try {
         const info = await fetchMachineInfo();
@@ -399,8 +402,12 @@ const Therapy: React.FC = () => {
         setMachineInfo(null);
         if (state === 'READY') {
           setState('INIT');
+        } else if (state === 'ACTIVE') {
+          // Auto-pause the session and show a modal when machine disconnects during active session
+          setState('PAUSED');
+          setShowDisconnectPauseModal(true);
         } else if (state !== 'INIT') {
-          // Show alert banner when connection drops mid-session
+          // Show alert banner when connection drops mid-session (PREPARING, IDLE, PAUSED)
           setShowMachineAlert(true);
         }
       }
@@ -552,7 +559,8 @@ const Therapy: React.FC = () => {
   const handleFlushToggle = async () => {
     const newVal: 0 | 1 = machineInfo?.flush_valve === 1 ? 0 : 1;
     try {
-      const updated = await sendCommand('flush_valve', newVal);
+      const params = await buildAllParams();
+      const updated = await sendPrepareParams({ ...params, 'flush_valve': newVal });
       setMachineInfo(updated);
     } catch {
       setShowMachineAlert(true);
@@ -564,7 +572,9 @@ const Therapy: React.FC = () => {
   const handleBlowerToggle = async () => {
     const newVal: 0 | 1 = machineInfo?.blower === 1 ? 0 : 1;
     try {
-      const updated = await sendCommand('blower', newVal);
+      //const updated = await sendCommand('blower', newVal);
+      const params = await buildAllParams();
+      const updated = await sendPrepareParams({ ...params, 'blower': newVal });
       setMachineInfo(updated);
     } catch {
       setShowMachineAlert(true);
@@ -573,18 +583,20 @@ const Therapy: React.FC = () => {
 
   const handleBlowerPulse = async () => {
     try {
-      const s = await localDB.settings.get(machineId);
-      const params: Record<string, number> = {
-        blower: 1,
-        blower_duration: s?.blower_duration ?? blowerDuration,
-        blower_interval: s?.blower_interval ?? blowerInterval,
-        default_temperature: s?.default_temperature ?? defaultTemp,
-        max_temperature: s?.max_temperature ?? 40,
-        flush_frequency: s?.flush_frequency ?? 30,
-        flush_duration: s?.flush_duration ?? 10,
-        auto_flush: s?.auto_flush ? 1 : 0,
-      };
-      const updated = await sendPrepareParams(params);
+      //const s = await localDB.settings.get(machineId);
+      // const params: Record<string, number> = {
+      //   blower: 1,
+      //   blower_duration: s?.blower_duration ?? blowerDuration,
+      //   blower_interval: s?.blower_interval ?? blowerInterval,
+      //   default_temperature: s?.default_temperature ?? defaultTemp,
+      //   max_temperature: s?.max_temperature ?? 40,
+      //   flush_frequency: s?.flush_frequency ?? 30,
+      //   flush_duration: s?.flush_duration ?? 10,
+      //   auto_flush: s?.auto_flush ? 1 : 0,
+      // };
+      // const updated = await sendPrepareParams(params);
+      const params = await buildAllParams();
+      const updated = await sendPrepareParams({ ...params, 'blower': 1 });
       setMachineInfo(updated);
     } catch {
       setShowMachineAlert(true);
@@ -959,20 +971,20 @@ const Therapy: React.FC = () => {
 
               <IonRow>
                   <IonCol>
-                    {flushMode === 'continuous' ? (
+                  {flushMode === 'continuous' ? !flushAuto ? (
                       <>
                         <IonLabel style={{ fontSize: '0.95rem', color: '#555', marginBottom: '0.3rem', marginLeft: '0.5rem' }}>Flush Mode: Continuous</IonLabel>
                         <IonLabel style={{ fontSize: '0.95rem', color: '#555', marginBottom: '0.3rem', marginLeft: '0.5rem' }}>Flush Valve is {machineInfo?.flush_valve === 1 ? 'ON' : 'OFF'}</IonLabel>
                         <IonButton
                           expand="block"
-                          color={machineInfo?.flush_valve === 1 ? 'medium' : 'danger'}
+                        color={machineInfo?.flush_valve === 1 ? 'success' : 'danger'}
                           disabled={state === 'INIT' || state === 'READY'}
                           onClick={handleFlushToggle}
                         >
                           TURN FLUSH {machineInfo?.flush_valve === 1 ? 'OFF' : 'ON'}
                         </IonButton>
                       </>
-                    ) : (
+                    ):('') : (
                       <>
                         <IonLabel style={{ fontSize: '0.95rem', color: '#555', marginBottom: '0.3rem', marginLeft: '0.5rem' }}>Flush Mode: Interval</IonLabel>
                         <IonButton
@@ -1023,7 +1035,7 @@ const Therapy: React.FC = () => {
             </IonCol>
 
             {/* Right panel */}
-            <IonCol size="7" style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'start', padding: '2rem', backgroundImage: `url(${['/healthy_gut_1024x683.png', '/hydrad_soften_1024x683.png'][bgIndex]})`, backgroundSize: 'contain', backgroundRepeat: 'no-repeat', backgroundPosition: 'bottom center', transition: 'background-image 0.8s ease-in-out' }}>
+            <IonCol size="7" style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'start', padding: '0.51rem', backgroundImage: `url(${['/healthy_gut_1024x683.png', '/hydrad_soften_1024x683.png'][bgIndex]})`, backgroundSize: 'contain', backgroundRepeat: 'no-repeat', backgroundPosition: 'bottom center', transition: 'background-image 0.8s ease-in-out' }}>
               {state === 'INIT' && (
                 <div style={{ textAlign: 'center', backgroundColor: 'rgba(255,255,255,0.88)', borderRadius: '16px', padding: '2rem', maxWidth: '420px' }}>
                   <IonIcon icon={cloudOfflineOutline} style={{ fontSize: '5rem', color: '#d32f2f' }} />
@@ -1064,11 +1076,11 @@ const Therapy: React.FC = () => {
                 </div>
               )}
               {state === 'PREPARING' && (
-                <div style={{ width: '100%' }}>
+                <div style={{ width: '100%', backgroundColor: 'rgba(255,255,255,0.94)', border: '1px solid rgba(205,205,205,0.4)', borderRadius: '16px', padding: '10px'}}>
                   <h3 style={{ textAlign: 'center', marginBottom: '1.5rem', color: '#555' }}>
                     Preparing… waiting for water level and temperature
                   </h3>
-                  <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'start' }}>
                     {/* Temperature gauge */}
                     <div style={{ textAlign: 'center' }}>
                       <p style={{ fontWeight: 600, color: '#555', marginBottom: '0.5rem' }}>Water Temperature</p>
@@ -1087,7 +1099,7 @@ const Therapy: React.FC = () => {
                     {/* Water level indicator */}
                     <div style={{ textAlign: 'center' }}>
                       <p style={{ fontWeight: 600, color: '#555', marginBottom: '0.5rem' }}>Water Level</p>
-                      <div style={{ width: '80px', height: '180px', border: '2px solid #ccc', borderRadius: '4px', margin: '0 auto', position: 'relative', backgroundColor: '#f9f9f9' }}>
+                      <div style={{ width: '80px', height: '120px', border: '2px solid #ccc', borderRadius: '4px', margin: '0 auto', position: 'relative', backgroundColor: '#f9f9f9' }}>
                         {/* Low level marker */}
                         <div style={{ position: 'absolute', bottom: '30%', left: 0, right: 0, borderTop: '1px dashed #f0a500', zIndex: 1 }} />
                         {/* High level marker */}
@@ -1508,6 +1520,45 @@ const Therapy: React.FC = () => {
       `}</style>
 
       <MachineInfoModal isOpen={showMachineInfo} onClose={() => setShowMachineInfo(false)} />
+
+      {/* Session auto-paused due to machine disconnection modal */}
+      {showDisconnectPauseModal && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 10000,
+          backgroundColor: 'rgba(0,0,0,0.55)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <div style={{
+            backgroundColor: 'white', borderRadius: '14px',
+            padding: '2rem 2rem 1.5rem',
+            maxWidth: '420px', width: '90%',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.28)',
+            textAlign: 'center',
+          }}>
+            <div style={{ fontSize: '2.8rem', marginBottom: '0.5rem' }}>⚠️</div>
+            <h2 style={{ margin: '0 0 0.5rem', fontSize: '1.3rem', color: '#b71c1c', fontWeight: 700 }}>
+              Session Paused
+            </h2>
+            <p style={{ margin: '0 0 0.25rem', fontSize: '0.95rem', color: '#333', lineHeight: 1.5 }}>
+              The machine became unreachable and your session has been <strong>automatically paused</strong>.
+            </p>
+            <p style={{ margin: '0 0 1.5rem', fontSize: '0.88rem', color: '#666', lineHeight: 1.5 }}>
+              Please ensure the machine is powered on and connected to the same network, then press <strong>Resume</strong> to continue the session.
+            </p>
+            <button
+              onClick={() => setShowDisconnectPauseModal(false)}
+              style={{
+                backgroundColor: '#0a5c99', color: 'white',
+                border: 'none', borderRadius: '8px',
+                padding: '0.65rem 2rem', fontSize: '1rem',
+                fontWeight: 600, cursor: 'pointer', width: '100%',
+              }}
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Machine disconnected alert */}
       {showMachineAlert && (
