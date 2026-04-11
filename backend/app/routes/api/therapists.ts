@@ -2,18 +2,21 @@ import { requireUserRole } from '../../lib/auth.server';
 import Therapist from '../../models/Therapist';
 import { connectDB } from '../../lib/db';
 import Machine from '~/models/Machine';
+import { corsHeaders, handleOptions } from '../../lib/cors.server';
 
 export async function loader({ request }: { request: Request }) {
+  if (request.method === 'OPTIONS') return handleOptions();
   const url = new URL(request.url);
   const machine_id = url.searchParams.get('machine_id');
   await connectDB();
-  await Machine.findOneAndUpdate({ _id: machine_id }, { last_seen_date: new Date() });   
+  await Machine.findOneAndUpdate({ _id: machine_id }, { last_seen_date: new Date() });
   const filter = machine_id ? { machine_id, is_active: true } : { is_active: true };
   const therapists = await Therapist.find(filter);
-  return new Response(JSON.stringify(therapists), { status: 200, headers: {'Content-Type':'application/json'} });
+  return new Response(JSON.stringify(therapists), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 }
 
 export async function action({ request }: { request: Request }) {
+  if (request.method === 'OPTIONS') return handleOptions();
   const user = await requireUserRole(request, ['Admin', 'Supplier', 'Owner']);
   await connectDB();
   if (request.method === 'POST') {
@@ -24,7 +27,7 @@ export async function action({ request }: { request: Request }) {
       { upsert: true, new: true }
     );
     await Machine.findOneAndUpdate({ _id: data.machine_id }, { last_seen_date: new Date() });
-    return new Response(JSON.stringify(therapist), { status: 201 });
+    return new Response(JSON.stringify(therapist), { status: 201, headers: corsHeaders });
   }
-  return new Response('Method Not Allowed', { status: 405 });
+  return new Response('Method Not Allowed', { status: 405, headers: corsHeaders });
 }

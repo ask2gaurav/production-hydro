@@ -2,8 +2,10 @@ import Machine from '../../models/Machine';
 import MachineSupplier from '../../models/MachineSupplier';
 import User from '../../models/User';
 import { connectDB } from '../../lib/db';
+import { corsHeaders, handleOptions } from '../../lib/cors.server';
 
 export async function loader({ request, params }: { request: Request, params: any }) {
+  if (request.method === 'OPTIONS') return handleOptions();
   await connectDB();
   const { id } = params;
 
@@ -11,7 +13,7 @@ export async function loader({ request, params }: { request: Request, params: an
   const actualTarget = machine || await Machine.findById(id).catch(()=>null);
 
   if (!actualTarget) {
-     return new Response(JSON.stringify({ error: 'Not found' }), { status: 404 });
+     return new Response(JSON.stringify({ error: 'Not found' }), { status: 404, headers: corsHeaders });
   }
 
   const is_locked = actualTarget.mode === 'demo' && actualTarget.demo_sessions_used >= actualTarget.demo_session_limit;
@@ -46,5 +48,5 @@ export async function loader({ request, params }: { request: Request, params: an
     lock_screen_contact,
     ssid: actualTarget.ssid ?? null,
     password: actualTarget.password ?? null,
-  }), { status: 200, headers: {'Content-Type':'application/json'} });
+  }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 }

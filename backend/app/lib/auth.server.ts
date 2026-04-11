@@ -4,6 +4,7 @@ import AuthCredential from '../models/AuthCredential';
 import User from '../models/User';
 import UserType from '../models/UserType';
 import { connectDB } from './db';
+import { corsHeaders } from './cors.server';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-256-bit-secret';
 const JWT_EXPIRY = process.env.JWT_EXPIRY || '8h';
@@ -71,13 +72,13 @@ export async function requireUserRole(request: Request, allowedRoles: string[]) 
   }
 
   if (!token) {
-    throw new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
+    throw new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders });
   }
 
   const decoded: any = verifyToken(token);
-  
+
   if (!decoded || !allowedRoles.includes(decoded.type)) {
-    throw new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403 });
+    throw new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403, headers: corsHeaders });
   }
 
   return decoded;
