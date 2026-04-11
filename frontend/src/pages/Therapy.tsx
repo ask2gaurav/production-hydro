@@ -509,7 +509,7 @@ const Therapy: React.FC = () => {
     const isPausing = state === 'ACTIVE';
     try {
       const params = await buildAllParams();
-      const updated = await sendPrepareParams({ ...params, pause_session: isPausing ? 1 : 0 });
+      const updated = await sendPrepareParams({ ...params, start_session: 1, prepare_session: 1, pause_session: isPausing ? 1 : 0 });
       setMachineInfo(updated);
     } catch {
       presentAlert({ header: 'Command Failed', message: `Could not ${isPausing ? 'pause' : 'resume'} session on the machine. Check the connection.`, buttons: ['OK'] });
