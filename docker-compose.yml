@@ -8,6 +8,7 @@ services:
   #     - /var/run/docker.sock:/var/run/docker.sock
   backend:
     image: backend
+    restart: unless-stopped
     build:
       context: ./backend
       target: ${VITE_DOCKER_COMPOSE_BACKEND_STAGE}
@@ -33,6 +34,7 @@ services:
 
   frontend:
     image: frontend
+    restart: unless-stopped
     build:
       context: ./frontend
       target: ${VITE_DOCKER_COMPOSE_FRONTEND_STAGE}
@@ -56,6 +58,7 @@ services:
 
   mongodb:
     image: mongo:7
+    restart: unless-stopped
     volumes:
       - mongo_data:/data/db
     ports:
