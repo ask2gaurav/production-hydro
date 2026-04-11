@@ -1,0 +1,55 @@
+{
+  "packageId": "com.advaitsolutions.hct.twa",
+  "host": "hct.advaitsolutions.com",
+  "name": "Dasatva Hydrotherapy Management System - Colonima",
+  "launcherName": "Dasatva",
+  "display": "standalone",
+  "themeColor": "#0A5C99",
+  "themeColorDark": "#000000",
+  "navigationColor": "#000000",
+  "navigationColorDark": "#000000",
+  "navigationDividerColor": "#000000",
+  "navigationDividerColorDark": "#000000",
+  "backgroundColor": "#FFFFFF",
+  "enableNotifications": true,
+  "startUrl": "/",
+  "iconUrl": "https://hct.advaitsolutions.com/favicon-32x32.png",
+  "maskableIconUrl": "https://hct.advaitsolutions.com/web-app-manifest-512x512.png",
+  "monochromeIconUrl": "https://hct.advaitsolutions.com/favicon-32x32.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "D:\\projects\\production-hydro-colon-therapy\\android_apk\\android.keystore",
+    "alias": "android"
+  },
+  "appVersionName": "1",
+  "appVersionCode": 1,
+  "shortcuts": [],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://hct.advaitsolutions.com/manifest.json",
+  "fallbackType": "customtabs",
+  "features": {},
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://hct.advaitsolutions.com/",
+  "minSdkVersion": 21,
+  "orientation": "landscape",
+  "fingerprints": [],
+  "additionalTrustedOrigins": [],
+  "retainedBundles": [],
+  "protocolHandlers": [
+    {
+      "protocol": "web+sessions",
+      "url": "https://hct.advaitsolutions.com/%s"
+    }
+  ],
+  "fileHandlers": [],
+  "launchHandlerClientMode": "",
+  "displayOverride": [
+    "window-controls-overlay"
+  ],
+  "appVersion": "1"
+}

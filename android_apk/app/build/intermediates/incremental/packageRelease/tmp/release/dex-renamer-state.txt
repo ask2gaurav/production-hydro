@@ -1,0 +1,4 @@
+#Sat Apr 11 16:31:29 IST 2026
+base.0=D\:\\projects\\production-hydro-colon-therapy\\android_apk\\app\\build\\intermediates\\dex\\release\\minifyReleaseWithR8\\classes.dex
+renamed.0=classes.dex
+path.0=classes.dex
