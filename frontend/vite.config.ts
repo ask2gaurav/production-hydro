@@ -34,7 +34,53 @@ export default defineConfig({
         short_name: 'HydroSys',
         theme_color: '#0a5c99',
         orientation: 'landscape',
-        display: 'standalone'
+        display: 'standalone',
+        scope: "/",
+        start_url: "/",
+        display_override: [
+          "window-controls-overlay"
+        ],
+        icons: [
+          {
+            src: "/favicon-96x96.png",
+            sizes: "96x96",
+            type: "image/png"
+          },
+          {
+            src: "/web-app-manifest-192x192.png",
+            sizes: "192x192",
+            type: "image/png",
+            purpose: "maskable"
+          },
+          {
+            src: "/web-app-manifest-512x512.png",
+            sizes: "512x512",
+            type: "image/png",
+            purpose: "maskable"
+          }
+        ],
+        protocol_handlers: [
+          {
+            protocol: "web+sessions",
+            url: "/%s"
+          }
+        ],
+        screenshots: [
+          {
+            src: "/screenshots/Dashboard-Hydro-Colon-Therapy-Desktop.png",
+            sizes: "1240x953",
+            type: "image/png",
+            form_factor: "wide",
+            label: "Desktop view"
+          },
+          {
+            src: "/screenshots/Dashboard-Hydro-Colon-Therapy-Mobile.png",
+            sizes: "390x844",
+            type: "image/png",
+            form_factor: "narrow",
+            label: "Mobile view"
+          }
+        ]
       },
       devOptions: {
         enabled: true,
