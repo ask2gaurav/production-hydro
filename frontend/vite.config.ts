@@ -30,8 +30,9 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
       },
       manifest: {
-        name: 'Hydrotherapy System',
-        short_name: 'HydroSys',
+        name: "Dasatva Hydrotherapy Management System - Colonima",
+        short_name: "Dasatva",
+        description: "*HydroColon Therapy*\nInstall this powerful App to take full control of your hydro colon therapy sessions — anytime, anywhere.\nStart sessions with one tap, monitor live temperature, pressure, and water levels in real time, view detailed session logs, and trigger instant emergency shutdown if needed. Built for safety, precision, and peace of mind — your personal wellness companion is ready to go straight from your home screen.\nAdd to your device now for the smoothest, most reliable therapy experience.",
         theme_color: '#0a5c99',
         orientation: 'landscape',
         display: 'standalone',
