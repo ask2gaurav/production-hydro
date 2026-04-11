@@ -21,8 +21,8 @@
     "path": "D:\\projects\\production-hydro-colon-therapy\\android_apk\\android.keystore",
     "alias": "android"
   },
-  "appVersionName": "1",
-  "appVersionCode": 1,
+  "appVersionName": "1.0.1",
+  "appVersionCode": 2,
   "shortcuts": [],
   "generatorApp": "bubblewrap-cli",
   "webManifestUrl": "https://hct.advaitsolutions.com/manifest.json",
@@ -51,5 +51,5 @@
   "displayOverride": [
     "window-controls-overlay"
   ],
-  "appVersion": "1"
+  "appVersion": "1.0.1"
 }
