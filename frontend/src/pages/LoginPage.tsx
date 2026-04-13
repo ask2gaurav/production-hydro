@@ -71,7 +71,7 @@ const LoginPage: React.FC = () => {
               type="email"
               placeholder='Enter email address'
               value={email}
-              onIonChange={(e) => setEmail(e.detail.value || '')}
+              onIonInput={(e) => setEmail((e.target as HTMLIonInputElement).value as string || '')}
               autocomplete="email"
               fill="outline" 
               style={{ marginBottom: "15px" }}
@@ -85,7 +85,7 @@ const LoginPage: React.FC = () => {
               fill="outline" 
               type="password"
               value={password}
-              onIonChange={(e) => setPassword(e.detail.value || '')}
+              onIonInput={(e) => setPassword((e.target as HTMLIonInputElement).value as string || '')}
               onKeyDown={(e) => { if (e.key === 'Enter') handleLogin(); }}
             />
           {/* {</IonItem>} */}

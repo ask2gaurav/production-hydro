@@ -33,12 +33,23 @@ const computeAge = (dob?: string): string => {
 
 const formatDateTime = (d: Date | null): string => {
   if (!d) return '—';
-  return new Date(d).toLocaleString(undefined, {
+    return new Date(d).toLocaleString('en-IN', {
     year: 'numeric', month: 'short', day: 'numeric',
     hour: '2-digit', minute: '2-digit',
   });
 };
-
+const formatDate = (d: string | undefined): string => {
+  if (!d) return '—';
+  return new Date(d).toLocaleDateString('en-IN', {
+    year: 'numeric', month: 'short', day: 'numeric'
+  });
+};
+const formatTime = (d: Date | null): string => {
+  if (!d) return '—';
+  return new Date(d).toLocaleString('en-IN', {
+      hour: '2-digit', minute: '2-digit',
+  });
+};
 const thStyle: React.CSSProperties = {
   padding: '0.6rem 0.75rem', textAlign: 'left', fontWeight: 600,
   color: '#555', whiteSpace: 'nowrap', fontSize: '0.8rem',
@@ -1168,24 +1179,24 @@ const Therapy: React.FC = () => {
         </IonHeader>
         <IonContent className="ion-padding">
           <IonItem>
-            <IonLabel position="floating">First Name *</IonLabel>
-            <IonInput className="ion-padding-top" value={tFirstName} onIonChange={(e) => setTFirstName(e.detail.value || '')} />
+            {/* <IonLabel position="floating">First Name *</IonLabel> */}
+            <IonInput fill="outline" label='First Name' className="ion-padding-top" value={tFirstName} onIonInput={(e) => setTFirstName((e.target as HTMLIonInputElement).value as string || '')} />
           </IonItem>
           <IonItem>
-            <IonLabel position="floating">Last Name *</IonLabel>
-            <IonInput className="ion-padding-top" value={tLastName} onIonChange={(e) => setTLastName(e.detail.value || '')} />
+            {/* <IonLabel position="floating">Last Name *</IonLabel> */}
+            <IonInput fill="outline" label='Last Name' className="ion-padding-top" value={tLastName} onIonInput={(e) => setTLastName((e.target as HTMLIonInputElement).value as string || '')} />
           </IonItem>
           <IonItem>
-            <IonLabel position="floating">Phone *</IonLabel>
-            <IonInput className="ion-padding-top" type="tel" value={tPhone} onIonChange={(e) => setTPhone(e.detail.value || '')} />
+            {/* <IonLabel position="floating">Phone *</IonLabel> */}
+            <IonInput fill="outline" label='Phone' className="ion-padding-top" type="tel" value={tPhone} onIonInput={(e) => setTPhone((e.target as HTMLIonInputElement).value as string || '')} />
           </IonItem>
           <IonItem>
-            <IonLabel position="floating">Email *</IonLabel>
-            <IonInput className="ion-padding-top" type="email" value={tEmail} onIonChange={(e) => setTEmail(e.detail.value || '')} />
+            {/* <IonLabel position="floating">Email *</IonLabel> */}
+            <IonInput fill="outline"  label='Email' className="ion-padding-top" type="email" value={tEmail} onIonInput={(e) => setTEmail((e.target as HTMLIonInputElement).value as string || '')} />
           </IonItem>
           <IonItem>
-            <IonLabel>Gender</IonLabel>
-            <IonSelect value={tGender} onIonChange={(e) => setTGender(e.detail.value)} placeholder="Select...">
+            {/* <IonLabel>Gender</IonLabel> */}
+            <IonSelect fill="outline" label='Gender' value={tGender} onIonChange={(e) => setTGender(e.detail.value)} placeholder="Select...">
               {genderOptions}
             </IonSelect>
           </IonItem>
@@ -1208,34 +1219,34 @@ const Therapy: React.FC = () => {
         </IonHeader>
         <IonContent className="ion-padding">
           <IonItem>
-            <IonLabel position="floating">First Name *</IonLabel>
-            <IonInput className="ion-padding-top" value={pFirstName} onIonChange={(e) => setPFirstName(e.detail.value || '')} />
+            {/* <IonLabel position="floating">First Name *</IonLabel> */}
+            <IonInput label='First Name' className="ion-padding-top" value={pFirstName} onIonInput={(e) => setPFirstName((e.target as HTMLIonInputElement).value as string || '')} />
           </IonItem>
           <IonItem>
-            <IonLabel position="floating">Last Name *</IonLabel>
-            <IonInput className="ion-padding-top" value={pLastName} onIonChange={(e) => setPLastName(e.detail.value || '')} />
+            {/* <IonLabel position="floating">Last Name *</IonLabel> */}
+            <IonInput label='Last Name' className="ion-padding-top" value={pLastName} onIonInput={(e) => setPLastName((e.target as HTMLIonInputElement).value as string || '')} />
           </IonItem>
           <IonItem>
-            <IonLabel position="floating">Phone *</IonLabel>
-            <IonInput className="ion-padding-top" type="tel" value={pPhone} onIonChange={(e) => setPPhone(e.detail.value || '')} />
+            {/* <IonLabel position="floating">Phone *</IonLabel> */}
+            <IonInput label='Phone' className="ion-padding-top" type="tel" value={pPhone} onIonInput={(e) => setPPhone((e.target as HTMLIonInputElement).value as string || '')} />
           </IonItem>
           <IonItem>
-            <IonLabel position="floating">Email *</IonLabel>
-            <IonInput className="ion-padding-top" type="email" value={pEmail} onIonChange={(e) => setPEmail(e.detail.value || '')} />
+            {/* <IonLabel position="floating">Email *</IonLabel> */}
+            <IonInput label='Email' className="ion-padding-top" type="email" value={pEmail} onIonInput={(e) => setPEmail((e.target as HTMLIonInputElement).value as string || '')} />
           </IonItem>
           <IonItem>
-            <IonLabel>Gender</IonLabel>
-            <IonSelect value={pGender} onIonChange={(e) => setPGender(e.detail.value)} placeholder="Select...">
+            {/* <IonLabel>Gender</IonLabel> */}
+            <IonSelect label='Gender' value={pGender} onIonChange={(e) => setPGender(e.detail.value)} placeholder="Select...">
               {genderOptions}
             </IonSelect>
           </IonItem>
           <IonItem>
-            <IonLabel position="floating">Date of Birth</IonLabel>
-            <IonInput ref={refPatientDob} className="ion-padding-top" type="date" value={pDob} onIonChange={(e) => setPDob(e.detail.value || '')} />
+            {/* <IonLabel position="floating">Date of Birth</IonLabel> */}
+            <IonInput label='Date of Birth' ref={refPatientDob} className="ion-padding-top" type="date" value={pDob} onIonChange={(e) => setPDob(e.detail.value || '')} />
           </IonItem>
           <IonItem>
-            <IonLabel position="stacked">Notes</IonLabel>
-            <IonTextarea rows={3} value={pNotes} onIonChange={(e) => setPNotes(e.detail.value || '')} />
+            {/* <IonLabel position="stacked">Notes</IonLabel> */}
+            <IonTextarea label='Notes' rows={3} value={pNotes} onIonInput={(e) => setPNotes((e.target as HTMLIonTextareaElement).value as string || '')} />
           </IonItem>
           {pError && (
             <IonText color="danger"><p style={{ padding: '0.5rem 1rem', margin: 0 }}>{pError}</p></IonText>
@@ -1264,24 +1275,24 @@ const Therapy: React.FC = () => {
           {editTherapist ? (
             <div>
               <IonItem>
-                <IonLabel position="floating">First Name *</IonLabel>
-                <IonInput className="ion-padding-top" value={etFirstName} onIonChange={(e) => setEtFirstName(e.detail.value || '')} />
+                {/* <IonLabel position="floating">First Name *</IonLabel> */}
+                <IonInput label='First Name' className="ion-padding-top" value={etFirstName} onIonInput={(e) => setEtFirstName((e.target as HTMLIonInputElement).value as string || '')} />
               </IonItem>
               <IonItem>
-                <IonLabel position="floating">Last Name *</IonLabel>
-                <IonInput className="ion-padding-top" value={etLastName} onIonChange={(e) => setEtLastName(e.detail.value || '')} />
+                {/* <IonLabel position="floating">Last Name *</IonLabel> */}
+                <IonInput label='Last Name' className="ion-padding-top" value={etLastName} onIonInput={(e) => setEtLastName((e.target as HTMLIonInputElement).value as string || '')} />
               </IonItem>
               <IonItem>
-                <IonLabel position="floating">Phone *</IonLabel>
-                <IonInput className="ion-padding-top" type="tel" value={etPhone} onIonChange={(e) => setEtPhone(e.detail.value || '')} />
+                {/* <IonLabel position="floating">Phone *</IonLabel> */}
+                <IonInput label='Phone' className="ion-padding-top" type="tel" value={etPhone} onIonInput={(e) => setEtPhone((e.target as HTMLIonInputElement).value as string || '')} />
               </IonItem>
               <IonItem>
-                <IonLabel position="floating">Email *</IonLabel>
-                <IonInput className="ion-padding-top" type="email" value={etEmail} onIonChange={(e) => setEtEmail(e.detail.value || '')} />
+                {/* <IonLabel position="floating">Email *</IonLabel> */}
+                <IonInput label='Email' className="ion-padding-top" type="email" value={etEmail} onIonInput={(e) => setEtEmail((e.target as HTMLIonInputElement).value as string || '')} />
               </IonItem>
               <IonItem>
-                <IonLabel>Gender</IonLabel>
-                <IonSelect value={etGender} onIonChange={(e) => setEtGender(e.detail.value)} placeholder="Select...">
+                {/* <IonLabel>Gender</IonLabel> */}
+                <IonSelect label='Gender' value={etGender} onIonChange={(e) => setEtGender(e.detail.value)} placeholder="Select...">
                   {genderOptions}
                 </IonSelect>
               </IonItem>
@@ -1316,7 +1327,7 @@ const Therapy: React.FC = () => {
                       <th style={thStyle}>Mobile</th>
                       <th style={thStyle}>Email</th>
                       <th style={thStyle}>Gender</th>
-                      <th style={thStyle}>Total Sessions</th>
+                      <th style={thStyle}>Total<br/>Sessions</th>
                       <th style={thStyle}>Last Session</th>
                       <th style={thStyle}>Actions</th>
                     </tr>
@@ -1387,34 +1398,34 @@ const Therapy: React.FC = () => {
           {editPatient ? (
             <div>
               <IonItem>
-                <IonLabel position="floating">First Name *</IonLabel>
-                <IonInput className="ion-padding-top" value={epFirstName} onIonChange={(e) => setEpFirstName(e.detail.value || '')} />
+                {/* <IonLabel position="floating">First Name *</IonLabel> */}
+                <IonInput label='First Name' className="ion-padding-top" value={epFirstName} onIonInput={(e) => setEpFirstName((e.target as HTMLIonInputElement).value as string || '')} />
               </IonItem>
               <IonItem>
-                <IonLabel position="floating">Last Name *</IonLabel>
-                <IonInput className="ion-padding-top" value={epLastName} onIonChange={(e) => setEpLastName(e.detail.value || '')} />
+                {/* <IonLabel position="floating">Last Name *</IonLabel> */}
+                <IonInput label='Last Name' className="ion-padding-top" value={epLastName} onIonInput={(e) => setEpLastName((e.target as HTMLIonInputElement).value as string || '')} />
               </IonItem>
               <IonItem>
-                <IonLabel position="floating">Phone *</IonLabel>
-                <IonInput className="ion-padding-top" type="tel" value={epPhone} onIonChange={(e) => setEpPhone(e.detail.value || '')} />
+                {/* <IonLabel position="floating">Phone *</IonLabel> */}
+                <IonInput label='Phone' className="ion-padding-top" type="tel" value={epPhone} onIonInput={(e) => setEpPhone((e.target as HTMLIonInputElement).value as string || '')} />
               </IonItem>
               <IonItem>
-                <IonLabel position="floating">Email *</IonLabel>
-                <IonInput className="ion-padding-top" type="email" value={epEmail} onIonChange={(e) => setEpEmail(e.detail.value || '')} />
+                {/* <IonLabel position="floating">Email *</IonLabel> */}
+                <IonInput label='Email' className="ion-padding-top" type="email" value={epEmail} onIonInput={(e) => setEpEmail((e.target as HTMLIonInputElement).value as string || '')} />
               </IonItem>
               <IonItem>
-                <IonLabel>Gender</IonLabel>
-                <IonSelect value={epGender} onIonChange={(e) => setEpGender(e.detail.value)} placeholder="Select...">
+                {/* <IonLabel>Gender</IonLabel> */}
+                <IonSelect label='Gender' value={epGender} onIonChange={(e) => setEpGender(e.detail.value)} placeholder="Select...">
                   {genderOptions}
                 </IonSelect>
               </IonItem>
               <IonItem>
-                <IonLabel position="floating">Date of Birth</IonLabel>
-                <IonInput ref={refEpDob} className="ion-padding-top" type="date" value={epDob} onIonChange={(e) => setEpDob(e.detail.value || '')} />
+                {/* <IonLabel position="floating">Date of Birth</IonLabel> */}
+                <IonInput label='Date of Birth' ref={refEpDob} className="ion-padding-top" type="date" value={epDob} onIonChange={(e) => setEpDob(e.detail.value || '')} />
               </IonItem>
               <IonItem>
-                <IonLabel position="stacked">Notes</IonLabel>
-                <IonTextarea rows={3} value={epNotes} onIonChange={(e) => setEpNotes(e.detail.value || '')} />
+                {/* <IonLabel position="stacked">Notes</IonLabel> */}
+                <IonTextarea label='Notes' rows={3} value={epNotes} onIonInput={(e) => setEpNotes((e.target as HTMLIonTextareaElement).value as string || '')} />
               </IonItem>
               {epError && (
                 <IonText color="danger"><p style={{ padding: '0.5rem 1rem', margin: 0 }}>{epError}</p></IonText>
@@ -1447,10 +1458,10 @@ const Therapy: React.FC = () => {
                       <th style={thStyle}>Mobile</th>
                       <th style={thStyle}>Email</th>
                       <th style={thStyle}>Gender</th>
-                      <th style={thStyle}>Date of Birth</th>
+                      <th style={thStyle}>DOB</th>
                       <th style={thStyle}>Age</th>
-                      <th style={thStyle}>Total Sessions</th>
-                      <th style={thStyle}>Last Session</th>
+                      <th style={thStyle}>Total<br/>Sessions</th>
+                      <th style={thStyle}>Last<br />Session</th>
                       <th style={thStyle}>Actions</th>
                     </tr>
                   </thead>
@@ -1476,10 +1487,10 @@ const Therapy: React.FC = () => {
                           <td style={tdStyle}>{p.phone}</td>
                           <td style={tdStyle}>{p.email}</td>
                           <td style={tdStyle}>{p.gender || '—'}</td>
-                          <td style={tdStyle}>{p.dob || '—'}</td>
+                          <td style={tdStyle}>{formatDate(p.dob) || '—'}</td>
                           <td style={{ ...tdStyle, textAlign: 'center' }}>{computeAge(p.dob)}</td>
                           <td style={{ ...tdStyle, textAlign: 'center' }}>{stats.total}</td>
-                          <td style={tdStyle}>{formatDateTime(stats.last)}</td>
+                          <td style={tdStyle}>{formatDate(stats.last)}<br />{formatTime(stats.last) }</td>
                           <td style={tdStyle} onClick={(e) => e.stopPropagation()}>
                             <IonIcon
                               icon={pencilOutline}
