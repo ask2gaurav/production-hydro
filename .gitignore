@@ -1,4 +1,5 @@
 .env
 .env.*
 .well-known
-
+keystore.properties
+frontend/android/keystore.properties

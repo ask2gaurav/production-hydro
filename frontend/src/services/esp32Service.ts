@@ -1,9 +1,4 @@
-// In development Vite proxies /esp32/* → ESP32 device (avoids CORS).
-// In production the PWA runs on the same local network as the ESP32 and
-// calls it directly, so we use the configured URL.
-const BASE = import.meta.env.DEV
-  ? import.meta.env.VITE_ESP32_URL
-  : (import.meta.env.VITE_ESP32_URL ?? 'http://advaithydro.local:8091');
+import { nativeFetch, getEsp32BaseUrl } from './nativeHttp';
 
 const ENDPOINT = import.meta.env.VITE_ESP32_ENDPOINT ?? 'machineinfo.html';
 
@@ -26,50 +21,20 @@ function parseLooseJson(text: string): MachineInfo {
 }
 
 export async function fetchMachineInfo(): Promise<MachineInfo> {
-  const res = await fetch(`${BASE}/${ENDPOINT}`, { signal: AbortSignal.timeout(3000) });
-  if (!res.ok) throw new Error(`ESP32 responded with ${res.status}`);
-  const text = await res.text();
-  const jsonResp = parseLooseJson(text);
-  // jsonResp['temp'] = jsonResp['temperature'];
-  // jsonResp['water_ll'] = jsonResp['water_level_low'];
-  // jsonResp['water_hl'] = jsonResp['water_level_high'];
-  // jsonResp['water_in_valve'] = !Number(jsonResp['water_in_s1']);
-  // jsonResp['pump'] = !Number(jsonResp['water_pump_out']);
-  // jsonResp['flush_valve'] = !Number(jsonResp['flush']);
-  // jsonResp['blower'] = !Number(jsonResp['blower']);
-  // jsonResp['heater'] = !Number(jsonResp['heater']);
-  return jsonResp;
+  const base = getEsp32BaseUrl();
+  const text = await nativeFetch(`${base}/${ENDPOINT}`, 3000);
+  return parseLooseJson(text);
 }
 
 export async function sendCommand(param: string, value: 0 | 1): Promise<MachineInfo> {
-  const res = await fetch(`${BASE}/${ENDPOINT}?${param}=${value}`, { signal: AbortSignal.timeout(3000) });
-  if (!res.ok) throw new Error(`ESP32 responded with ${res.status}`);
-  const text = await res.text();
-  const jsonResp = parseLooseJson(text);
-  // jsonResp['temp'] = jsonResp['temperature'];
-  // jsonResp['water_ll'] = jsonResp['water_level_low'];
-  // jsonResp['water_hl'] = jsonResp['water_level_high'];
-  // jsonResp['water_in_valve'] = !Number(jsonResp['water_in_s1']);
-  // jsonResp['pump'] = !Number(jsonResp['water_pump_out']);
-  // jsonResp['flush_valve'] = !Number(jsonResp['flush']);
-  // jsonResp['blower'] = !Number(jsonResp['blower']);
-  // jsonResp['heater'] = !Number(jsonResp['heater']);
-  return jsonResp;
+  const base = getEsp32BaseUrl();
+  const text = await nativeFetch(`${base}/${ENDPOINT}?${param}=${value}`, 3000);
+  return parseLooseJson(text);
 }
 
 export async function sendPrepareParams(params: Record<string, number>): Promise<MachineInfo> {
   const qs = Object.entries(params).map(([k, v]) => `${k}=${v}`).join('&');
-  const res = await fetch(`${BASE}/${ENDPOINT}?${qs}`, { signal: AbortSignal.timeout(5000) });
-  if (!res.ok) throw new Error(`ESP32 responded with ${res.status}`);
-  const text = await res.text();
-  const jsonResp = parseLooseJson(text);
-  // jsonResp['temp'] = jsonResp['temperature'];
-  // jsonResp['water_ll'] = jsonResp['water_level_low'];
-  // jsonResp['water_hl'] = jsonResp['water_level_high'];
-  // jsonResp['water_in_valve'] = !Number(jsonResp['water_in_s1']);
-  // jsonResp['pump'] = !Number(jsonResp['water_pump_out']);
-  // jsonResp['flush_valve'] = !Number(jsonResp['flush']);
-  // jsonResp['blower'] = !Number(jsonResp['blower']);
-  // jsonResp['heater'] = !Number(jsonResp['heater']);
-  return jsonResp;
+  const base = getEsp32BaseUrl();
+  const text = await nativeFetch(`${base}/${ENDPOINT}?${qs}`, 5000);
+  return parseLooseJson(text);
 }

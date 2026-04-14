@@ -15,8 +15,9 @@ import { useStore } from '../store/useStore';
 import { localDB, type LocalTherapist, type LocalPatient } from '../db/localDB';
 import { runSync } from '../services/syncService';
 import { onSessionComplete } from '../services/modeCheck';
-import { fetchMachineInfo, sendPrepareParams, sendCommand } from '../services/esp32Service';
+import { fetchMachineInfo, sendPrepareParams/* , sendCommand */ } from '../services/esp32Service';
 import MachineInfoModal from '../components/MachineInfoModal';
+import DobPicker from '../components/DobPicker';
 
 // ---------- Helpers ----------
 
@@ -221,8 +222,6 @@ const Therapy: React.FC = () => {
   const [pNotes, setPNotes] = useState('');
   const [pSaving, setPSaving] = useState(false);
   const [pError, setPError] = useState('');
-  const refPatientDob = useRef<HTMLIonInputElement>(null);
-
   // Manage therapists modal
   const [showManageTherapists, setShowManageTherapists] = useState(false);
   const [tManageSearch, setTManageSearch] = useState('');
@@ -248,8 +247,6 @@ const Therapy: React.FC = () => {
   const [epNotes, setEpNotes] = useState('');
   const [epSaving, setEpSaving] = useState(false);
   const [epError, setEpError] = useState('');
-  const refEpDob = useRef<HTMLIonInputElement>(null);
-
   // Session stats
   const [sessionStats, setSessionStats] = useState<StatMap>({});
 
@@ -1240,9 +1237,8 @@ const Therapy: React.FC = () => {
               {genderOptions}
             </IonSelect>
           </IonItem>
-          <IonItem>
-            {/* <IonLabel position="floating">Date of Birth</IonLabel> */}
-            <IonInput label='Date of Birth' ref={refPatientDob} className="ion-padding-top" type="date" value={pDob} onIonChange={(e) => setPDob(e.detail.value || '')} />
+          <IonItem lines="none">
+            <DobPicker value={pDob} onChange={setPDob} />
           </IonItem>
           <IonItem>
             {/* <IonLabel position="stacked">Notes</IonLabel> */}
@@ -1421,7 +1417,7 @@ const Therapy: React.FC = () => {
               </IonItem>
               <IonItem>
                 {/* <IonLabel position="floating">Date of Birth</IonLabel> */}
-                <IonInput label='Date of Birth' ref={refEpDob} className="ion-padding-top" type="date" value={epDob} onIonChange={(e) => setEpDob(e.detail.value || '')} />
+                <DobPicker value={epDob} onChange={setEpDob} />
               </IonItem>
               <IonItem>
                 {/* <IonLabel position="stacked">Notes</IonLabel> */}
@@ -1490,7 +1486,7 @@ const Therapy: React.FC = () => {
                           <td style={tdStyle}>{formatDate(p.dob) || '—'}</td>
                           <td style={{ ...tdStyle, textAlign: 'center' }}>{computeAge(p.dob)}</td>
                           <td style={{ ...tdStyle, textAlign: 'center' }}>{stats.total}</td>
-                          <td style={tdStyle}>{formatDate(stats.last)}<br />{formatTime(stats.last) }</td>
+                          <td style={tdStyle}>{stats.last ? formatDate(stats.last.toString()) : '—'}<br />{formatTime(stats.last) }</td>
                           <td style={tdStyle} onClick={(e) => e.stopPropagation()}>
                             <IonIcon
                               icon={pencilOutline}

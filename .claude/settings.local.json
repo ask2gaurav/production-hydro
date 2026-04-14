@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run:*)",
+      "Bash(npx cap:*)",
+      "Read(//c/Program Files/Android/Android Studio/**)",
+      "Read(//c/Program Files \\(x86\\)/Android/Android Studio/**)",
+      "Read(//c/Program Files/**)",
+      "Read(//c/Users/__TRACKED_VAR__/AppData/Local/**)",
+      "Bash(./gradlew assembleRelease)",
+      "Read(//c/android-sdk/cmdline-tools/latest/bin//**)",
+      "Read(//d/android-sdk/cmdline-tools/latest/**)",
+      "Bash(find \"/c\" -name \"sdkmanager.bat\")",
+      "Read(//c/android-sdk//**)",
+      "Bash(npm uninstall:*)",
+      "Bash(./gradlew --stop)",
+      "Bash(find \"/c/Users/Gaurav/.gradle/caches/8.14.3/transforms\" -name \"metadata.bin\" -delete)",
+      "Bash(./gradlew assembleRelease --stacktrace)",
+      "Bash(rm -rf \"/c/Users/Gaurav/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlinx/kotlinx-coroutines-android/1.8.1\")",
+      "Bash(rm -rf \"/c/Users/Gaurav/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlinx/kotlinx-coroutines-core-jvm/1.8.1\")",
+      "Bash(rm -rf \"/c/Users/Gaurav/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib/2.0.21\")",
+      "Bash(rm -rf \"/c/Users/Gaurav/.gradle/caches/modules-2/files-2.1/com.google.guava/listenablefuture/1.0\")",
+      "Bash(java -version)",
+      "Bash(javac -version)",
+      "Bash(./gradlew assembleDebug)",
+      "Bash(\"C:/android-sdk/platform-tools/adb.exe\" install:*)",
+      "Bash(./gradlew clean:*)",
+      "Bash(\"C:/android-sdk/platform-tools/adb.exe\" logcat:*)"
+    ]
+  }
+}
