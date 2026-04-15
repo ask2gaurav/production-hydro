@@ -1,48 +1,22 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   IonContent, IonHeader, IonPage, IonTitle, IonToolbar,
   IonButton, IonIcon, IonBadge, useIonAlert
 } from '@ionic/react';
-import { arrowBack, wifiOutline, refreshOutline, trashOutline } from 'ionicons/icons';
+import { arrowBack, wifiOutline } from 'ionicons/icons';
 import { localDB } from '../db/localDB';
 import { useStore } from '../store/useStore';
 import { useHistory } from 'react-router-dom';
 import { sendCommand } from '../services/esp32Service';
 import MachineInfoModal from '../components/MachineInfoModal';
-import { getLog, clearLog, fmtTime, type LogEntry } from '../services/debugLog';
-
-interface DbCounts { therapists: number; patients: number; sessions: number }
+// Debug panel imports — kept for reference, panel commented out for production release
+// import { getLog, clearLog, fmtTime, type LogEntry } from '../services/debugLog';
 
 const Settings: React.FC = () => {
   const [presentAlert] = useIonAlert();
   const { machineId, machineConnected, machineInfo, setMachineInfo } = useStore();
   const history = useHistory();
   const [showMachineInfo, setShowMachineInfo] = useState(false);
-
-  // Debug panel state
-  const [debugLog, setDebugLog] = useState<readonly LogEntry[]>([]);
-  const [dbCounts, setDbCounts] = useState<DbCounts>({ therapists: 0, patients: 0, sessions: 0 });
-  const [storedIp, setStoredIp] = useState<string>('—');
-  const [storedSerial, setStoredSerial] = useState<string>('—');
-
-  const refreshDebug = useCallback(async () => {
-    setDebugLog([...getLog()]);
-    setStoredIp(localStorage.getItem('esp32_ip') ?? '—');
-    setStoredSerial(localStorage.getItem('esp32_serial') ?? '—');
-    const [th, pt, se] = await Promise.all([
-      localDB.therapists.count(),
-      localDB.patients.count(),
-      localDB.sessions.count(),
-    ]);
-    setDbCounts({ therapists: th, patients: pt, sessions: se });
-  }, []);
-
-  // Refresh debug info every 5 seconds
-  useEffect(() => {
-    refreshDebug();
-    const id = setInterval(refreshDebug, 5000);
-    return () => clearInterval(id);
-  }, [refreshDebug]);
 
   const [settings, setSettings] = useState({
     default_session_minutes: 40,
@@ -448,7 +422,9 @@ const Settings: React.FC = () => {
               Machine ID: {machineId}
             </p>
           </div>
-          {/* Column 4: Debug Panel */}
+
+
+          {/* Column 4: Debug Panel — commented out for production release
           <div style={{ ...cardStyle, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', paddingBottom: '0.5rem', borderBottom: '2px solid #f0f0f0' }}>
               <p style={{ ...colHeaderStyle, marginBottom: 0, borderBottom: 'none' }}>Debug</p>
@@ -466,7 +442,6 @@ const Settings: React.FC = () => {
               </div>
             </div>
 
-            {/* Connection info */}
             <div style={rowStyle}>
               <span style={labelStyle}>Stored IP</span>
               <span style={{ ...valueStyle, fontSize: '0.78rem', fontFamily: 'monospace' }}>{storedIp}</span>
@@ -482,7 +457,6 @@ const Settings: React.FC = () => {
               </span>
             </div>
 
-            {/* DB stats */}
             <p style={{ ...colHeaderStyle, marginTop: '0.75rem' }}>Local DB</p>
             <div style={rowStyle}>
               <span style={labelStyle}>Therapists</span>
@@ -497,7 +471,6 @@ const Settings: React.FC = () => {
               <span style={valueStyle}>{dbCounts.sessions}</span>
             </div>
 
-            {/* Event log */}
             <p style={{ ...colHeaderStyle, marginTop: '0.75rem' }}>Recent Events</p>
             <div style={{ flex: 1, overflowY: 'auto', fontSize: '0.72rem', fontFamily: 'monospace' }}>
               {debugLog.length === 0 && (
@@ -531,6 +504,7 @@ const Settings: React.FC = () => {
               })}
             </div>
           </div>
+          */}
 
         </div>
       </IonContent>
