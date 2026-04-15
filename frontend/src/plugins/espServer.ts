@@ -5,7 +5,7 @@ export interface EspServerPlugin {
   stopServer(): Promise<void>;
   addListener(
     eventName: 'espRegistered',
-    listenerFunc: (data: { ip: string }) => void
+    listenerFunc: (data: { ip: string; serial: string }) => void
   ): Promise<{ remove: () => void }>;
 }
 

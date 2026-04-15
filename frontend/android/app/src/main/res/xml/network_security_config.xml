@@ -1,9 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
-    <!-- Allow cleartext HTTP to ESP32 on typical Android hotspot and home LAN subnets -->
-    <domain-config cleartextTrafficPermitted="true">
-        <domain includeSubdomains="true">192.168.43.1</domain>
-        <domain includeSubdomains="true">192.168.1.1</domain>
-        <domain includeSubdomains="true">192.168.0.1</domain>
-    </domain-config>
+    <!--
+        Allow cleartext HTTP to any host on private LAN.
+        Android hotspot subnets vary (192.168.43.x, 192.168.26.x, 10.x.x.x, etc.)
+        so we permit cleartext globally. All internet-bound traffic uses HTTPS anyway.
+    -->
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
 </network-security-config>

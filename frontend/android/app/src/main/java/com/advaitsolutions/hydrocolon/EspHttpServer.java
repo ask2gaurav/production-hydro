@@ -28,11 +28,13 @@ public class EspHttpServer extends NanoHTTPD {
                 String json = body.get("postData");
                 org.json.JSONObject obj = new org.json.JSONObject(json != null ? json : "{}");
                 String ip = obj.optString("ip", "");
+                String serial = obj.optString("serial", "");
                 if (!ip.isEmpty()) {
                     JSObject event = new JSObject();
                     event.put("ip", ip);
+                    event.put("serial", serial);
                     plugin.notifyEspRegistered(event);
-                    Log.d(TAG, "ESP32 registered at " + ip);
+                    Log.d(TAG, "ESP32 registered at " + ip + " serial=" + serial);
                 }
                 Response res = newFixedLengthResponse(Response.Status.OK, "application/json", "{\"status\":\"ok\"}");
                 res.addHeader("Access-Control-Allow-Origin", "*");

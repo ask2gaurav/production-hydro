@@ -22,19 +22,19 @@ function parseLooseJson(text: string): MachineInfo {
 
 export async function fetchMachineInfo(): Promise<MachineInfo> {
   const base = getEsp32BaseUrl();
-  const text = await nativeFetch(`${base}/${ENDPOINT}`, 3000);
+  const text = await nativeFetch(`${base}/${ENDPOINT}`, 3000, 'poll');
   return parseLooseJson(text);
 }
 
 export async function sendCommand(param: string, value: 0 | 1): Promise<MachineInfo> {
   const base = getEsp32BaseUrl();
-  const text = await nativeFetch(`${base}/${ENDPOINT}?${param}=${value}`, 3000);
+  const text = await nativeFetch(`${base}/${ENDPOINT}?${param}=${value}`, 3000, 'command');
   return parseLooseJson(text);
 }
 
 export async function sendPrepareParams(params: Record<string, number>): Promise<MachineInfo> {
   const qs = Object.entries(params).map(([k, v]) => `${k}=${v}`).join('&');
   const base = getEsp32BaseUrl();
-  const text = await nativeFetch(`${base}/${ENDPOINT}?${qs}`, 5000);
+  const text = await nativeFetch(`${base}/${ENDPOINT}?${qs}`, 5000, 'command');
   return parseLooseJson(text);
 }

@@ -1,20 +1,48 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   IonContent, IonHeader, IonPage, IonTitle, IonToolbar,
   IonButton, IonIcon, IonBadge, useIonAlert
 } from '@ionic/react';
-import { arrowBack, wifiOutline } from 'ionicons/icons';
+import { arrowBack, wifiOutline, refreshOutline, trashOutline } from 'ionicons/icons';
 import { localDB } from '../db/localDB';
 import { useStore } from '../store/useStore';
 import { useHistory } from 'react-router-dom';
 import { sendCommand } from '../services/esp32Service';
 import MachineInfoModal from '../components/MachineInfoModal';
+import { getLog, clearLog, fmtTime, type LogEntry } from '../services/debugLog';
+
+interface DbCounts { therapists: number; patients: number; sessions: number }
 
 const Settings: React.FC = () => {
   const [presentAlert] = useIonAlert();
   const { machineId, machineConnected, machineInfo, setMachineInfo } = useStore();
   const history = useHistory();
   const [showMachineInfo, setShowMachineInfo] = useState(false);
+
+  // Debug panel state
+  const [debugLog, setDebugLog] = useState<readonly LogEntry[]>([]);
+  const [dbCounts, setDbCounts] = useState<DbCounts>({ therapists: 0, patients: 0, sessions: 0 });
+  const [storedIp, setStoredIp] = useState<string>('—');
+  const [storedSerial, setStoredSerial] = useState<string>('—');
+
+  const refreshDebug = useCallback(async () => {
+    setDebugLog([...getLog()]);
+    setStoredIp(localStorage.getItem('esp32_ip') ?? '—');
+    setStoredSerial(localStorage.getItem('esp32_serial') ?? '—');
+    const [th, pt, se] = await Promise.all([
+      localDB.therapists.count(),
+      localDB.patients.count(),
+      localDB.sessions.count(),
+    ]);
+    setDbCounts({ therapists: th, patients: pt, sessions: se });
+  }, []);
+
+  // Refresh debug info every 5 seconds
+  useEffect(() => {
+    refreshDebug();
+    const id = setInterval(refreshDebug, 5000);
+    return () => clearInterval(id);
+  }, [refreshDebug]);
 
   const [settings, setSettings] = useState({
     default_session_minutes: 40,
@@ -160,7 +188,7 @@ const Settings: React.FC = () => {
       </IonHeader>
 
       <IonContent className="ion-padding">
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', height: '100%' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '1rem', height: '100%' }}>
 
           {/* Column 1: System State */}
           <div style={cardStyle}>
@@ -420,6 +448,90 @@ const Settings: React.FC = () => {
               Machine ID: {machineId}
             </p>
           </div>
+          {/* Column 4: Debug Panel */}
+          <div style={{ ...cardStyle, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', paddingBottom: '0.5rem', borderBottom: '2px solid #f0f0f0' }}>
+              <p style={{ ...colHeaderStyle, marginBottom: 0, borderBottom: 'none' }}>Debug</p>
+              <div style={{ display: 'flex', gap: '0.4rem' }}>
+                <IonIcon
+                  icon={refreshOutline}
+                  style={{ fontSize: '1rem', cursor: 'pointer', color: '#3880ff' }}
+                  onClick={refreshDebug}
+                />
+                <IonIcon
+                  icon={trashOutline}
+                  style={{ fontSize: '1rem', cursor: 'pointer', color: '#eb445a' }}
+                  onClick={() => { clearLog(); refreshDebug(); }}
+                />
+              </div>
+            </div>
+
+            {/* Connection info */}
+            <div style={rowStyle}>
+              <span style={labelStyle}>Stored IP</span>
+              <span style={{ ...valueStyle, fontSize: '0.78rem', fontFamily: 'monospace' }}>{storedIp}</span>
+            </div>
+            <div style={rowStyle}>
+              <span style={labelStyle}>Serial</span>
+              <span style={{ ...valueStyle, fontSize: '0.78rem', fontFamily: 'monospace' }}>{storedSerial}</span>
+            </div>
+            <div style={rowStyle}>
+              <span style={labelStyle}>Connected</span>
+              <span style={{ ...valueStyle, color: machineConnected ? '#2dd36f' : '#eb445a' }}>
+                {machineConnected ? 'Yes' : 'No'}
+              </span>
+            </div>
+
+            {/* DB stats */}
+            <p style={{ ...colHeaderStyle, marginTop: '0.75rem' }}>Local DB</p>
+            <div style={rowStyle}>
+              <span style={labelStyle}>Therapists</span>
+              <span style={valueStyle}>{dbCounts.therapists}</span>
+            </div>
+            <div style={rowStyle}>
+              <span style={labelStyle}>Patients</span>
+              <span style={valueStyle}>{dbCounts.patients}</span>
+            </div>
+            <div style={rowStyle}>
+              <span style={labelStyle}>Sessions</span>
+              <span style={valueStyle}>{dbCounts.sessions}</span>
+            </div>
+
+            {/* Event log */}
+            <p style={{ ...colHeaderStyle, marginTop: '0.75rem' }}>Recent Events</p>
+            <div style={{ flex: 1, overflowY: 'auto', fontSize: '0.72rem', fontFamily: 'monospace' }}>
+              {debugLog.length === 0 && (
+                <p style={{ color: '#aaa', textAlign: 'center', marginTop: '0.5rem' }}>No events yet</p>
+              )}
+              {debugLog.map((entry, i) => {
+                let color = '#555';
+                let text = '';
+                if (entry.type === 'registration') {
+                  color = '#2dd36f';
+                  text = `[${fmtTime(entry.ts)}] REG ip=${entry.ip} sn=${entry.serial}`;
+                } else if (entry.type === 'poll') {
+                  color = entry.status === 'ok' ? '#3880ff' : '#eb445a';
+                  text = entry.status === 'ok'
+                    ? `[${fmtTime(entry.ts)}] POLL ok — ${entry.body?.slice(0, 40)}`
+                    : `[${fmtTime(entry.ts)}] POLL ERR — ${entry.error}`;
+                } else if (entry.type === 'command') {
+                  color = entry.status === 'ok' ? '#ffc409' : '#eb445a';
+                  text = entry.status === 'ok'
+                    ? `[${fmtTime(entry.ts)}] CMD ok`
+                    : `[${fmtTime(entry.ts)}] CMD ERR — ${entry.error}`;
+                } else if (entry.type === 'info') {
+                  color = '#888';
+                  text = `[${fmtTime(entry.ts)}] ${entry.message}`;
+                }
+                return (
+                  <div key={i} style={{ color, padding: '0.15rem 0', borderBottom: '1px solid #f5f5f5', wordBreak: 'break-all' }}>
+                    {text}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
         </div>
       </IonContent>
       <MachineInfoModal isOpen={showMachineInfo} onClose={() => setShowMachineInfo(false)} />

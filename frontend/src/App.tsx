@@ -29,6 +29,7 @@ import LoginPage from './pages/LoginPage';
 import { useStore } from './store/useStore';
 import { checkModeOnBoot } from './services/modeCheck';
 import { runSync } from './services/syncService';
+import { addLog } from './services/debugLog';
 
 setupIonicReact();
 
@@ -39,8 +40,10 @@ const App: React.FC = () => {
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
     EspServer.startServer();
-    const listenerPromise = EspServer.addListener('espRegistered', ({ ip }) => {
+    const listenerPromise = EspServer.addListener('espRegistered', ({ ip, serial }) => {
       localStorage.setItem('esp32_ip', ip);
+      if (serial) localStorage.setItem('esp32_serial', serial);
+      addLog({ type: 'registration', ip, serial: serial ?? '' });
       useStore.getState().setMachineConnected(true);
     });
     return () => {

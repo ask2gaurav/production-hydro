@@ -1,4 +1,5 @@
 import { Capacitor, CapacitorHttp } from '@capacitor/core';
+import { addLog } from './debugLog';
 
 /**
  * Drop-in fetch wrapper that uses the built-in CapacitorHttp on Android
@@ -10,30 +11,56 @@ import { Capacitor, CapacitorHttp } from '@capacitor/core';
 export async function nativeFetch(
   url: string,
   timeoutMs = 3000,
+  logType: 'poll' | 'command' = 'poll',
 ): Promise<string> {
+  console.log(`[HydroDebug][FETCH] → ${url}`);
+
   if (!Capacitor.isNativePlatform()) {
-    const res = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return res.text();
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
+      if (!res.ok) {
+        const err = `HTTP ${res.status}`;
+        addLog({ type: logType, url, status: 'error', error: err });
+        throw new Error(err);
+      }
+      const body = await res.text();
+      addLog({ type: logType, url, status: 'ok', body });
+      return body;
+    } catch (e: unknown) {
+      addLog({ type: logType, url, status: 'error', error: e instanceof Error ? e.message : String(e) });
+      throw e;
+    }
   }
 
-  const response = await CapacitorHttp.request({
-    method: 'GET',
-    url,
-    connectTimeout: timeoutMs,
-    readTimeout: timeoutMs,
-  });
+  try {
+    const response = await CapacitorHttp.request({
+      method: 'GET',
+      url,
+      connectTimeout: timeoutMs,
+      readTimeout: timeoutMs,
+    });
 
-  if (response.status < 200 || response.status >= 300) {
-    throw new Error(`ESP32 responded with ${response.status}`);
-  }
+    console.log(`[HydroDebug][FETCH] ← ${url} status=${response.status}`);
 
-  // CapacitorHttp parses JSON automatically when Content-Type is application/json.
-  // ESP32 returns loose JSON as plain text, so re-serialise if already parsed.
-  if (typeof response.data === 'string') {
-    return response.data;
+    if (response.status < 200 || response.status >= 300) {
+      const err = `ESP32 responded with ${response.status}`;
+      addLog({ type: logType, url, status: 'error', error: err });
+      throw new Error(err);
+    }
+
+    // CapacitorHttp parses JSON automatically when Content-Type is application/json.
+    // ESP32 returns loose JSON as plain text, so re-serialise if already parsed.
+    const body =
+      typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
+
+    addLog({ type: logType, url, status: 'ok', body });
+    return body;
+  } catch (e: unknown) {
+    const errMsg = e instanceof Error ? e.message : String(e);
+    console.error(`[HydroDebug][FETCH] ✗ ${url} — ${errMsg}`);
+    addLog({ type: logType, url, status: 'error', error: errMsg });
+    throw e;
   }
-  return JSON.stringify(response.data);
 }
 
 /**
