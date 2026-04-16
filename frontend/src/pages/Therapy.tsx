@@ -252,8 +252,11 @@ const Therapy: React.FC = () => {
 
   const isLocked = state === 'INIT' || state === 'ACTIVE' || state === 'PAUSED';
   const [defaultTemp, setDefaultTemp] = useState(37);
+  const [therapyMinTemp, setTherapyMinTemp] = useState(0);
   const [showMachineAlert, setShowMachineAlert] = useState(false);
   const [showDisconnectPauseModal, setShowDisconnectPauseModal] = useState(false);
+  const [showLowTempModal, setShowLowTempModal] = useState(false);
+  const [showTempRecoveredModal, setShowTempRecoveredModal] = useState(false);
   const [blowerAuto, setBlowerAuto] = useState(false);
   const [flushAuto, setFlushAuto] = useState(false);
   const [blowerMode, setBlowerMode] = useState<'continuous' | 'interval'>('continuous');
@@ -268,6 +271,7 @@ const Therapy: React.FC = () => {
   const [showLowWaterModal, setShowLowWaterModal] = useState(false);
   const [showWaterRecoveredModal, setShowWaterRecoveredModal] = useState(false);
   const lowWaterPaused = useRef(false);
+  const lowTempPaused = useRef(false);
   const [bgIndex, setBgIndex] = useState(0);
   useEffect(() => {
     const images = ['/healthy_gut_1024x683.png', '/hydrad_soften_1024x683.png'];
@@ -281,6 +285,7 @@ const Therapy: React.FC = () => {
     const s = await localDB.settings.get(machineId);
     return {
       session_duration: s?.default_session_minutes ?? 40,
+      therapy_min_temp: s?.therapy_min_temp ?? 0,
       default_temperature: s?.default_temperature ?? defaultTemp,
       max_temperature: s?.max_temperature ?? 40,
       auto_flush: s?.auto_flush ? 1 : 0,
@@ -367,6 +372,7 @@ const Therapy: React.FC = () => {
       setTotalSeconds(secs);
       setTimeLeft(secs);
       if (s?.default_temperature) setDefaultTemp(s.default_temperature);
+      setTherapyMinTemp(s?.therapy_min_temp ?? 0);
       setBlowerAuto(s?.blower_auto ?? false);
       setFlushAuto(s?.auto_flush ?? false);
       setBlowerMode(s?.blower_frequency_mode ?? 'continuous');
@@ -426,6 +432,26 @@ const Therapy: React.FC = () => {
           setShowLowWaterModal(false);
           setShowWaterRecoveredModal(true);
         }
+
+        // Auto-pause: temp drops below therapy min during active session
+        const isMinTempValid = therapyMinTemp > 0 && therapyMinTemp < defaultTemp;
+        if (state === 'ACTIVE' && isMinTempValid && info.temp < therapyMinTemp) {
+          lowTempPaused.current = true;
+          setState('PAUSED');
+          setShowLowTempModal(true);
+          try {
+            const params = await buildAllParams();
+            await sendPrepareParams({ ...params, start_session: 1, prepare_session: 1, pause_session: 1 });
+          } catch {
+            // Stay paused locally even if command fails
+          }
+        }
+        // Auto-recover: temp restored while paused due to low temp
+        if (state === 'PAUSED' && lowTempPaused.current && isMinTempValid && info.temp >= therapyMinTemp) {
+          lowTempPaused.current = false;
+          setShowLowTempModal(false);
+          setShowTempRecoveredModal(true);
+        }
       } catch {
         setMachineConnected(false);
         setMachineInfo(null);
@@ -444,7 +470,7 @@ const Therapy: React.FC = () => {
     poll();
     const id = setInterval(poll, interval);
     return () => clearInterval(id);
-  }, [state, defaultTemp, setMachineConnected, setMachineInfo, buildAllParams]);
+  }, [state, defaultTemp, therapyMinTemp, setMachineConnected, setMachineInfo, buildAllParams]);
 
   // ---------- Session lifecycle ----------
 
@@ -975,7 +1001,10 @@ const Therapy: React.FC = () => {
                       expand="block"
                       color={state === 'ACTIVE' ? 'warning' : 'success'}
                       onClick={handlePauseResume}
-                      disabled={state === 'PAUSED' && machineInfo?.water_ll === 0}
+                      disabled={
+                        (state === 'PAUSED' && machineInfo?.water_ll === 0) ||
+                        (state === 'PAUSED' && lowTempPaused.current && machineInfo != null && machineInfo.temp < therapyMinTemp)
+                      }
                     >
                       {state === 'ACTIVE' ? 'PAUSE' : 'RESUME'}
                     </IonButton>
@@ -1653,6 +1682,90 @@ const Therapy: React.FC = () => {
               }}
             >
               Dismiss
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Low temperature — session auto-paused modal */}
+      {showLowTempModal && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 10000,
+          backgroundColor: 'rgba(0,0,0,0.55)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <div style={{
+            backgroundColor: 'white', borderRadius: '14px',
+            padding: '2rem 2rem 1.5rem',
+            maxWidth: '460px', width: '90%',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.28)',
+          }}>
+            <div style={{ fontSize: '2.8rem', marginBottom: '0.5rem', textAlign: 'center' }}>🌡️</div>
+            <h2 style={{ margin: '0 0 0.5rem', fontSize: '1.3rem', color: '#b71c1c', fontWeight: 700, textAlign: 'center' }}>
+              Session Paused — Water Temperature Too Low
+            </h2>
+            <p style={{ margin: '0 0 1rem', fontSize: '0.95rem', color: '#333', lineHeight: 1.6, textAlign: 'center' }}>
+              The water temperature has dropped below the minimum therapy threshold ({therapyMinTemp}°C).
+              The session has been automatically paused.
+            </p>
+            <div style={{ backgroundColor: '#fff3f3', border: '1px solid #f5c2c2', borderRadius: '10px', padding: '1rem 1.25rem', marginBottom: '1.25rem' }}>
+              <p style={{ fontWeight: 700, color: '#555', fontSize: '0.88rem', marginBottom: '0.5rem' }}>Please check the following:</p>
+              <ol style={{ margin: 0, paddingLeft: '1.2rem', color: '#444', fontSize: '0.88rem', lineHeight: '2' }}>
+                <li>Check the <strong>water heater</strong> — ensure it is powered on and functioning.</li>
+                <li>Ensure the <strong>heater switch</strong> is enabled in Hardware Controls.</li>
+                <li>Wait for the temperature to rise back above <strong>{therapyMinTemp}°C</strong> before resuming.</li>
+              </ol>
+            </div>
+            <p style={{ margin: '0 0 1.25rem', fontSize: '0.85rem', color: '#888', textAlign: 'center', lineHeight: 1.5 }}>
+              The session will remain paused. This dialog will close automatically once the temperature is restored.
+            </p>
+            <button
+              onClick={() => setShowLowTempModal(false)}
+              style={{
+                backgroundColor: '#b71c1c', color: 'white',
+                border: 'none', borderRadius: '8px',
+                padding: '0.65rem 2rem', fontSize: '1rem',
+                fontWeight: 600, cursor: 'pointer', width: '100%',
+              }}
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Temperature restored modal */}
+      {showTempRecoveredModal && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 10000,
+          backgroundColor: 'rgba(0,0,0,0.55)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <div style={{
+            backgroundColor: 'white', borderRadius: '14px',
+            padding: '2rem 2rem 1.5rem',
+            maxWidth: '420px', width: '90%',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.28)',
+            textAlign: 'center',
+          }}>
+            <div style={{ fontSize: '2.8rem', marginBottom: '0.5rem' }}>✅</div>
+            <h2 style={{ margin: '0 0 0.5rem', fontSize: '1.3rem', color: '#2dd36f', fontWeight: 700 }}>
+              Temperature Restored
+            </h2>
+            <p style={{ margin: '0 0 1.5rem', fontSize: '0.95rem', color: '#333', lineHeight: 1.6 }}>
+              The water temperature is back above the minimum threshold ({therapyMinTemp}°C).
+              Press <strong>RESUME</strong> to continue the therapy session.
+            </p>
+            <button
+              onClick={() => setShowTempRecoveredModal(false)}
+              style={{
+                backgroundColor: '#2dd36f', color: 'white',
+                border: 'none', borderRadius: '8px',
+                padding: '0.65rem 2rem', fontSize: '1rem',
+                fontWeight: 600, cursor: 'pointer', width: '100%',
+              }}
+            >
+              OK
             </button>
           </div>
         </div>

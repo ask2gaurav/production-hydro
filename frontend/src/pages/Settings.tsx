@@ -20,6 +20,7 @@ const Settings: React.FC = () => {
 
   const [settings, setSettings] = useState({
     default_session_minutes: 40,
+    therapy_min_temp: 35,
     default_temperature: 37,
     max_temperature: 40,
     flush_frequency: 30,
@@ -41,6 +42,7 @@ const Settings: React.FC = () => {
 
   const [inputDraft, setInputDraft] = useState({
     default_session_minutes: '40',
+    therapy_min_temp: '35',
     default_temperature: '37',
     max_temperature: '40',
     flush_duration: '10',
@@ -55,6 +57,7 @@ const Settings: React.FC = () => {
         setSettings((prev) => ({ ...prev, ...s }));
         setInputDraft({
           default_session_minutes: String(s.default_session_minutes ?? 40),
+          therapy_min_temp: String(s.therapy_min_temp ?? 35),
           default_temperature: String(s.default_temperature ?? 37),
           max_temperature: String(s.max_temperature ?? 40),
           flush_duration: String(s.flush_duration ?? 10),
@@ -66,9 +69,10 @@ const Settings: React.FC = () => {
     });
   }, [machineId]);
 
-  const handleNumericBlur = (key: keyof typeof inputDraft, min: number) => {
+  const handleNumericBlur = (key: keyof typeof inputDraft, min: number, max?: number) => {
     const parsed = parseInt(inputDraft[key], 10);
-    if (!isNaN(parsed) && parsed >= min) {
+    const valid = !isNaN(parsed) && parsed >= min && (max === undefined || parsed <= max);
+    if (valid) {
       handleSetting(key, parsed);
     } else {
       setInputDraft((d) => ({ ...d, [key]: String(settings[key]) }));
@@ -302,18 +306,33 @@ const Settings: React.FC = () => {
               </div>
             </div>
 
-            <div style={rowStyle}>
+            <div style={{ ...rowStyle, flexDirection: 'column', alignItems: 'flex-start', gap: '0.4rem' }}>
               <span style={labelStyle}>Set Therapy Temperature</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <input
-                  type="number"
-                  min={20} max={50}
-                  value={inputDraft.default_temperature}
-                  onChange={(e) => setInputDraft((d) => ({ ...d, default_temperature: e.target.value }))}
-                  onBlur={() => handleNumericBlur('default_temperature', 20)}
-                  style={inputStyle}
-                />
-                <span style={{ fontSize: '0.8rem', color: '#888' }}>°C</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                  <span style={{ fontSize: '0.78rem', color: '#888' }}>Min</span>
+                  <input
+                    type="number"
+                    min={20} max={settings.default_temperature - 1}
+                    value={inputDraft.therapy_min_temp}
+                    onChange={(e) => setInputDraft((d) => ({ ...d, therapy_min_temp: e.target.value }))}
+                    onBlur={() => handleNumericBlur('therapy_min_temp', 20, settings.default_temperature - 1)}
+                    style={inputStyle}
+                  />
+                  <span style={{ fontSize: '0.8rem', color: '#888' }}>°C</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                  <span style={{ fontSize: '0.78rem', color: '#888' }}>Max</span>
+                  <input
+                    type="number"
+                    min={settings.therapy_min_temp + 1} max={50}
+                    value={inputDraft.default_temperature}
+                    onChange={(e) => setInputDraft((d) => ({ ...d, default_temperature: e.target.value }))}
+                    onBlur={() => handleNumericBlur('default_temperature', settings.therapy_min_temp + 1, 50)}
+                    style={inputStyle}
+                  />
+                  <span style={{ fontSize: '0.8rem', color: '#888' }}>°C</span>
+                </div>
               </div>
             </div>
 
@@ -473,31 +492,6 @@ const Settings: React.FC = () => {
                 </div>
               </>
             )}
-
-            {/* Hotspot Settings */}
-            <p style={{ ...colHeaderStyle, marginTop: '1.25rem' }}>Hotspot</p>
-
-            <div style={rowStyle}>
-              <span style={labelStyle}>SSID</span>
-              <input
-                type="text"
-                value={settings.ssid}
-                onChange={(e) => handleSetting('ssid', e.target.value)}
-                style={{ ...inputStyle, width: '140px', textAlign: 'left' }}
-                placeholder="Hotspot name"
-              />
-            </div>
-
-            <div style={rowStyle}>
-              <span style={labelStyle}>Password</span>
-              <input
-                type="text"
-                value={settings.password}
-                onChange={(e) => handleSetting('password', e.target.value)}
-                style={{ ...inputStyle, width: '140px', textAlign: 'left' }}
-                placeholder="Hotspot password"
-              />
-            </div>
 
             <p style={{ fontSize: '0.78rem', color: '#aaa', marginTop: '1.5rem' }}>
               Machine ID: {machineId}
