@@ -3,7 +3,7 @@ import {
   IonContent, IonHeader, IonPage, IonTitle, IonToolbar,
   IonButton, IonIcon, IonBadge, useIonAlert
 } from '@ionic/react';
-import { arrowBack, wifiOutline } from 'ionicons/icons';
+import { arrowBack, wifiOutline/* , cloudOfflineOutline  */} from 'ionicons/icons';
 import { localDB } from '../db/localDB';
 import { useStore } from '../store/useStore';
 import { useHistory } from 'react-router-dom';
@@ -35,13 +35,45 @@ const Settings: React.FC = () => {
     blower_frequency_mode: 'continuous' as 'continuous' | 'interval',
     blower_interval: 30,
     blower_duration: 10,
+    ssid: '',
+    password: '',
+  });
+
+  const [inputDraft, setInputDraft] = useState({
+    default_session_minutes: '40',
+    default_temperature: '37',
+    max_temperature: '40',
+    flush_duration: '10',
+    flush_frequency: '30',
+    blower_interval: '30',
+    blower_duration: '10',
   });
 
   useEffect(() => {
     localDB.settings.get(machineId).then((s) => {
-      if (s) setSettings((prev) => ({ ...prev, ...s }));
+      if (s) {
+        setSettings((prev) => ({ ...prev, ...s }));
+        setInputDraft({
+          default_session_minutes: String(s.default_session_minutes ?? 40),
+          default_temperature: String(s.default_temperature ?? 37),
+          max_temperature: String(s.max_temperature ?? 40),
+          flush_duration: String(s.flush_duration ?? 10),
+          flush_frequency: String(s.flush_frequency ?? 30),
+          blower_interval: String(s.blower_interval ?? 30),
+          blower_duration: String(s.blower_duration ?? 10),
+        });
+      }
     });
   }, [machineId]);
+
+  const handleNumericBlur = (key: keyof typeof inputDraft, min: number) => {
+    const parsed = parseInt(inputDraft[key], 10);
+    if (!isNaN(parsed) && parsed >= min) {
+      handleSetting(key, parsed);
+    } else {
+      setInputDraft((d) => ({ ...d, [key]: String(settings[key]) }));
+    }
+  };
 
   const persistSettings = (updated: typeof settings) => {
     localDB.settings.get(machineId).then((existing) => {
@@ -162,7 +194,7 @@ const Settings: React.FC = () => {
       </IonHeader>
 
       <IonContent className="ion-padding">
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '1rem', height: '100%' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', height: '100%' }}>
 
           {/* Column 1: System State */}
           <div style={cardStyle}>
@@ -202,6 +234,23 @@ const Settings: React.FC = () => {
                 {machineInfo ? (machineInfo.water_hl ? 'True' : 'False') : '—'}
               </span>
             </div>
+
+            {!machineConnected && (
+              <div style={{ marginTop: '1.25rem', backgroundColor: '#fff3f3', border: '1px solid #f5c2c2', borderRadius: '10px', padding: '1rem 1.25rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                  {/*<IonIcon icon={cloudOfflineOutline} style={{ fontSize: '1.2rem', color: '#d32f2f' }} />
+                   <span style={{ fontWeight: 700, color: '#d32f2f', fontSize: '0.88rem' }}>Machine Not Connected</span> */}
+                  <span style={{ fontWeight: 700, color: '#d32f2f', fontSize: '0.88rem' }}>Tablet Hotspot Troubleshooting Steps:</span>
+                </div>
+                {/* <p style={{ fontWeight: 700, color: '#555', fontSize: '0.8rem', marginBottom: '0.4rem' }}>Troubleshooting Steps:</p> */}
+                <ol style={{ margin: 0, paddingLeft: '1.2rem', color: '#444', fontSize: '0.8rem', lineHeight: '1.9' }}>
+                  <li>Enable the <strong>hotspot</strong> on this tablet.</li>
+                  <li>Set hotspot <strong>SSID</strong> to: <code style={{ backgroundColor: '#f0f0f0', padding: '0 4px', borderRadius: '4px' }}>{settings.ssid || <em style={{ color: '#999' }}>Not configured — set in Session Settings</em>}</code></li>
+                  <li>Set hotspot <strong>Password</strong> to: <code style={{ backgroundColor: '#f0f0f0', padding: '0 4px', borderRadius: '4px' }}>{settings.password || <em style={{ color: '#999' }}>Not configured — set in Session Settings</em>}</code></li>
+                  <li>Turn on the <strong>Colonima machine</strong> and wait for it to connect.</li>
+                </ol>
+              </div>
+            )}
           </div>
 
           {/* Column 2: Hardware Controls */}
@@ -228,10 +277,10 @@ const Settings: React.FC = () => {
               );
             })}
 
-            <div style={{ ...hwButtonStyle(false), cursor: 'default', opacity: 0.5, marginTop: '1rem' }}>
+            {/* <div style={{ ...hwButtonStyle(false), cursor: 'default', opacity: 0.5, marginTop: '1rem' }}>
               <span>Reset</span>
               <span style={{ fontSize: '0.78rem', color: '#999' }}>No action</span>
-            </div>
+            </div> */}
           </div>
 
           {/* Column 3: Settings */}
@@ -244,8 +293,9 @@ const Settings: React.FC = () => {
                 <input
                   type="number"
                   min={1} max={120}
-                  value={settings.default_session_minutes}
-                  onChange={(e) => handleSetting('default_session_minutes', parseInt(e.target.value, 10) || 1)}
+                  value={inputDraft.default_session_minutes}
+                  onChange={(e) => setInputDraft((d) => ({ ...d, default_session_minutes: e.target.value }))}
+                  onBlur={() => handleNumericBlur('default_session_minutes', 1)}
                   style={inputStyle}
                 />
                 <span style={{ fontSize: '0.8rem', color: '#888' }}>min</span>
@@ -258,8 +308,9 @@ const Settings: React.FC = () => {
                 <input
                   type="number"
                   min={20} max={50}
-                  value={settings.default_temperature}
-                  onChange={(e) => handleSetting('default_temperature', parseInt(e.target.value, 10) || 37)}
+                  value={inputDraft.default_temperature}
+                  onChange={(e) => setInputDraft((d) => ({ ...d, default_temperature: e.target.value }))}
+                  onBlur={() => handleNumericBlur('default_temperature', 20)}
                   style={inputStyle}
                 />
                 <span style={{ fontSize: '0.8rem', color: '#888' }}>°C</span>
@@ -272,8 +323,9 @@ const Settings: React.FC = () => {
                 <input
                   type="number"
                   min={20} max={60}
-                  value={settings.max_temperature}
-                  onChange={(e) => handleSetting('max_temperature', parseInt(e.target.value, 10) || 40)}
+                  value={inputDraft.max_temperature}
+                  onChange={(e) => setInputDraft((d) => ({ ...d, max_temperature: e.target.value }))}
+                  onBlur={() => handleNumericBlur('max_temperature', 20)}
                   style={inputStyle}
                 />
                 <span style={{ fontSize: '0.8rem', color: '#888' }}>°C</span>
@@ -286,8 +338,9 @@ const Settings: React.FC = () => {
                 <input
                   type="number"
                   min={1} max={300}
-                  value={settings.flush_duration}
-                  onChange={(e) => handleSetting('flush_duration', parseInt(e.target.value, 10) || 10)}
+                  value={inputDraft.flush_duration}
+                  onChange={(e) => setInputDraft((d) => ({ ...d, flush_duration: e.target.value }))}
+                  onBlur={() => handleNumericBlur('flush_duration', 1)}
                   style={inputStyle}
                 />
                 <span style={{ fontSize: '0.8rem', color: '#888' }}>sec</span>
@@ -339,8 +392,9 @@ const Settings: React.FC = () => {
                   <input
                     type="number"
                     min={5} max={300}
-                    value={settings.flush_frequency}
-                    onChange={(e) => handleSetting('flush_frequency', parseInt(e.target.value, 10) || 30)}
+                    value={inputDraft.flush_frequency}
+                    onChange={(e) => setInputDraft((d) => ({ ...d, flush_frequency: e.target.value }))}
+                    onBlur={() => handleNumericBlur('flush_frequency', 5)}
                     style={inputStyle}
                   />
                   <span style={{ fontSize: '0.8rem', color: '#888' }}>sec</span>
@@ -394,8 +448,9 @@ const Settings: React.FC = () => {
                     <input
                       type="number"
                       min={5} max={600}
-                      value={settings.blower_interval}
-                      onChange={(e) => handleSetting('blower_interval', parseInt(e.target.value, 10) || 30)}
+                      value={inputDraft.blower_interval}
+                      onChange={(e) => setInputDraft((d) => ({ ...d, blower_interval: e.target.value }))}
+                      onBlur={() => handleNumericBlur('blower_interval', 5)}
                       style={inputStyle}
                     />
                     <span style={{ fontSize: '0.8rem', color: '#888' }}>sec</span>
@@ -408,8 +463,9 @@ const Settings: React.FC = () => {
                     <input
                       type="number"
                       min={1} max={300}
-                      value={settings.blower_duration}
-                      onChange={(e) => handleSetting('blower_duration', parseInt(e.target.value, 10) || 10)}
+                      value={inputDraft.blower_duration}
+                      onChange={(e) => setInputDraft((d) => ({ ...d, blower_duration: e.target.value }))}
+                      onBlur={() => handleNumericBlur('blower_duration', 1)}
                       style={inputStyle}
                     />
                     <span style={{ fontSize: '0.8rem', color: '#888' }}>sec</span>
@@ -417,6 +473,31 @@ const Settings: React.FC = () => {
                 </div>
               </>
             )}
+
+            {/* Hotspot Settings */}
+            <p style={{ ...colHeaderStyle, marginTop: '1.25rem' }}>Hotspot</p>
+
+            <div style={rowStyle}>
+              <span style={labelStyle}>SSID</span>
+              <input
+                type="text"
+                value={settings.ssid}
+                onChange={(e) => handleSetting('ssid', e.target.value)}
+                style={{ ...inputStyle, width: '140px', textAlign: 'left' }}
+                placeholder="Hotspot name"
+              />
+            </div>
+
+            <div style={rowStyle}>
+              <span style={labelStyle}>Password</span>
+              <input
+                type="text"
+                value={settings.password}
+                onChange={(e) => handleSetting('password', e.target.value)}
+                style={{ ...inputStyle, width: '140px', textAlign: 'left' }}
+                placeholder="Hotspot password"
+              />
+            </div>
 
             <p style={{ fontSize: '0.78rem', color: '#aaa', marginTop: '1.5rem' }}>
               Machine ID: {machineId}

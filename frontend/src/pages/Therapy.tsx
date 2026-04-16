@@ -8,7 +8,7 @@ import {
 import {
   arrowBack, addOutline, personOutline, personCircleOutline,
   peopleOutline, pencilOutline, trashOutline, searchOutline,
-  wifiOutline, cloudOfflineOutline, checkmarkCircleOutline
+  wifiOutline, cloudOfflineOutline, checkmarkCircleOutline, playCircleOutline, pauseCircleOutline
 } from 'ionicons/icons';
 import { useHistory } from 'react-router';
 import { useStore } from '../store/useStore';
@@ -265,6 +265,9 @@ const Therapy: React.FC = () => {
   const [hotspotPassword, setHotspotPassword] = useState<string | null>(null);
 
   const [showMachineInfo, setShowMachineInfo] = useState(false);
+  const [showLowWaterModal, setShowLowWaterModal] = useState(false);
+  const [showWaterRecoveredModal, setShowWaterRecoveredModal] = useState(false);
+  const lowWaterPaused = useRef(false);
   const [bgIndex, setBgIndex] = useState(0);
   useEffect(() => {
     const images = ['/healthy_gut_1024x683.png', '/hydrad_soften_1024x683.png'];
@@ -405,6 +408,24 @@ const Therapy: React.FC = () => {
         if (state === 'IDLE' && (info.temp < defaultTemp || info.water_hl !== 1)) {
           setState('PREPARING');
         }
+        // Auto-pause: water low level drops to 0 during active session
+        if (state === 'ACTIVE' && info.water_ll === 0) {
+          lowWaterPaused.current = true;
+          setState('PAUSED');
+          setShowLowWaterModal(true);
+          try {
+            const params = await buildAllParams();
+            await sendPrepareParams({ ...params, start_session: 1, prepare_session: 1, pause_session: 1 });
+          } catch {
+            // Stay paused locally even if command fails
+          }
+        }
+        // Auto-recover: water level restored while paused due to low water
+        if (state === 'PAUSED' && lowWaterPaused.current && info.water_ll === 1) {
+          lowWaterPaused.current = false;
+          setShowLowWaterModal(false);
+          setShowWaterRecoveredModal(true);
+        }
       } catch {
         setMachineConnected(false);
         setMachineInfo(null);
@@ -423,7 +444,7 @@ const Therapy: React.FC = () => {
     poll();
     const id = setInterval(poll, interval);
     return () => clearInterval(id);
-  }, [state, defaultTemp, setMachineConnected, setMachineInfo]);
+  }, [state, defaultTemp, setMachineConnected, setMachineInfo, buildAllParams]);
 
   // ---------- Session lifecycle ----------
 
@@ -950,7 +971,12 @@ const Therapy: React.FC = () => {
                 </IonCol>
                 <IonCol>
                   {state === 'ACTIVE' || state === 'PAUSED' ? (
-                    <IonButton expand="block" color={state === 'ACTIVE' ? 'warning' : 'success'} onClick={handlePauseResume}>
+                    <IonButton
+                      expand="block"
+                      color={state === 'ACTIVE' ? 'warning' : 'success'}
+                      onClick={handlePauseResume}
+                      disabled={state === 'PAUSED' && machineInfo?.water_ll === 0}
+                    >
                       {state === 'ACTIVE' ? 'PAUSE' : 'RESUME'}
                     </IonButton>
                   ) : (
@@ -1063,9 +1089,11 @@ const Therapy: React.FC = () => {
                 </div>
               )}
               {state === 'READY' && (
-                <div style={{ textAlign: 'center', backgroundColor: 'rgba(255,255,255,0.88)', borderRadius: '16px', padding: '2rem', maxWidth: '360px' }}>
-                  <IonIcon icon={checkmarkCircleOutline} style={{ fontSize: '5rem', color: '#2dd36f' }} />
-                  <h2 style={{ color: '#2dd36f', margin: '0.75rem 0 0.25rem' }}>Machine Connected</h2>
+                <div style={{ textAlign: 'center', backgroundColor: 'rgba(255,255,255,0.88)', borderRadius: '16px', padding: '0.5rem', maxWidth: '98%' }}>
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', alignItems: 'center', marginBottom: '1rem' }}>
+                  <IonIcon icon={checkmarkCircleOutline} style={{ fontSize: '2.5rem', color: '#2dd36f' }} />
+                  <h2 style={{ color: '#2dd36f', margin: '0.75rem 0 0.25rem'}}>Machine Connected</h2>
+                    </div>
                   <p style={{ color: '#666', fontSize: '0.95rem' }}>
                     Colonima is online. Select a therapist and patient, add session notes, then press <strong>PREPARE</strong> to begin. Use by professionals only.
                   </p>
@@ -1133,10 +1161,9 @@ const Therapy: React.FC = () => {
                 </div>
               )}
               {state === 'IDLE' && (
-                <div style={{ textAlign: 'center' }}>
-                  <h2 style={{ color: '#2dd36f' }}>System Ready</h2>
-                  <p style={{ color: '#666' }}>Water level and temperature reached. Select therapist, patient, add notes and press START.</p>
-                  <div style={{ display: 'flex', justifyContent: 'center', gap: '2rem', marginTop: '1rem' }}>
+                <div style={{ textAlign: 'center', width: '98%'}}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding:'0rem 1.5rem', gap: '2rem', marginTop: '1rem' }}>
+                    <h2 style={{ color: '#2dd36f', textAlign:"left" }}>System Ready (IDLE)</h2>
                     <div style={{ textAlign: 'center' }}>
                       <span style={{ fontSize: '1.8rem', fontWeight: 700, color: '#2dd36f' }}>{machineInfo ? `${machineInfo.temp}°C` : '—'}</span>
                       <p style={{ fontSize: '0.8rem', color: '#888', margin: 0 }}>Temperature</p>
@@ -1146,19 +1173,37 @@ const Therapy: React.FC = () => {
                       <p style={{ fontSize: '0.8rem', color: '#888', margin: 0 }}>Water Level</p>
                     </div>
                   </div>
+                  <p style={{ color: '#666' }}>Water level and temperature reached. Select therapist, patient, add notes and press START.</p>
                 </div>
               )}
               {state === 'ACTIVE' && (
-                <div style={{ width: '100%', height: '40%', backgroundColor: '#e0f7fa', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '5px solid #2dd36f' }}>
-                  <h2 style={{ color: '#00838f' }}>Active Therapy</h2>
+                <div style={{ textAlign: 'center', width: '98%', backgroundColor: 'rgba(255,255,255,0.88)', border: '1px solid  rgba(235, 235, 235, 0.88)', borderRadius: '16px', padding: '0.5rem'  }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0rem 1.5rem', gap: '1rem', marginTop: '0.1rem' }}>
+                    <IonIcon icon={playCircleOutline} style={{ fontSize: '2rem', color: '#2dd36f' }} />
+                    <h2 style={{ color: '#2dd36f', fontSize: '1.3rem', textAlign: "left", width: '65%',padding: '0.5rem 0' ,margin: '0rem'}}>Therapy in Progress</h2>
                   {machineInfo && (
-                    <p style={{ color: '#00838f', fontSize: '1.1rem' }}>Temp: {machineInfo.temp}°C</p>
+                      <p style={{ color: '#00838f', fontSize: '1.1rem', width: '35%', margin: '0.1rem 0', padding: '0.2rem 0.1rem' }}>Temp: {machineInfo.temp}°C</p>
                   )}
+                    {!machineInfo && (
+                      <p style={{ color: '#00838f', fontSize: '1.1rem', width: '35%', margin: '0.1rem 0', padding: '0.2rem 0.1rem' }}>&nbsp;</p>
+                    )}
+                  </div>
+                  <p style={{ color: '#666', fontSize: '0.81rem', margin: '0.1rem 0', padding: '0.2rem 0.1rem' }}>Therapy session in progress. Use PAUSE to take a break, and END THERAPY when finished.</p>
                 </div>
               )}
               {state === 'PAUSED' && (
-                <div style={{ width: '100%', height: '40%', backgroundColor: '#fff8e1', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '5px solid #ffc409' }}>
-                  <h2 style={{ color: '#b28900' }}>Session Paused</h2>
+                <div style={{ textAlign: 'center', width: '98%', backgroundColor: 'rgba(255,255,255,0.88)', border: '1px solid  rgba(235, 235, 235, 0.88)', borderRadius: '16px', padding: '0.5rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0rem 1.5rem', gap: '1rem', marginTop: '0.1rem' }}>
+                    <IonIcon icon={pauseCircleOutline} style={{ fontSize: '2rem', color: '#d32e2d' }} />
+                    <h2 style={{ color: '#d32e2d', fontSize: '1.3rem', textAlign: "left", width: '65%', padding: '0.5rem 0', margin: '0rem' }}>Therapy is Paused</h2>
+                    {machineInfo && (
+                      <p style={{ color: '#00838f', fontSize: '1.1rem', width: '35%' }}>Temp: {machineInfo.temp}°C</p>
+                    )}
+                    {!machineInfo && (
+                      <p style={{ color: '#00838f', fontSize: '1.1rem', width: '35%', margin: '0.1rem 0', padding: '0.2rem 0.1rem' }}>&nbsp;</p>
+                    )}
+                  </div>
+                  <p style={{ color: '#666', fontSize: '0.81rem', margin: '0.1rem 0', padding: '0.2rem 0.1rem' }}>Therapy session is paused. Use RESUME to continue, and END THERAPY when finished.</p>
                 </div>
               )}
             </IonCol>
@@ -1562,6 +1607,89 @@ const Therapy: React.FC = () => {
               }}
             >
               Dismiss
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Low water level — session auto-paused modal */}
+      {showLowWaterModal && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 10000,
+          backgroundColor: 'rgba(0,0,0,0.55)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <div style={{
+            backgroundColor: 'white', borderRadius: '14px',
+            padding: '2rem 2rem 1.5rem',
+            maxWidth: '460px', width: '90%',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.28)',
+          }}>
+            <div style={{ fontSize: '2.8rem', marginBottom: '0.5rem', textAlign: 'center' }}>⚠️</div>
+            <h2 style={{ margin: '0 0 0.5rem', fontSize: '1.3rem', color: '#b71c1c', fontWeight: 700, textAlign: 'center' }}>
+              Session Paused — Low Water Level
+            </h2>
+            <p style={{ margin: '0 0 1rem', fontSize: '0.95rem', color: '#333', lineHeight: 1.6, textAlign: 'center' }}>
+              The water level in the machine has dropped. The session has been automatically paused.
+            </p>
+            <div style={{ backgroundColor: '#fff3f3', border: '1px solid #f5c2c2', borderRadius: '10px', padding: '1rem 1.25rem', marginBottom: '1.25rem' }}>
+              <p style={{ fontWeight: 700, color: '#555', fontSize: '0.88rem', marginBottom: '0.5rem' }}>Please check the following:</p>
+              <ol style={{ margin: 0, paddingLeft: '1.2rem', color: '#444', fontSize: '0.88rem', lineHeight: '2' }}>
+                <li>Check the <strong>water level</strong> in the machine tank — refill if low.</li>
+                <li>Check the <strong>water pump</strong> — ensure it is running and not blocked.</li>
+                <li>Check the <strong>main water supply tank</strong> — ensure it has sufficient water.</li>
+              </ol>
+            </div>
+            <p style={{ margin: '0 0 1.25rem', fontSize: '0.85rem', color: '#888', textAlign: 'center', lineHeight: 1.5 }}>
+              The session will remain paused. This dialog will close automatically once water level is restored.
+            </p>
+            <button
+              onClick={() => setShowLowWaterModal(false)}
+              style={{
+                backgroundColor: '#b71c1c', color: 'white',
+                border: 'none', borderRadius: '8px',
+                padding: '0.65rem 2rem', fontSize: '1rem',
+                fontWeight: 600, cursor: 'pointer', width: '100%',
+              }}
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Water level restored modal */}
+      {showWaterRecoveredModal && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 10000,
+          backgroundColor: 'rgba(0,0,0,0.55)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <div style={{
+            backgroundColor: 'white', borderRadius: '14px',
+            padding: '2rem 2rem 1.5rem',
+            maxWidth: '420px', width: '90%',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.28)',
+            textAlign: 'center',
+          }}>
+            <div style={{ fontSize: '2.8rem', marginBottom: '0.5rem' }}>✅</div>
+            <h2 style={{ margin: '0 0 0.5rem', fontSize: '1.3rem', color: '#2dd36f', fontWeight: 700 }}>
+              Water Level Restored
+            </h2>
+            <p style={{ margin: '0 0 1.5rem', fontSize: '0.95rem', color: '#333', lineHeight: 1.6 }}>
+              The water level is back to normal. The machine is ready to continue.
+              Press <strong>RESUME</strong> to continue the therapy session.
+            </p>
+            <button
+              onClick={() => setShowWaterRecoveredModal(false)}
+              style={{
+                backgroundColor: '#2dd36f', color: 'white',
+                border: 'none', borderRadius: '8px',
+                padding: '0.65rem 2rem', fontSize: '1rem',
+                fontWeight: 600, cursor: 'pointer', width: '100%',
+              }}
+            >
+              OK
             </button>
           </div>
         </div>
