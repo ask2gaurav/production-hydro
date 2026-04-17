@@ -1,0 +1,20 @@
+╭─── Claude Code v2.1.112 ─────────────────────────────────────────────────────╮
+│                                                │ Tips for getting started    │
+│              Welcome back Gaurav!              │ Run /init to create a CLAU… │
+│                                                │ ─────────────────────────── │
+│                     ▐▛███▜▌                    │ Recent activity             │
+│                    ▝▜█████▛▘                   │ 8m ago   /export            │
+│                      ▘▘ ▝▝                     │ 11m ago  Settings.tsx inpu… │
+│                                                │ 11m ago  Ionic 8 input bug… │
+│            Sonnet 4.6 · Claude Pro             │ /resume for more            │
+│   D:\projects\production-hydro-colon-therapy   │                             │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+> /export                                                                       
+/d/projects/production-hydro-colon-therapy/ClaudeHistory/sessions_export.md     
+  ⎿  Failed to export conversation: ENOENT: no such file or directory, open
+     'D:\projects\production-hydro-colon-therapy\d\projects\production-hydro-col
+     on-therapy\ClaudeHistory\sessions_export.txt'
+
+> /resume 
+  ⎿  Resume cancelled
