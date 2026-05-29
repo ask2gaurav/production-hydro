@@ -3,12 +3,14 @@ import {
   IonContent, IonHeader, IonPage, IonTitle, IonToolbar,
   IonButton, IonIcon, IonBadge, useIonAlert
 } from '@ionic/react';
-import { arrowBack, wifiOutline } from 'ionicons/icons';
+import { arrowBack, wifiOutline/* , cloudOfflineOutline  */} from 'ionicons/icons';
 import { localDB } from '../db/localDB';
 import { useStore } from '../store/useStore';
 import { useHistory } from 'react-router-dom';
 import { sendCommand } from '../services/esp32Service';
 import MachineInfoModal from '../components/MachineInfoModal';
+// Debug panel imports — kept for reference, panel commented out for production release
+// import { getLog, clearLog, fmtTime, type LogEntry } from '../services/debugLog';
 
 const Settings: React.FC = () => {
   const [presentAlert] = useIonAlert();
@@ -18,6 +20,7 @@ const Settings: React.FC = () => {
 
   const [settings, setSettings] = useState({
     default_session_minutes: 40,
+    therapy_min_temp: 35,
     default_temperature: 37,
     max_temperature: 40,
     flush_frequency: 30,
@@ -33,13 +36,48 @@ const Settings: React.FC = () => {
     blower_frequency_mode: 'continuous' as 'continuous' | 'interval',
     blower_interval: 30,
     blower_duration: 10,
+    ssid: '',
+    password: '',
+  });
+
+  const [inputDraft, setInputDraft] = useState({
+    default_session_minutes: '40',
+    therapy_min_temp: '35',
+    default_temperature: '37',
+    max_temperature: '40',
+    flush_duration: '10',
+    flush_frequency: '30',
+    blower_interval: '30',
+    blower_duration: '10',
   });
 
   useEffect(() => {
     localDB.settings.get(machineId).then((s) => {
-      if (s) setSettings((prev) => ({ ...prev, ...s }));
+      if (s) {
+        setSettings((prev) => ({ ...prev, ...s }));
+        setInputDraft({
+          default_session_minutes: String(s.default_session_minutes ?? 40),
+          therapy_min_temp: String(s.therapy_min_temp ?? 35),
+          default_temperature: String(s.default_temperature ?? 37),
+          max_temperature: String(s.max_temperature ?? 40),
+          flush_duration: String(s.flush_duration ?? 10),
+          flush_frequency: String(s.flush_frequency ?? 30),
+          blower_interval: String(s.blower_interval ?? 30),
+          blower_duration: String(s.blower_duration ?? 10),
+        });
+      }
     });
   }, [machineId]);
+
+  const handleNumericBlur = (key: keyof typeof inputDraft, min: number, max?: number) => {
+    const parsed = parseInt(inputDraft[key], 10);
+    const valid = !isNaN(parsed) && parsed >= min && (max === undefined || parsed <= max);
+    if (valid) {
+      handleSetting(key, parsed);
+    } else {
+      setInputDraft((d) => ({ ...d, [key]: String(settings[key]) }));
+    }
+  };
 
   const persistSettings = (updated: typeof settings) => {
     localDB.settings.get(machineId).then((existing) => {
@@ -200,6 +238,23 @@ const Settings: React.FC = () => {
                 {machineInfo ? (machineInfo.water_hl ? 'True' : 'False') : '—'}
               </span>
             </div>
+
+            {!machineConnected && (
+              <div style={{ marginTop: '1.25rem', backgroundColor: '#fff3f3', border: '1px solid #f5c2c2', borderRadius: '10px', padding: '1rem 1.25rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                  {/*<IonIcon icon={cloudOfflineOutline} style={{ fontSize: '1.2rem', color: '#d32f2f' }} />
+                   <span style={{ fontWeight: 700, color: '#d32f2f', fontSize: '0.88rem' }}>Machine Not Connected</span> */}
+                  <span style={{ fontWeight: 700, color: '#d32f2f', fontSize: '0.88rem' }}>Tablet Hotspot Troubleshooting Steps:</span>
+                </div>
+                {/* <p style={{ fontWeight: 700, color: '#555', fontSize: '0.8rem', marginBottom: '0.4rem' }}>Troubleshooting Steps:</p> */}
+                <ol style={{ margin: 0, paddingLeft: '1.2rem', color: '#444', fontSize: '0.8rem', lineHeight: '1.9' }}>
+                  <li>Enable the <strong>hotspot</strong> on this tablet.</li>
+                  <li>Set hotspot <strong>SSID</strong> to: <code style={{ backgroundColor: '#f0f0f0', padding: '0 4px', borderRadius: '4px' }}>{settings.ssid || <em style={{ color: '#999' }}>Not configured — set in Session Settings</em>}</code></li>
+                  <li>Set hotspot <strong>Password</strong> to: <code style={{ backgroundColor: '#f0f0f0', padding: '0 4px', borderRadius: '4px' }}>{settings.password || <em style={{ color: '#999' }}>Not configured — set in Session Settings</em>}</code></li>
+                  <li>Turn on the <strong>Colonima machine</strong> and wait for it to connect.</li>
+                </ol>
+              </div>
+            )}
           </div>
 
           {/* Column 2: Hardware Controls */}
@@ -226,10 +281,10 @@ const Settings: React.FC = () => {
               );
             })}
 
-            <div style={{ ...hwButtonStyle(false), cursor: 'default', opacity: 0.5, marginTop: '1rem' }}>
+            {/* <div style={{ ...hwButtonStyle(false), cursor: 'default', opacity: 0.5, marginTop: '1rem' }}>
               <span>Reset</span>
               <span style={{ fontSize: '0.78rem', color: '#999' }}>No action</span>
-            </div>
+            </div> */}
           </div>
 
           {/* Column 3: Settings */}
@@ -242,25 +297,42 @@ const Settings: React.FC = () => {
                 <input
                   type="number"
                   min={1} max={120}
-                  value={settings.default_session_minutes}
-                  onChange={(e) => handleSetting('default_session_minutes', parseInt(e.target.value, 10) || 1)}
+                  value={inputDraft.default_session_minutes}
+                  onChange={(e) => setInputDraft((d) => ({ ...d, default_session_minutes: e.target.value }))}
+                  onBlur={() => handleNumericBlur('default_session_minutes', 1)}
                   style={inputStyle}
                 />
                 <span style={{ fontSize: '0.8rem', color: '#888' }}>min</span>
               </div>
             </div>
 
-            <div style={rowStyle}>
+            <div style={{ ...rowStyle, flexDirection: 'column', alignItems: 'flex-start', gap: '0.4rem' }}>
               <span style={labelStyle}>Set Therapy Temperature</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <input
-                  type="number"
-                  min={20} max={50}
-                  value={settings.default_temperature}
-                  onChange={(e) => handleSetting('default_temperature', parseInt(e.target.value, 10) || 37)}
-                  style={inputStyle}
-                />
-                <span style={{ fontSize: '0.8rem', color: '#888' }}>°C</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                  <span style={{ fontSize: '0.78rem', color: '#888' }}>Min</span>
+                  <input
+                    type="number"
+                    min={20} max={settings.default_temperature - 1}
+                    value={inputDraft.therapy_min_temp}
+                    onChange={(e) => setInputDraft((d) => ({ ...d, therapy_min_temp: e.target.value }))}
+                    onBlur={() => handleNumericBlur('therapy_min_temp', 20, settings.default_temperature - 1)}
+                    style={inputStyle}
+                  />
+                  <span style={{ fontSize: '0.8rem', color: '#888' }}>°C</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                  <span style={{ fontSize: '0.78rem', color: '#888' }}>Max</span>
+                  <input
+                    type="number"
+                    min={settings.therapy_min_temp + 1} max={50}
+                    value={inputDraft.default_temperature}
+                    onChange={(e) => setInputDraft((d) => ({ ...d, default_temperature: e.target.value }))}
+                    onBlur={() => handleNumericBlur('default_temperature', settings.therapy_min_temp + 1, 50)}
+                    style={inputStyle}
+                  />
+                  <span style={{ fontSize: '0.8rem', color: '#888' }}>°C</span>
+                </div>
               </div>
             </div>
 
@@ -270,8 +342,9 @@ const Settings: React.FC = () => {
                 <input
                   type="number"
                   min={20} max={60}
-                  value={settings.max_temperature}
-                  onChange={(e) => handleSetting('max_temperature', parseInt(e.target.value, 10) || 40)}
+                  value={inputDraft.max_temperature}
+                  onChange={(e) => setInputDraft((d) => ({ ...d, max_temperature: e.target.value }))}
+                  onBlur={() => handleNumericBlur('max_temperature', 20)}
                   style={inputStyle}
                 />
                 <span style={{ fontSize: '0.8rem', color: '#888' }}>°C</span>
@@ -284,8 +357,9 @@ const Settings: React.FC = () => {
                 <input
                   type="number"
                   min={1} max={300}
-                  value={settings.flush_duration}
-                  onChange={(e) => handleSetting('flush_duration', parseInt(e.target.value, 10) || 10)}
+                  value={inputDraft.flush_duration}
+                  onChange={(e) => setInputDraft((d) => ({ ...d, flush_duration: e.target.value }))}
+                  onBlur={() => handleNumericBlur('flush_duration', 1)}
                   style={inputStyle}
                 />
                 <span style={{ fontSize: '0.8rem', color: '#888' }}>sec</span>
@@ -337,8 +411,9 @@ const Settings: React.FC = () => {
                   <input
                     type="number"
                     min={5} max={300}
-                    value={settings.flush_frequency}
-                    onChange={(e) => handleSetting('flush_frequency', parseInt(e.target.value, 10) || 30)}
+                    value={inputDraft.flush_frequency}
+                    onChange={(e) => setInputDraft((d) => ({ ...d, flush_frequency: e.target.value }))}
+                    onBlur={() => handleNumericBlur('flush_frequency', 5)}
                     style={inputStyle}
                   />
                   <span style={{ fontSize: '0.8rem', color: '#888' }}>sec</span>
@@ -392,8 +467,9 @@ const Settings: React.FC = () => {
                     <input
                       type="number"
                       min={5} max={600}
-                      value={settings.blower_interval}
-                      onChange={(e) => handleSetting('blower_interval', parseInt(e.target.value, 10) || 30)}
+                      value={inputDraft.blower_interval}
+                      onChange={(e) => setInputDraft((d) => ({ ...d, blower_interval: e.target.value }))}
+                      onBlur={() => handleNumericBlur('blower_interval', 5)}
                       style={inputStyle}
                     />
                     <span style={{ fontSize: '0.8rem', color: '#888' }}>sec</span>
@@ -406,8 +482,9 @@ const Settings: React.FC = () => {
                     <input
                       type="number"
                       min={1} max={300}
-                      value={settings.blower_duration}
-                      onChange={(e) => handleSetting('blower_duration', parseInt(e.target.value, 10) || 10)}
+                      value={inputDraft.blower_duration}
+                      onChange={(e) => setInputDraft((d) => ({ ...d, blower_duration: e.target.value }))}
+                      onBlur={() => handleNumericBlur('blower_duration', 1)}
                       style={inputStyle}
                     />
                     <span style={{ fontSize: '0.8rem', color: '#888' }}>sec</span>
@@ -420,6 +497,90 @@ const Settings: React.FC = () => {
               Machine ID: {machineId}
             </p>
           </div>
+
+
+          {/* Column 4: Debug Panel — commented out for production release
+          <div style={{ ...cardStyle, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', paddingBottom: '0.5rem', borderBottom: '2px solid #f0f0f0' }}>
+              <p style={{ ...colHeaderStyle, marginBottom: 0, borderBottom: 'none' }}>Debug</p>
+              <div style={{ display: 'flex', gap: '0.4rem' }}>
+                <IonIcon
+                  icon={refreshOutline}
+                  style={{ fontSize: '1rem', cursor: 'pointer', color: '#3880ff' }}
+                  onClick={refreshDebug}
+                />
+                <IonIcon
+                  icon={trashOutline}
+                  style={{ fontSize: '1rem', cursor: 'pointer', color: '#eb445a' }}
+                  onClick={() => { clearLog(); refreshDebug(); }}
+                />
+              </div>
+            </div>
+
+            <div style={rowStyle}>
+              <span style={labelStyle}>Stored IP</span>
+              <span style={{ ...valueStyle, fontSize: '0.78rem', fontFamily: 'monospace' }}>{storedIp}</span>
+            </div>
+            <div style={rowStyle}>
+              <span style={labelStyle}>Serial</span>
+              <span style={{ ...valueStyle, fontSize: '0.78rem', fontFamily: 'monospace' }}>{storedSerial}</span>
+            </div>
+            <div style={rowStyle}>
+              <span style={labelStyle}>Connected</span>
+              <span style={{ ...valueStyle, color: machineConnected ? '#2dd36f' : '#eb445a' }}>
+                {machineConnected ? 'Yes' : 'No'}
+              </span>
+            </div>
+
+            <p style={{ ...colHeaderStyle, marginTop: '0.75rem' }}>Local DB</p>
+            <div style={rowStyle}>
+              <span style={labelStyle}>Therapists</span>
+              <span style={valueStyle}>{dbCounts.therapists}</span>
+            </div>
+            <div style={rowStyle}>
+              <span style={labelStyle}>Patients</span>
+              <span style={valueStyle}>{dbCounts.patients}</span>
+            </div>
+            <div style={rowStyle}>
+              <span style={labelStyle}>Sessions</span>
+              <span style={valueStyle}>{dbCounts.sessions}</span>
+            </div>
+
+            <p style={{ ...colHeaderStyle, marginTop: '0.75rem' }}>Recent Events</p>
+            <div style={{ flex: 1, overflowY: 'auto', fontSize: '0.72rem', fontFamily: 'monospace' }}>
+              {debugLog.length === 0 && (
+                <p style={{ color: '#aaa', textAlign: 'center', marginTop: '0.5rem' }}>No events yet</p>
+              )}
+              {debugLog.map((entry, i) => {
+                let color = '#555';
+                let text = '';
+                if (entry.type === 'registration') {
+                  color = '#2dd36f';
+                  text = `[${fmtTime(entry.ts)}] REG ip=${entry.ip} sn=${entry.serial}`;
+                } else if (entry.type === 'poll') {
+                  color = entry.status === 'ok' ? '#3880ff' : '#eb445a';
+                  text = entry.status === 'ok'
+                    ? `[${fmtTime(entry.ts)}] POLL ok — ${entry.body?.slice(0, 40)}`
+                    : `[${fmtTime(entry.ts)}] POLL ERR — ${entry.error}`;
+                } else if (entry.type === 'command') {
+                  color = entry.status === 'ok' ? '#ffc409' : '#eb445a';
+                  text = entry.status === 'ok'
+                    ? `[${fmtTime(entry.ts)}] CMD ok`
+                    : `[${fmtTime(entry.ts)}] CMD ERR — ${entry.error}`;
+                } else if (entry.type === 'info') {
+                  color = '#888';
+                  text = `[${fmtTime(entry.ts)}] ${entry.message}`;
+                }
+                return (
+                  <div key={i} style={{ color, padding: '0.15rem 0', borderBottom: '1px solid #f5f5f5', wordBreak: 'break-all' }}>
+                    {text}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          */}
+
         </div>
       </IonContent>
       <MachineInfoModal isOpen={showMachineInfo} onClose={() => setShowMachineInfo(false)} />

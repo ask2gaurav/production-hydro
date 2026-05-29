@@ -22,6 +22,16 @@ const MachineSchema = new mongoose.Schema({
   }],
   activated_full_mode_by: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
   activated_full_mode_at: { type: Date, default: null },
+  // Owner Login Limit
+  owner_login_limit: { type: Number, default: 2 },
+  owner_login_count: { type: Number, default: 0 },
+  owner_login_extended_at: [{
+    extended_by: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    previous_limit: Number,
+    new_limit: Number,
+    reason: String,
+    timestamp: { type: Date, default: Date.now }
+  }],
   lock_screen_contact: {
     supplier_name: String,
     supplier_email: String,

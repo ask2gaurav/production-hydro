@@ -263,6 +263,7 @@ export default function SupplierOwnerDetail() {
         {therapists.length === 0 ? (
           <p className="text-sm text-gray-400">No therapists registered.</p>
         ) : (
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
@@ -279,6 +280,7 @@ export default function SupplierOwnerDetail() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 
@@ -288,6 +290,7 @@ export default function SupplierOwnerDetail() {
         {patients.length === 0 ? (
           <p className="text-sm text-gray-400">No patients registered.</p>
         ) : (
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
@@ -304,6 +307,7 @@ export default function SupplierOwnerDetail() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 
@@ -313,6 +317,7 @@ export default function SupplierOwnerDetail() {
         {sessions.length === 0 ? (
           <p className="text-sm text-gray-400">No sessions recorded.</p>
         ) : (
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
@@ -337,6 +342,7 @@ export default function SupplierOwnerDetail() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
     </div>

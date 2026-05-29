@@ -9,9 +9,12 @@
     "preview": "vite preview",
     "test.e2e": "cypress run",
     "test.unit": "vitest",
-    "lint": "eslint"
+    "lint": "eslint",
+    "build:android": "npm run build -- --mode prod && npx cap sync android && npx capacitor-assets generate --android && node scripts/fix-adaptive-icons.mjs"
   },
   "dependencies": {
+    "@capacitor/android": "^8.3.0",
+    "@capacitor/cli": "^8.3.0",
     "@capacitor/core": "8.3.0",
     "@ionic/react": "^8.5.0",
     "@ionic/react-router": "^8.5.0",
@@ -24,6 +27,7 @@
     "react-router-dom": "^5.3.4"
   },
   "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
     "@ionic/pwa-elements": "^3.4.0",
     "@testing-library/dom": ">=7.21.4",
     "@testing-library/jest-dom": "^5.16.5",

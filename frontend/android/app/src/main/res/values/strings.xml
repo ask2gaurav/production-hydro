@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Dasatva</string>
+    <string name="title_activity_main">Dasatva Hydrotherapy Management System - Colonima</string>
+    <string name="package_name">com.advaitsolutions.hydrocolon</string>
+    <string name="custom_url_scheme">com.advaitsolutions.hydrocolon</string>
+</resources>

@@ -2,6 +2,8 @@ import { Redirect, Route } from 'react-router-dom';
 import { IonApp, IonRouterOutlet, setupIonicReact } from '@ionic/react';
 import { IonReactRouter } from '@ionic/react-router';
 import { useEffect } from 'react';
+import { Capacitor } from '@capacitor/core';
+import { EspServer } from './plugins/espServer';
 
 /* Core CSS required for Ionic components to work properly */
 import '@ionic/react/css/core.css';
@@ -27,11 +29,28 @@ import LoginPage from './pages/LoginPage';
 import { useStore } from './store/useStore';
 import { checkModeOnBoot } from './services/modeCheck';
 import { runSync } from './services/syncService';
+import { addLog } from './services/debugLog';
 
 setupIonicReact();
 
 const App: React.FC = () => {
   const { machineId, modeStatus } = useStore();
+
+  // Start the embedded HTTP server so the ESP32 can POST its LAN IP on connect
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    EspServer.startServer();
+    const listenerPromise = EspServer.addListener('espRegistered', ({ ip, serial }) => {
+      localStorage.setItem('esp32_ip', ip);
+      if (serial) localStorage.setItem('esp32_serial', serial);
+      addLog({ type: 'registration', ip, serial: serial ?? '' });
+      useStore.getState().setMachineConnected(true);
+    });
+    return () => {
+      listenerPromise.then(l => l.remove());
+      EspServer.stopServer();
+    };
+  }, []);
 
   useEffect(() => {
     if (!machineId) return;

@@ -23,6 +23,7 @@ export interface LocalSettings {
   machine_id: string;
   default_session_minutes?: number;
   max_temperature?: number;
+  therapy_min_temp?: number;
   default_temperature?: number;
   water_inlet_valve?: boolean;
   flush_valve?: boolean;

@@ -41,6 +41,21 @@ export async function action({ request }: { request: Request }) {
           machine = await Machine.findById(machine_owners[i].machine_id?.toString()).lean();
           console.log('Assigned Machine Record:', machine);
           if (machine && 'Active' == machine.machine_status) {
+            // Check owner login limit
+            const loginCount = (machine as any).owner_login_count ?? 0;
+            const loginLimit = (machine as any).owner_login_limit ?? 2;
+            if (loginCount >= loginLimit) {
+              return new Response(
+                JSON.stringify({ error: 'Login limit reached. Please contact your supplier to extend access.' }),
+                { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+              );
+            }
+
+            // Increment login count
+            await Machine.findByIdAndUpdate(machine_owners[i].machine_id?.toString(), {
+              $inc: { owner_login_count: 1 }
+            });
+
             // Machine is active, exit loop
             // Set HTTP-Only Cookie
             const isProd = process.env.NODE_ENV === 'production';

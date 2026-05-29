@@ -74,6 +74,27 @@ export async function loader({ request, params }: { request: Request; params: an
     timestamp: e.timestamp instanceof Date ? e.timestamp.toISOString() : (e.timestamp ?? null),
   })).reverse(); // most recent first
 
+  // Login extension history
+  const rawLoginHistory: any[] = (machine as any).owner_login_extended_at ?? [];
+  const loginExtenderIds = rawLoginHistory
+    .map((e: any) => e.extended_by?.toString())
+    .filter(Boolean);
+  const loginExtenderUsers = loginExtenderIds.length
+    ? await User.find({ _id: { $in: loginExtenderIds } }).select("first_name last_name email").lean()
+    : [];
+  const loginExtenderMap: Record<string, string> = {};
+  (loginExtenderUsers as any[]).forEach((u: any) => {
+    loginExtenderMap[u._id.toString()] = `${u.first_name} ${u.last_name}`;
+  });
+
+  const loginHistory = rawLoginHistory.map((e: any) => ({
+    extended_by: e.extended_by ? (loginExtenderMap[e.extended_by.toString()] ?? "Unknown") : "—",
+    previous_limit: e.previous_limit ?? null,
+    new_limit: e.new_limit ?? null,
+    reason: e.reason ?? "",
+    timestamp: e.timestamp instanceof Date ? e.timestamp.toISOString() : (e.timestamp ?? null),
+  })).reverse();
+
   // Compute per-patient stats
   const patients = rawPatients.map((p: any) => {
     const pSessions = rawSessions.filter((s: any) => s.patient_id?.toString() === p._id.toString());
@@ -126,11 +147,18 @@ export async function loader({ request, params }: { request: Request; params: an
   }));
 
   return {
-    machine: { _id: machine._id.toString(), serial_number: machine.serial_number, model_name: machine.model_name },
+    machine: {
+      _id: machine._id.toString(),
+      serial_number: machine.serial_number,
+      model_name: machine.model_name,
+      owner_login_count: (machine as any).owner_login_count ?? 0,
+      owner_login_limit: (machine as any).owner_login_limit ?? 2,
+    },
     patients,
     therapists,
     sessions,
     demoHistory,
+    loginHistory,
   };
 }
 
@@ -153,12 +181,12 @@ const STATUS_COLORS: Record<string, string> = {
   paused: "bg-yellow-100 text-yellow-700",
 };
 
-type Tab = "patients" | "therapists" | "sessions" | "demo_history";
+type Tab = "patients" | "therapists" | "sessions" | "demo_history" | "login_history";
 
 // ---------- Component ----------
 
 export default function SupplierMachineDetail() {
-  const { machine, patients, therapists, sessions, demoHistory } = useLoaderData<typeof loader>();
+  const { machine, patients, therapists, sessions, demoHistory, loginHistory } = useLoaderData<typeof loader>();
 
   const [activeTab, setActiveTab] = useState<Tab>("patients");
 
@@ -238,6 +266,9 @@ export default function SupplierMachineDetail() {
           </button>
           <button className={tabClass("demo_history")} onClick={() => setActiveTab("demo_history")}>
             Demo Extensions <span className="ml-1 text-xs text-gray-400">({demoHistory.length})</span>
+          </button>
+          <button className={tabClass("login_history")} onClick={() => setActiveTab("login_history")}>
+            Login Extensions <span className="ml-1 text-xs text-gray-400">({loginHistory.length})</span>
           </button>
         </nav>
       </div>
@@ -398,6 +429,66 @@ export default function SupplierMachineDetail() {
                       <td style={{ ...tdStyle, textAlign: "center" }}>
                         {e.previous_limit != null && e.new_limit != null
                           ? <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-teal-100 text-teal-700">
+                              +{e.new_limit - e.previous_limit}
+                            </span>
+                          : "—"}
+                      </td>
+                      <td style={{ ...tdStyle, maxWidth: 300, whiteSpace: "normal", wordBreak: "break-word", color: e.reason ? "#333" : "#aaa" }}>
+                        {e.reason || "—"}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Login Extensions Tab */}
+      {activeTab === "login_history" && (
+        <div>
+          <p className="text-xs text-gray-400 mb-1">
+            Owner login usage: <strong className={machine.owner_login_count >= machine.owner_login_limit ? "text-red-600" : "text-gray-700"}>
+              {machine.owner_login_count} / {machine.owner_login_limit}
+            </strong> logins used
+          </p>
+          <p className="text-xs text-gray-400 mb-3">
+            {loginHistory.length} extension{loginHistory.length !== 1 ? "s" : ""} recorded
+          </p>
+          <div className="overflow-x-auto bg-white rounded-lg border border-gray-200">
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead>
+                <tr>
+                  <th style={thStyle}>Date &amp; Time</th>
+                  <th style={thStyle}>Extended By</th>
+                  <th style={{ ...thStyle, textAlign: "center" }}>Previous Limit</th>
+                  <th style={{ ...thStyle, textAlign: "center" }}>New Limit</th>
+                  <th style={{ ...thStyle, textAlign: "center" }}>Logins Added</th>
+                  <th style={thStyle}>Reason</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loginHistory.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} style={{ ...tdStyle, textAlign: "center", color: "#999", padding: "3rem" }}>
+                      No login extensions recorded.
+                    </td>
+                  </tr>
+                ) : (
+                  loginHistory.map((e: any, i: number) => (
+                    <tr key={i}
+                      style={{ backgroundColor: "white" }}
+                      onMouseEnter={(ev) => (ev.currentTarget.style.backgroundColor = "#f9fafb")}
+                      onMouseLeave={(ev) => (ev.currentTarget.style.backgroundColor = "white")}
+                    >
+                      <td style={tdStyle}>{formatDateTime(e.timestamp)}</td>
+                      <td style={{ ...tdStyle, fontWeight: 500 }}>{e.extended_by}</td>
+                      <td style={{ ...tdStyle, textAlign: "center" }}>{e.previous_limit ?? "—"}</td>
+                      <td style={{ ...tdStyle, textAlign: "center" }}>{e.new_limit ?? "—"}</td>
+                      <td style={{ ...tdStyle, textAlign: "center" }}>
+                        {e.previous_limit != null && e.new_limit != null
+                          ? <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
                               +{e.new_limit - e.previous_limit}
                             </span>
                           : "—"}

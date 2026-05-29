@@ -23,6 +23,8 @@ type MachineDoc = {
   mode: string;
   demo_sessions_used: number;
   demo_session_limit: number;
+  owner_login_count: number;
+  owner_login_limit: number;
   production_date?: string;
   installation_location?: string;
   ssid?: string;
@@ -64,6 +66,8 @@ export async function loader({ request }: { request: Request }) {
         mode: m.mode,
         demo_sessions_used: m.demo_sessions_used ?? 0,
         demo_session_limit: m.demo_session_limit ?? 10,
+        owner_login_count: m.owner_login_count ?? 0,
+        owner_login_limit: m.owner_login_limit ?? 2,
         production_date: m.production_date?.toISOString() ?? null,
         installation_location: m.installation_location ?? null,
         ssid: m.ssid ?? null,
@@ -99,6 +103,7 @@ export async function action({ request }: { request: Request }) {
     const machine_status = formData.get("machine_status") as string;
     const mode = formData.get("mode") as string;
     const demo_session_limit = parseInt(formData.get("demo_session_limit") as string) || 10;
+    const owner_login_limit = parseInt(formData.get("owner_login_limit") as string) || 2;
     const installation_location = (formData.get("installation_location") as string)?.trim() || undefined;
     const production_date = (formData.get("production_date") as string) || undefined;
 
@@ -119,6 +124,7 @@ export async function action({ request }: { request: Request }) {
       machine_status,
       mode,
       demo_session_limit: mode === "demo" ? demo_session_limit : 10,
+      owner_login_limit,
       installation_location,
       production_date: production_date ? new Date(production_date) : undefined,
       ssid,
@@ -155,6 +161,28 @@ export async function action({ request }: { request: Request }) {
       timestamp: new Date(),
     });
     machine.demo_session_limit = new_limit;
+    await machine.save();
+
+    return { success: true };
+  }
+
+  if (intent === "extend_login") {
+    const new_limit = parseInt(formData.get("new_limit") as string);
+    const reason = (formData.get("reason") as string)?.trim();
+
+    if (!new_limit || new_limit < 1) return { error: "Please enter a valid login limit." };
+
+    const machine = await Machine.findById(machine_id);
+    if (!machine) return { error: "Machine not found." };
+
+    (machine as any).owner_login_extended_at.push({
+      extended_by: supplierId,
+      previous_limit: (machine as any).owner_login_limit,
+      new_limit,
+      reason: reason || "",
+      timestamp: new Date(),
+    });
+    (machine as any).owner_login_limit = new_limit;
     await machine.save();
 
     return { success: true };
@@ -204,6 +232,9 @@ export async function action({ request }: { request: Request }) {
       const demo_session_limit = parseInt(formData.get("demo_session_limit") as string);
       if (demo_session_limit >= 1) updateData.demo_session_limit = demo_session_limit;
     }
+
+    const owner_login_limit = parseInt(formData.get("owner_login_limit") as string);
+    if (owner_login_limit >= 1) updateData.owner_login_limit = owner_login_limit;
 
     if (!existingMachine.ssid) updateData.ssid = (formData.get("ssid") as string)?.trim() || undefined;
     if (!existingMachine.password) updateData.password = (formData.get("password") as string)?.trim() || undefined;
@@ -266,6 +297,10 @@ export default function SupplierMachines() {
   const [newLimit, setNewLimit] = useState("");
   const [reason, setReason] = useState("");
 
+  const [extendLoginModal, setExtendLoginModal] = useState<MachineDoc | null>(null);
+  const [newLoginLimit, setNewLoginLimit] = useState("");
+  const [loginReason, setLoginReason] = useState("");
+
   const [addModal, setAddModal] = useState(false);
   const [addMode, setAddMode] = useState("demo");
   const [addSsid, setAddSsid] = useState("");
@@ -281,6 +316,9 @@ export default function SupplierMachines() {
 
   const [contactModal, setContactModal] = useState<MachineDoc | null>(null);
   const [contactForm, setContactForm] = useState<LockContact>({});
+
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
 
   const openContactModal = (m: MachineDoc) => {
     const existing = m.lock_screen_contact ?? {};
@@ -299,6 +337,9 @@ export default function SupplierMachines() {
       setExtendModal(null);
       setNewLimit("");
       setReason("");
+      setExtendLoginModal(null);
+      setNewLoginLimit("");
+      setLoginReason("");
       if ((actionData as any).intent === "add_machine") {
         setAddModal(false);
         setAddMode("demo");
@@ -337,6 +378,7 @@ export default function SupplierMachines() {
       )}
 
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
@@ -345,6 +387,7 @@ export default function SupplierMachines() {
               <th className="text-left px-4 py-3 font-semibold text-gray-600">Status</th>
               <th className="text-left px-4 py-3 font-semibold text-gray-600">Mode</th>
               <th className="text-left px-4 py-3 font-semibold text-gray-600">Demo Sessions</th>
+              <th className="text-left px-4 py-3 font-semibold text-gray-600">Owner Logins</th>
               <th className="text-left px-4 py-3 font-semibold text-gray-600">Owner</th>
               <th className="text-left px-4 py-3 font-semibold text-gray-600">SSID</th>
               <th className="text-left px-4 py-3 font-semibold text-gray-600">Password</th>
@@ -354,7 +397,7 @@ export default function SupplierMachines() {
           <tbody className="divide-y divide-gray-100">
             {machines.length === 0 && (
               <tr>
-                <td colSpan={9} className="text-center py-10 text-gray-400">
+                <td colSpan={10} className="text-center py-10 text-gray-400">
                   No machines assigned to you yet.
                 </td>
               </tr>
@@ -376,6 +419,11 @@ export default function SupplierMachines() {
                 <td className="px-4 py-3 text-gray-600 text-sm">
                   {m.mode === "demo" ? `${m.demo_sessions_used} / ${m.demo_session_limit}` : "—"}
                 </td>
+                <td className="px-4 py-3 text-sm">
+                  <span className={`font-medium ${m.owner_login_count >= m.owner_login_limit ? "text-red-600" : "text-gray-600"}`}>
+                    {m.owner_login_count} / {m.owner_login_limit}
+                  </span>
+                </td>
                 <td className="px-4 py-3 text-gray-600 text-sm">
                   {m.owner
                     ? <a href={`/supplier/owners/${m.owner._id}`} className="text-teal-600 hover:underline">{m.owner.first_name} {m.owner.last_name}</a>
@@ -384,67 +432,108 @@ export default function SupplierMachines() {
                 <td className="px-4 py-3 font-mono text-xs text-gray-700">{m.ssid || "—"}</td>
                 <td className="px-4 py-3 font-mono text-xs text-gray-700">{m.password || "—"}</td>
                 <td className="px-4 py-3">
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
                     <a
                       href={`/supplier/machines/${m._id}`}
                       className="text-teal-600 hover:underline text-xs font-medium"
                     >
                       View
                     </a>
-                    |
-                    <button
-                      onClick={() => openEditModal(m)}
-                      className="text-blue-600 hover:underline text-xs font-medium"
-                    >
-                      Edit
-                    </button>
-                    |
-                    <button
-                      onClick={() => openContactModal(m)}
-                      className="text-gray-600 hover:underline text-xs font-medium"
-                    >
-                      Edit Contact
-                    </button>
-                    {m.mode === "demo" && ('|' )}
-                    {m.mode === "demo" && (
+                    <div className="relative">
                       <button
-                        onClick={() => { setExtendModal(m); setNewLimit(String(m.demo_session_limit)); setReason(""); }}
-                        className="text-blue-600 hover:underline text-xs font-medium"
+                        onClick={(e) => {
+                          if (openDropdown === m._id) {
+                            setOpenDropdown(null);
+                          } else {
+                            const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
+                            setDropdownPos({ top: rect.bottom + window.scrollY, left: rect.right - 176 });
+                            setOpenDropdown(m._id);
+                          }
+                        }}
+                        className="p-1 rounded hover:bg-gray-100 text-gray-500 hover:text-gray-700 leading-none text-base"
+                        title="More actions"
                       >
-                        Extend Demo
+                        ⋮
                       </button>
-                    )}
-                    {m.mode === "demo" && (
-                      <Form
-                        method="post"
-                        onSubmit={(e) => { if (!confirm("Activate full mode? This will unlock unlimited sessions.")) e.preventDefault(); }}
-                      >
-                        |&nbsp;&nbsp;
-                        <input type="hidden" name="intent" value="activate_full" />
-                        <input type="hidden" name="machine_id" value={m._id} />
-                        <button type="submit" className="text-teal-600 hover:underline text-xs font-medium" disabled={isSubmitting}>
-                          Activate Full
-                        </button>
-                      </Form>
-                    )}
-                    {m.mode === "full" && (
-                      <Form
-                        method="post"
-                        onSubmit={(e) => { if (!confirm("Switch back to demo mode?")) e.preventDefault(); }}
-                      >|&nbsp;&nbsp;
-                        <input type="hidden" name="intent" value="set_demo" />
-                        <input type="hidden" name="machine_id" value={m._id} />
-                        <button type="submit" className="text-yellow-600 hover:underline text-xs font-medium" disabled={isSubmitting}>
-                          Set Demo
-                        </button>
-                      </Form>
-                    )}
+                      {openDropdown === m._id && (
+                        <>
+                          <div
+                            className="fixed inset-0 z-10"
+                            onClick={() => setOpenDropdown(null)}
+                          />
+                          <div
+                            className="fixed w-44 bg-white border border-gray-200 rounded shadow-lg z-20 py-1 text-sm"
+                            style={{ top: dropdownPos.top, left: dropdownPos.left }}
+                          >
+                            <button
+                              onClick={() => { openEditModal(m); setOpenDropdown(null); }}
+                              className="w-full text-left px-4 py-2 hover:bg-gray-50 text-gray-700"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => { openContactModal(m); setOpenDropdown(null); }}
+                              className="w-full text-left px-4 py-2 hover:bg-gray-50 text-gray-700"
+                            >
+                              Edit Contact
+                            </button>
+                            {m.mode === "demo" && (
+                              <button
+                                onClick={() => { setExtendModal(m); setNewLimit(String(m.demo_session_limit)); setReason(""); setOpenDropdown(null); }}
+                                className="w-full text-left px-4 py-2 hover:bg-gray-50 text-gray-700"
+                              >
+                                Extend Demo
+                              </button>
+                            )}
+                            <button
+                              onClick={() => { setExtendLoginModal(m); setNewLoginLimit(String(m.owner_login_limit)); setLoginReason(""); setOpenDropdown(null); }}
+                              className="w-full text-left px-4 py-2 hover:bg-gray-50 text-gray-700"
+                            >
+                              Extend Login
+                            </button>
+                            {m.mode === "demo" && (
+                              <Form
+                                method="post"
+                                onSubmit={(e) => { if (!confirm("Activate full mode? This will unlock unlimited sessions.")) e.preventDefault(); setOpenDropdown(null); }}
+                              >
+                                <input type="hidden" name="intent" value="activate_full" />
+                                <input type="hidden" name="machine_id" value={m._id} />
+                                <button
+                                  type="submit"
+                                  disabled={isSubmitting}
+                                  className="w-full text-left px-4 py-2 hover:bg-gray-50 text-teal-700 disabled:opacity-50"
+                                >
+                                  Activate Full
+                                </button>
+                              </Form>
+                            )}
+                            {m.mode === "full" && (
+                              <Form
+                                method="post"
+                                onSubmit={(e) => { if (!confirm("Switch back to demo mode?")) e.preventDefault(); setOpenDropdown(null); }}
+                              >
+                                <input type="hidden" name="intent" value="set_demo" />
+                                <input type="hidden" name="machine_id" value={m._id} />
+                                <button
+                                  type="submit"
+                                  disabled={isSubmitting}
+                                  className="w-full text-left px-4 py-2 hover:bg-gray-50 text-yellow-700 disabled:opacity-50"
+                                >
+                                  Set Demo
+                                </button>
+                              </Form>
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* Edit Machine Modal */}
@@ -521,6 +610,18 @@ export default function SupplierMachines() {
                   />
                 </div>
               )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Owner Login Limit *</label>
+                <input
+                  name="owner_login_limit"
+                  type="number"
+                  min={1}
+                  defaultValue={editModal.owner_login_limit}
+                  required
+                  className={supplierInputCls}
+                />
+              </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Installation Location</label>
@@ -651,6 +752,18 @@ export default function SupplierMachines() {
                   />
                 </div>
               )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Owner Login Limit *</label>
+                <input
+                  name="owner_login_limit"
+                  type="number"
+                  min={1}
+                  defaultValue={2}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
+                />
+              </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Installation Location</label>
@@ -798,6 +911,72 @@ export default function SupplierMachines() {
                   {isSubmitting ? "Saving..." : "Save Contact"}
                 </button>
                 <button type="button" onClick={() => setContactModal(null)} className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50 text-sm">
+                  Cancel
+                </button>
+              </div>
+            </Form>
+          </div>
+        </div>
+      )}
+
+      {/* Extend Login Modal */}
+      {extendLoginModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+            <div className="flex items-center justify-between p-6 border-b">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-800">Extend Owner Login Limit</h2>
+                <p className="text-sm text-gray-500 mt-0.5 font-mono">{extendLoginModal.serial_number}</p>
+              </div>
+              <button onClick={() => setExtendLoginModal(null)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">✕</button>
+            </div>
+
+            <Form method="post" className="p-6 flex flex-col gap-4">
+              <input type="hidden" name="intent" value="extend_login" />
+              <input type="hidden" name="machine_id" value={extendLoginModal._id} />
+
+              {actionData?.error && extendLoginModal && (
+                <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded text-sm">
+                  {actionData.error}
+                </div>
+              )}
+
+              <div>
+                <p className="text-sm text-gray-600 mb-3">
+                  Current limit: <strong>{extendLoginModal.owner_login_limit}</strong> logins
+                  &nbsp;({extendLoginModal.owner_login_count} used)
+                </p>
+                <label className="block text-sm font-medium text-gray-700 mb-1">New Login Limit *</label>
+                <input
+                  name="new_limit"
+                  type="number"
+                  min={extendLoginModal.owner_login_count + 1}
+                  value={newLoginLimit}
+                  onChange={(e) => setNewLoginLimit(e.target.value)}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Reason</label>
+                <input
+                  name="reason"
+                  value={loginReason}
+                  onChange={(e) => setLoginReason(e.target.value)}
+                  placeholder="Optional note..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="flex-1 py-2 bg-teal-700 text-white rounded hover:bg-teal-800 font-medium text-sm disabled:opacity-50"
+                >
+                  {isSubmitting ? "Saving..." : "Extend Limit"}
+                </button>
+                <button type="button" onClick={() => setExtendLoginModal(null)} className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50 text-sm">
                   Cancel
                 </button>
               </div>

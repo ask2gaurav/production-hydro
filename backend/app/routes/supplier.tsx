@@ -1,4 +1,5 @@
 import { redirect, Outlet, Link, Form, useLoaderData } from "react-router";
+import { useState } from "react";
 import { requireSupplier } from "../lib/auth.server";
 import { connectDB } from "../lib/db";
 import User from "../models/User";
@@ -17,20 +18,43 @@ export async function loader({ request }: { request: Request }) {
 
 export default function SupplierLayout() {
   const { name } = useLoaderData<typeof loader>();
+  const [collapsed, setCollapsed] = useState(false);
+
+  const navItems = [
+    { to: "/supplier", label: "Dashboard", abbr: "Da" },
+    { to: "/supplier/machines", label: "My Machines", abbr: "Ma" },
+    { to: "/supplier/owners", label: "My Owners", abbr: "Ow" },
+    { to: "/supplier/resources", label: "Resources", abbr: "Re" },
+  ];
 
   return (
     <div className="flex h-screen bg-gray-100">
       {/* Sidebar */}
-      <aside className="w-64 bg-white shadow-md">
-        <div className="p-4 bg-teal-700 text-white text-xl font-bold">
-          HydroSys Supplier
+      <aside className={`${collapsed ? 'w-14' : 'w-64'} bg-white shadow-md flex flex-col transition-all duration-200 overflow-hidden`}>
+        <div className={`bg-teal-700 text-white font-bold flex items-center ${collapsed ? 'justify-center p-3' : 'justify-between p-4'}`}>
+          {!collapsed && <span className="text-xl">HydroSys Supplier</span>}
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            className="text-white hover:text-teal-200 focus:outline-none text-lg leading-none"
+            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {collapsed ? '›' : '‹'}
+          </button>
         </div>
-        <nav className="mt-4 flex flex-col gap-2 p-2">
-          <Link to="/supplier" className="p-2 hover:bg-gray-200 rounded">Dashboard</Link>
-          <Link to="/supplier/machines" className="p-2 hover:bg-gray-200 rounded">My Machines</Link>
-          <Link to="/supplier/owners" className="p-2 hover:bg-gray-200 rounded">My Owners</Link>
-          {/* <Link to="/supplier/invoices" className="p-2 hover:bg-gray-200 rounded">Invoices</Link> */}
-          <Link to="/supplier/resources" className="p-2 hover:bg-gray-200 rounded">Resources</Link>
+        <nav className="mt-4 flex flex-col gap-1 p-2 flex-1">
+          {navItems.map(({ to, label, abbr }) => (
+            <Link
+              key={to}
+              to={to}
+              title={collapsed ? label : undefined}
+              className={`p-2 hover:bg-gray-200 rounded flex items-center gap-2 text-sm font-medium ${collapsed ? 'justify-center' : ''}`}
+            >
+              <span className="w-6 h-6 rounded bg-teal-100 text-teal-700 flex items-center justify-center text-xs font-bold shrink-0">
+                {abbr}
+              </span>
+              {!collapsed && <span>{label}</span>}
+            </Link>
+          ))}
         </nav>
       </aside>
 
