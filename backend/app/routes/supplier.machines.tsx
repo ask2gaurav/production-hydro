@@ -6,6 +6,10 @@ import Machine from "../models/Machine";
 import MachineSupplier from "../models/MachineSupplier";
 import MachineOwner from "../models/MachineOwner";
 import User from "../models/User";
+import Session from "../models/Session";
+import Patient from "../models/Patient";
+import Therapist from "../models/Therapist";
+import Invoice from "../models/Invoice";
 
 type LockContact = {
   supplier_name?: string;
@@ -253,6 +257,24 @@ export async function action({ request }: { request: Request }) {
     await Machine.findByIdAndUpdate(machine_id, {
       lock_screen_contact: { supplier_name, supplier_email, supplier_phone, supplier_available_hours, custom_message },
     });
+    return { success: true, intent };
+  }
+
+  if (intent === "delete_machine") {
+    const machine = await Machine.findById(machine_id);
+    if (!machine) return { error: "Machine not found." };
+    if (machine.mode !== "demo") {
+      return { error: "Machine is not in demo mode. Only demo mode machines can be deleted." };
+    }
+
+    await MachineSupplier.deleteMany({ machine_id });
+    await MachineOwner.deleteMany({ machine_id });
+    await Session.deleteMany({ machine_id });
+    await Patient.deleteMany({ machine_id });
+    await Therapist.deleteMany({ machine_id });
+    await Invoice.deleteMany({ machine_id });
+
+    await Machine.findByIdAndDelete(machine_id);
     return { success: true, intent };
   }
 
@@ -520,6 +542,27 @@ export default function SupplierMachines() {
                                   className="w-full text-left px-4 py-2 hover:bg-gray-50 text-yellow-700 disabled:opacity-50"
                                 >
                                   Set Demo
+                                </button>
+                              </Form>
+                            )}
+                            {m.mode === "demo" && (
+                              <Form
+                                method="post"
+                                onSubmit={(e) => {
+                                  if (!confirm("Are you sure you want to delete this machine? This action is permanent and all associated data will be deleted.")) {
+                                    e.preventDefault();
+                                  }
+                                  setOpenDropdown(null);
+                                }}
+                              >
+                                <input type="hidden" name="intent" value="delete_machine" />
+                                <input type="hidden" name="machine_id" value={m._id} />
+                                <button
+                                  type="submit"
+                                  disabled={isSubmitting}
+                                  className="w-full text-left px-4 py-2 hover:bg-red-50 text-red-600 disabled:opacity-50 font-medium transition-colors"
+                                >
+                                  Delete Machine
                                 </button>
                               </Form>
                             )}
