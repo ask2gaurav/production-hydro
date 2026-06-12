@@ -25,7 +25,8 @@
       "Bash(./gradlew assembleDebug)",
       "Bash(\"C:/android-sdk/platform-tools/adb.exe\" install:*)",
       "Bash(./gradlew clean:*)",
-      "Bash(\"C:/android-sdk/platform-tools/adb.exe\" logcat:*)"
+      "Bash(\"C:/android-sdk/platform-tools/adb.exe\" logcat:*)",
+      "Bash(Remove-Item \"d:\\\\projects\\\\production-hydro-colon-therapy\\\\backend\\\\app\\\\routes\\\\supplier.impersonate.tsx\")"
     ]
   }
 }

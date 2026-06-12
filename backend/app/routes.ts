@@ -51,6 +51,7 @@ export default [
   ...prefix("supplier", [
     route("login", "routes/supplier.login.tsx"),
     route("logout", "routes/supplier.logout.tsx"),
+    route("impersonate", "routes/supplier_.impersonate.tsx"),
     layout("routes/supplier.tsx", [
       index("routes/supplier._index.tsx"),
       route("owners", "routes/supplier.owners.tsx"),

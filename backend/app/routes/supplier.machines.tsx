@@ -1,5 +1,6 @@
 import { useLoaderData, useActionData, Form, useNavigation } from "react-router";
 import { useState, useEffect } from "react";
+import { ActionsDropdown, type ActionItem } from "../components/ActionsDropdown";
 import { requireSupplier } from "../lib/auth.server";
 import { connectDB } from "../lib/db";
 import Machine from "../models/Machine";
@@ -339,8 +340,7 @@ export default function SupplierMachines() {
   const [contactModal, setContactModal] = useState<MachineDoc | null>(null);
   const [contactForm, setContactForm] = useState<LockContact>({});
 
-  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
-  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+
 
   const openContactModal = (m: MachineDoc) => {
     const existing = m.lock_screen_contact ?? {};
@@ -461,115 +461,65 @@ export default function SupplierMachines() {
                     >
                       View
                     </a>
-                    <div className="relative">
-                      <button
-                        onClick={(e) => {
-                          if (openDropdown === m._id) {
-                            setOpenDropdown(null);
-                          } else {
-                            const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
-                            setDropdownPos({ top: rect.bottom + window.scrollY, left: rect.right - 176 });
-                            setOpenDropdown(m._id);
-                          }
-                        }}
-                        className="p-1 rounded hover:bg-gray-100 text-gray-500 hover:text-gray-700 leading-none text-base"
-                        title="More actions"
-                      >
-                        ⋮
-                      </button>
-                      {openDropdown === m._id && (
-                        <>
-                          <div
-                            className="fixed inset-0 z-10"
-                            onClick={() => setOpenDropdown(null)}
-                          />
-                          <div
-                            className="fixed w-44 bg-white border border-gray-200 rounded shadow-lg z-20 py-1 text-sm"
-                            style={{ top: dropdownPos.top, left: dropdownPos.left }}
+                    <ActionsDropdown items={[
+                      { type: "button", label: "Edit", onClick: () => openEditModal(m) },
+                      { type: "button", label: "Edit Contact", onClick: () => openContactModal(m) },
+                      ...(m.mode === "demo" ? [{
+                        type: "button" as const,
+                        label: "Extend Demo",
+                        onClick: () => { setExtendModal(m); setNewLimit(String(m.demo_session_limit)); setReason(""); },
+                      }] : []),
+                      {
+                        type: "button",
+                        label: "Extend Login",
+                        onClick: () => { setExtendLoginModal(m); setNewLoginLimit(String(m.owner_login_limit)); setLoginReason(""); },
+                      },
+                      ...(m.mode === "demo" ? [{
+                        type: "node" as const,
+                        node: (
+                          <Form
+                            method="post"
+                            onSubmit={(e) => { if (!confirm("Activate full mode? This will unlock unlimited sessions.")) e.preventDefault(); }}
                           >
-                            <button
-                              onClick={() => { openEditModal(m); setOpenDropdown(null); }}
-                              className="w-full text-left px-4 py-2 hover:bg-gray-50 text-gray-700"
-                            >
-                              Edit
+                            <input type="hidden" name="intent" value="activate_full" />
+                            <input type="hidden" name="machine_id" value={m._id} />
+                            <button type="submit" disabled={isSubmitting} className="w-full text-left px-4 py-2 hover:bg-gray-50 text-teal-700 disabled:opacity-50">
+                              Activate Full
                             </button>
-                            <button
-                              onClick={() => { openContactModal(m); setOpenDropdown(null); }}
-                              className="w-full text-left px-4 py-2 hover:bg-gray-50 text-gray-700"
-                            >
-                              Edit Contact
+                          </Form>
+                        ),
+                      }] : []),
+                      ...(m.mode === "full" ? [{
+                        type: "node" as const,
+                        node: (
+                          <Form
+                            method="post"
+                            onSubmit={(e) => { if (!confirm("Switch back to demo mode?")) e.preventDefault(); }}
+                          >
+                            <input type="hidden" name="intent" value="set_demo" />
+                            <input type="hidden" name="machine_id" value={m._id} />
+                            <button type="submit" disabled={isSubmitting} className="w-full text-left px-4 py-2 hover:bg-gray-50 text-yellow-700 disabled:opacity-50">
+                              Set Demo
                             </button>
-                            {m.mode === "demo" && (
-                              <button
-                                onClick={() => { setExtendModal(m); setNewLimit(String(m.demo_session_limit)); setReason(""); setOpenDropdown(null); }}
-                                className="w-full text-left px-4 py-2 hover:bg-gray-50 text-gray-700"
-                              >
-                                Extend Demo
-                              </button>
-                            )}
-                            <button
-                              onClick={() => { setExtendLoginModal(m); setNewLoginLimit(String(m.owner_login_limit)); setLoginReason(""); setOpenDropdown(null); }}
-                              className="w-full text-left px-4 py-2 hover:bg-gray-50 text-gray-700"
-                            >
-                              Extend Login
+                          </Form>
+                        ),
+                      }] : []),
+                      ...(m.mode === "demo" ? [{
+                        type: "node" as const,
+                        node: (
+                          <Form
+                            method="post"
+                            onSubmit={(e) => { if (!confirm("Are you sure you want to delete this machine? This action is permanent and all associated data will be deleted.")) e.preventDefault(); }}
+                          >
+                            <input type="hidden" name="intent" value="delete_machine" />
+                            <input type="hidden" name="machine_id" value={m._id} />
+                            <button type="submit" disabled={isSubmitting} className="w-full text-left px-4 py-2 hover:bg-red-50 text-red-600 disabled:opacity-50 font-medium transition-colors">
+                              Delete Machine
                             </button>
-                            {m.mode === "demo" && (
-                              <Form
-                                method="post"
-                                onSubmit={(e) => { if (!confirm("Activate full mode? This will unlock unlimited sessions.")) e.preventDefault(); setOpenDropdown(null); }}
-                              >
-                                <input type="hidden" name="intent" value="activate_full" />
-                                <input type="hidden" name="machine_id" value={m._id} />
-                                <button
-                                  type="submit"
-                                  disabled={isSubmitting}
-                                  className="w-full text-left px-4 py-2 hover:bg-gray-50 text-teal-700 disabled:opacity-50"
-                                >
-                                  Activate Full
-                                </button>
-                              </Form>
-                            )}
-                            {m.mode === "full" && (
-                              <Form
-                                method="post"
-                                onSubmit={(e) => { if (!confirm("Switch back to demo mode?")) e.preventDefault(); setOpenDropdown(null); }}
-                              >
-                                <input type="hidden" name="intent" value="set_demo" />
-                                <input type="hidden" name="machine_id" value={m._id} />
-                                <button
-                                  type="submit"
-                                  disabled={isSubmitting}
-                                  className="w-full text-left px-4 py-2 hover:bg-gray-50 text-yellow-700 disabled:opacity-50"
-                                >
-                                  Set Demo
-                                </button>
-                              </Form>
-                            )}
-                            {m.mode === "demo" && (
-                              <Form
-                                method="post"
-                                onSubmit={(e) => {
-                                  if (!confirm("Are you sure you want to delete this machine? This action is permanent and all associated data will be deleted.")) {
-                                    e.preventDefault();
-                                  }
-                                  setOpenDropdown(null);
-                                }}
-                              >
-                                <input type="hidden" name="intent" value="delete_machine" />
-                                <input type="hidden" name="machine_id" value={m._id} />
-                                <button
-                                  type="submit"
-                                  disabled={isSubmitting}
-                                  className="w-full text-left px-4 py-2 hover:bg-red-50 text-red-600 disabled:opacity-50 font-medium transition-colors"
-                                >
-                                  Delete Machine
-                                </button>
-                              </Form>
-                            )}
-                          </div>
-                        </>
-                      )}
-                    </div>
+                          </Form>
+                        ),
+                      }] : []),
+                    ]} />
                   </div>
                 </td>
               </tr>

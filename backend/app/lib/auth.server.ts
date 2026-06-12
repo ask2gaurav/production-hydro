@@ -9,8 +9,8 @@ import { corsHeaders } from './cors.server';
 const JWT_SECRET = process.env.JWT_SECRET || 'your-256-bit-secret';
 const JWT_EXPIRY = process.env.JWT_EXPIRY || '8h';
 
-export function signToken(payload: object) {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRY as any });
+export function signToken(payload: object, expiresIn?: string) {
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: (expiresIn ?? JWT_EXPIRY) as any });
 }
 
 export function verifyToken(token: string) {

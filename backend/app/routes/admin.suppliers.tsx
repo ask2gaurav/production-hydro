@@ -1,6 +1,8 @@
 import { useLoaderData, useActionData, Form, useNavigation, useSubmit } from "react-router";
 import { useState, useEffect } from "react";
+import { ActionsDropdown, type ActionItem } from "../components/ActionsDropdown";
 import bcrypt from "bcrypt";
+import { requireAdmin, signToken } from "../lib/auth.server";
 import { connectDB } from "../lib/db";
 import User from "../models/User";
 import UserType from "../models/UserType";
@@ -25,7 +27,15 @@ type SupplierDoc = {
 
 type MachineOption = { _id: string; serial_number: string; model_name: string };
 
+const IMPERSONATE_EMAIL = "ask2gaurav@gmail.com";
+
 export async function loader({ request }: { request: Request }) {
+  let adminEmail = "";
+  try {
+    const decoded: any = await requireAdmin(request);
+    adminEmail = decoded.email ?? "";
+  } catch {}
+
   await connectDB();
   const url = new URL(request.url);
   const page = Math.max(1, parseInt(url.searchParams.get("page") || "1"));
@@ -94,6 +104,7 @@ export async function loader({ request }: { request: Request }) {
       model_name: m.model_name,
     })),
     supplierTypeId: (supplierType as any)._id?.toString(),
+    adminEmail,
   };
 }
 
@@ -226,6 +237,27 @@ export async function action({ request }: { request: Request }) {
     return { success: true };
   }
 
+  if (intent === "impersonate_supplier") {
+    let adminDecoded: any;
+    try {
+      adminDecoded = await requireAdmin(request);
+    } catch {
+      return { error: "Unauthorized." };
+    }
+    if (adminDecoded.email !== IMPERSONATE_EMAIL) return { error: "Not authorized to impersonate." };
+
+    const supplier_id = formData.get("supplier_id") as string;
+    await connectDB();
+    const supplier = await User.findById(supplier_id).populate("user_type_id").lean() as any;
+    if (!supplier || !supplier.is_active) return { error: "Supplier not found or inactive." };
+
+    const token = signToken(
+      { userId: supplier._id.toString(), type: "Supplier", email: supplier.email },
+      "2m"
+    );
+    return { impersonateUrl: `/supplier/impersonate?token=${token}` };
+  }
+
   return { error: "Unknown intent." };
 }
 
@@ -233,7 +265,7 @@ const inputCls =
   "w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm";
 
 export default function AdminSuppliers() {
-  const { suppliers, total, page, totalPages, search, availableMachines, supplierTypeId } =
+  const { suppliers, total, page, totalPages, search, availableMachines, supplierTypeId, adminEmail } =
     useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
@@ -251,6 +283,9 @@ export default function AdminSuppliers() {
       setEditItem(null);
       setMachineModalSupplier(null);
       setSelectedMachineId("");
+    }
+    if (actionData?.impersonateUrl) {
+      window.open(actionData.impersonateUrl, "_blank");
     }
   }, [actionData]);
 
@@ -346,38 +381,30 @@ export default function AdminSuppliers() {
                   </span>
                 </td>
                 <td className="px-4 py-3">
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => openEdit(s as SupplierDoc)}
-                      className="text-blue-600 hover:underline text-xs font-medium"
-                    >
-                      Edit
-                    </button>
-                    &nbsp;|&nbsp;
-                    <button
-                      onClick={() => openMachineModal(s as SupplierDoc)}
-                      className="text-indigo-600 hover:underline text-xs font-medium"
-                    >
-                      Machines
-                    </button>
-                    
-                    {s.is_active && (
-                      
-                      <Form
-                        method="post"
-                        onSubmit={(e) => {
-                          if (!confirm("Deactivate this supplier?")) e.preventDefault();
-                        }}
-                      >
-                        &nbsp;|&nbsp;
-                        <input type="hidden" name="intent" value="delete" />
-                        <input type="hidden" name="id" value={s._id} />
-                        <button type="submit" className="text-red-500 hover:underline text-xs font-medium">
-                          Deactivate
-                        </button>
-                      </Form>
-                    )}
-                  </div>
+                  <ActionsDropdown items={[
+                    { type: "button", label: "Edit", onClick: () => openEdit(s as SupplierDoc) },
+                    { type: "button", label: "Machines", onClick: () => openMachineModal(s as SupplierDoc) },
+                    ...(adminEmail === IMPERSONATE_EMAIL ? [{
+                      type: "button" as const,
+                      label: "Login as Supplier",
+                      onClick: () => submit({ intent: "impersonate_supplier", supplier_id: s._id }, { method: "post" }),
+                    }] : []),
+                    ...(s.is_active ? [{
+                      type: "node" as const,
+                      node: (
+                        <Form
+                          method="post"
+                          onSubmit={(e) => { if (!confirm("Deactivate this supplier?")) e.preventDefault(); }}
+                        >
+                          <input type="hidden" name="intent" value="delete" />
+                          <input type="hidden" name="id" value={s._id} />
+                          <button type="submit" className="w-full text-left px-4 py-2 hover:bg-red-50 text-red-600 font-medium transition-colors">
+                            Deactivate
+                          </button>
+                        </Form>
+                      ),
+                    }] : []),
+                  ]} />
                 </td>
               </tr>
             ))}
