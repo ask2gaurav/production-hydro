@@ -666,8 +666,10 @@ const Therapy: React.FC = () => {
   };
 
   const saveTherapist = async () => {
-    if (!tFirstName.trim() || !tLastName.trim() || !tPhone.trim() || !tEmail.trim()) {
-      setTError('First name, last name, phone and email are required.');
+    // if (!tFirstName.trim() || !tLastName.trim() || !tPhone.trim() || !tEmail.trim()) 
+    if (!tFirstName.trim() || !tLastName.trim() || !tPhone.trim() ) 
+    {
+      setTError('First name, last name and phone  are required.');
       return;
     }
     setTSaving(true);
@@ -701,8 +703,10 @@ const Therapy: React.FC = () => {
   };
 
   const savePatient = async () => {
-    if (!pFirstName.trim() || !pLastName.trim() || !pPhone.trim() || !pEmail.trim()) {
-      setPError('First name, last name, phone and email are required.');
+    // if (!pFirstName.trim() || !pLastName.trim() || !pPhone.trim() || !pEmail.trim()) 
+    if (!pFirstName.trim() || !pLastName.trim() || !pPhone.trim()) 
+    {
+      setPError('First name, last name and phone are required.');
       return;
     }
     setPSaving(true);

@@ -305,7 +305,7 @@ const Settings: React.FC = () => {
                 <span style={{ fontSize: '0.8rem', color: '#888' }}>min</span>
               </div>
             </div>
-
+             {/* 
             <div style={{ ...rowStyle, flexDirection: 'column', alignItems: 'flex-start', gap: '0.4rem' }}>
               <span style={labelStyle}>Set Therapy Temperature</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -335,7 +335,36 @@ const Settings: React.FC = () => {
                 </div>
               </div>
             </div>
+            */}
 
+            <div style={rowStyle}>
+              <span style={labelStyle}>Min Temp</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <input
+                  type="number"
+                  min={20} max={settings.default_temperature - 1}
+                  value={inputDraft.therapy_min_temp}
+                  onChange={(e) => setInputDraft((d) => ({ ...d, therapy_min_temp: e.target.value }))}
+                  onBlur={() => handleNumericBlur('therapy_min_temp', 20, settings.default_temperature - 1)}
+                  style={inputStyle}
+                />
+                <span style={{ fontSize: '0.8rem', color: '#888' }}>°C</span>
+              </div>
+            </div>
+            <div style={rowStyle}>
+              <span style={labelStyle}>Max Temp</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <input
+                  type="number"
+                  min={settings.therapy_min_temp + 1} max={50}
+                  value={inputDraft.default_temperature}
+                  onChange={(e) => setInputDraft((d) => ({ ...d, default_temperature: e.target.value }))}
+                  onBlur={() => handleNumericBlur('default_temperature', settings.therapy_min_temp + 1, 50)}
+                  style={inputStyle}
+                />
+                <span style={{ fontSize: '0.8rem', color: '#888' }}>°C</span>
+              </div>
+            </div>
             <div style={rowStyle}>
               <span style={labelStyle}>Max Threshold Temp</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
