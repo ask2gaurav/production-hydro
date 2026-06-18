@@ -5,6 +5,7 @@ import {
   IonModal, IonItem, IonLabel, IonInput, IonTextarea, IonSpinner,
   IonText, IonSelect, IonSelectOption, useIonViewDidEnter, useIonAlert
 } from '@ionic/react';
+import { Capacitor } from '@capacitor/core';
 import {
   arrowBack, addOutline, personOutline, personCircleOutline,
   peopleOutline, pencilOutline, trashOutline, searchOutline,
@@ -272,6 +273,8 @@ const Therapy: React.FC = () => {
   const [showWaterRecoveredModal, setShowWaterRecoveredModal] = useState(false);
   const lowWaterPaused = useRef(false);
   const lowTempPaused = useRef(false);
+  const bgPaused = useRef(false);
+  const [showBgPauseModal, setShowBgPauseModal] = useState(false);
   const [bgIndex, setBgIndex] = useState(0);
   useEffect(() => {
     const images = ['/healthy_gut_1024x683.png', '/hydrad_soften_1024x683.png'];
@@ -518,6 +521,34 @@ const Therapy: React.FC = () => {
     const t = setInterval(() => setTimeLeft((s) => s - 1), 1000);
     return () => clearInterval(t);
   }, [state, timeLeft, endSession, buildAllParams]);
+
+  // Auto-pause when the app goes to background or the screen is locked (native Android only)
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState === 'hidden') {
+        if (state === 'ACTIVE') {
+          bgPaused.current = true;
+          setState('PAUSED');
+          try {
+            const params = await buildAllParams();
+            await sendPrepareParams({ ...params, start_session: 1, prepare_session: 1, pause_session: 1 });
+          } catch {
+            // Stay paused locally even if the command fails
+          }
+        }
+      } else if (document.visibilityState === 'visible') {
+        if (bgPaused.current) {
+          bgPaused.current = false;
+          setShowBgPauseModal(true);
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [state, buildAllParams]);
 
   const handleStart = async () => {
     setSessionError('');
@@ -1807,6 +1838,45 @@ const Therapy: React.FC = () => {
               }}
             >
               OK
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Session auto-paused because app went to background / screen locked */}
+      {showBgPauseModal && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 10000,
+          backgroundColor: 'rgba(0,0,0,0.55)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <div style={{
+            backgroundColor: 'white', borderRadius: '14px',
+            padding: '2rem 2rem 1.5rem',
+            maxWidth: '420px', width: '90%',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.28)',
+            textAlign: 'center',
+          }}>
+            <div style={{ fontSize: '2.8rem', marginBottom: '0.5rem' }}>📵</div>
+            <h2 style={{ margin: '0 0 0.5rem', fontSize: '1.3rem', color: '#b71c1c', fontWeight: 700 }}>
+              Session Paused
+            </h2>
+            <p style={{ margin: '0 0 0.25rem', fontSize: '0.95rem', color: '#333', lineHeight: 1.5 }}>
+              The app was moved to the background or the screen was locked, so the session has been <strong>automatically paused</strong>.
+            </p>
+            <p style={{ margin: '0 0 1.5rem', fontSize: '0.88rem', color: '#666', lineHeight: 1.5 }}>
+              Press <strong>RESUME</strong> when you are ready to continue the therapy session.
+            </p>
+            <button
+              onClick={() => setShowBgPauseModal(false)}
+              style={{
+                backgroundColor: '#0a5c99', color: 'white',
+                border: 'none', borderRadius: '8px',
+                padding: '0.65rem 2rem', fontSize: '1rem',
+                fontWeight: 600, cursor: 'pointer', width: '100%',
+              }}
+            >
+              Dismiss
             </button>
           </div>
         </div>

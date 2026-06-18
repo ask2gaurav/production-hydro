@@ -67,3 +67,11 @@ The system achieves robust offline syncing through a dual-store approach:
 1. **Zustand State:** Maintains fast, reactive UI states (e.g., timer, machine lock checks).
 2. **Dexie DB (`localDB.ts`):** Buffers `sessions` and `settings` mutations locally.
 3. **Background Sync:** Workbox queues failed/offline Axios requests and replays them when it detects `navigator.onLine === true`, ensuring data integrity and correct Demo Mode decrementing on the server.
+
+
+## App Creation
+Now your entire rebuild is a single command from the frontend/ directory:
+`npm run build:android`
+
+Then build the APK:
+`cd android && ./gradlew assembleRelease`
