@@ -198,7 +198,7 @@ const Settings: React.FC = () => {
       </IonHeader>
 
       <IonContent className="ion-padding">
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', height: '100%' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
 
           {/* Column 1: System State */}
           <div style={cardStyle}>
@@ -352,7 +352,7 @@ const Settings: React.FC = () => {
               </div>
             </div>
             <div style={rowStyle}>
-              <span style={labelStyle}>Max Temp</span>
+              <span style={labelStyle}>Set Temp</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                 <input
                   type="number"

@@ -154,8 +154,8 @@ const LoginPage: React.FC = () => {
         </div>
       )}
 
-      <IonContent className="ion-padding" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ maxWidth: 400, margin: '4rem auto' }}>
+      <IonContent className="ion-padding">
+        <div style={{ maxWidth: 400, margin: '4rem auto 2rem' }}>
           <IonInput
             label='Email:'
             type="email"

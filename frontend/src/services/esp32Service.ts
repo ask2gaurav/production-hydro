@@ -11,6 +11,8 @@ export interface MachineInfo {
   blower: number;
   water_in_valve: number;
   flush_valve: number;
+  sessionP: number;
+  hes: number;
 }
 
 // The ESP32 returns non-standard JSON like {temp:24,water_ll:0,water_hl:0}

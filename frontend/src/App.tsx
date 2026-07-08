@@ -30,11 +30,13 @@ import { useStore } from './store/useStore';
 import { checkModeOnBoot } from './services/modeCheck';
 import { runSync } from './services/syncService';
 import { addLog } from './services/debugLog';
+import { useKeyboardScroll } from './hooks/useKeyboardScroll';
 
 setupIonicReact();
 
 const App: React.FC = () => {
   const { machineId, modeStatus } = useStore();
+  useKeyboardScroll();
 
   // Start the embedded HTTP server so the ESP32 can POST its LAN IP on connect
   useEffect(() => {

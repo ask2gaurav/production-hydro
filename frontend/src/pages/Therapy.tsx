@@ -201,6 +201,7 @@ const Therapy: React.FC = () => {
 
   const activeSessionLocalId = useRef<number | null>(null);
   const sessionStartTime = useRef<Date | null>(null);
+  const endSessionRef = useRef<() => Promise<void>>(() => Promise.resolve());
 
   // Add therapist modal
   const [showAddTherapist, setShowAddTherapist] = useState(false);
@@ -274,6 +275,7 @@ const Therapy: React.FC = () => {
   const lowWaterPaused = useRef(false);
   const lowTempPaused = useRef(false);
   const bgPaused = useRef(false);
+  const hardwarePaused = useRef(false);
   const [showBgPauseModal, setShowBgPauseModal] = useState(false);
   const [bgIndex, setBgIndex] = useState(0);
   useEffect(() => {
@@ -455,6 +457,21 @@ const Therapy: React.FC = () => {
           setShowLowTempModal(false);
           setShowTempRecoveredModal(true);
         }
+
+        // Hardware pause: ESP32 signals sessionP=1 → pause UI; sessionP=0 → resume
+        if (state === 'ACTIVE' && info.sessionP === 1) {
+          hardwarePaused.current = true;
+          setState('PAUSED');
+        }
+        if (state === 'PAUSED' && hardwarePaused.current && info.sessionP === 0) {
+          hardwarePaused.current = false;
+          setState('ACTIVE');
+        }
+
+        // Hardware end session: ESP32 signals hes=1 → end session on UI
+        if ((state === 'ACTIVE' || state === 'PAUSED') && info.hes === 1) {
+          endSessionRef.current();
+        }
       } catch {
         setMachineConnected(false);
         setMachineInfo(null);
@@ -510,6 +527,7 @@ const Therapy: React.FC = () => {
     // }
   // }, [timeLeft, machineId, totalSeconds, history]);
   }, [timeLeft, machineId, totalSeconds]);
+  endSessionRef.current = endSession;
 
   useEffect(() => {
     if (state !== 'ACTIVE') return;
