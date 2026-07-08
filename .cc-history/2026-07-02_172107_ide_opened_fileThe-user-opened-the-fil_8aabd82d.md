@@ -6,8 +6,8 @@
 | **Session ID** | `8aabd82d-c7e7-48d2-8124-5ab3b87b574a` |
 | **Working Dir** | `d:\projects\production-hydro-colon-therapy` |
 | **Started** | 7/2/2026, 5:21:07 PM |
-| **Last Updated** | 7/2/2026, 7:16:52 PM |
-| **Messages** | 66 |
+| **Last Updated** | 7/8/2026, 1:08:24 PM |
+| **Messages** | 68 |
 
 ---
 
@@ -933,6 +933,42 @@ Here's the sequence:
 The same risk exists for `sessionP` — if the ESP32 currently returns `sessionP: 1` by default, the session would pause the moment it starts.
 
 **What to confirm:** Check what value the ESP32 currently sends for `hes` (and `sessionP`) in its response when no hardware end/pause has been triggered. If it sends `1` when idle and flips to `0` when active, the logic needs to be inverted. If the field simply doesn't exist yet in the firmware response (returns `undefined`), then `undefined === 1` would be `false` and the check would be safe — but clearly something is matching.
+
+
+---
+
+## User <sup>7/8/2026, 1:08:11 PM</sup>
+
+<ide_selection>The user selected the lines 139 to 139 from d:\projects\production-hydro-colon-therapy\Recommendations\esp32\final_working_03Jul2026_high_on_logic_1.ino:
+blower
+
+This may or may not be related to the current task.</ide_selection>
+
+@frontend/src/pages/Therapy.tsx  where we read the esp32 status, are we reading blower variable along with other like water_hl, water_ll etc? Don't change any file just locate the code and tell if we are reading and updating blower variable and set the blower on off status accordingly?
+
+
+---
+
+## Assistant <sup>7/8/2026, 1:08:24 PM</sup>
+
+Yes, `blower` is fully covered. Here's the trail:
+
+**1. Defined in the interface** — [esp32Service.ts:11](frontend/src/services/esp32Service.ts#L11)
+```ts
+blower: number;
+```
+It's parsed automatically from the ESP32 JSON response along with all other fields.
+
+**2. Stored in global state** — every poll calls `setMachineInfo(info)` at [Therapy.tsx:407](frontend/src/pages/Therapy.tsx#L407), which stores the entire `MachineInfo` object including `blower`.
+
+**3. Read for UI display** — `machineInfo?.blower` is referenced in two places:
+- [Therapy.tsx:1107](frontend/src/pages/Therapy.tsx#L1107) — label: `"Blower is ON/OFF"`
+- [Therapy.tsx:1110](frontend/src/pages/Therapy.tsx#L1110) — button color (green when `=== 1`, medium when off)
+- [Therapy.tsx:1114](frontend/src/pages/Therapy.tsx#L1114) — button text: `"TURN BLOWER OFF/ON"`
+
+**4. Written back** — `handleBlowerToggle` at [Therapy.tsx:658](frontend/src/pages/Therapy.tsx#L658) reads `machineInfo?.blower` to determine the new value, sends it to the ESP32, then updates `machineInfo` with the response.
+
+So yes — `blower` is being read from the ESP32, reflected in the UI, and toggled correctly.
 
 
 ---
