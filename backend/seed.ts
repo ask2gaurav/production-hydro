@@ -60,7 +60,8 @@ async function seed() {
     const rawData = fs.readFileSync(dataPath, 'utf8');
     const data = EJSON.parse(rawData);
     
-
+    //mongoexport --username=admin --password=s3cUrepa55w0RdGpSurAt  --authenticationDatabase=admin --db=hydrotherapy --collection=resoureces --out=resoureces4aug26.json
+    //mongoexport --uri="mongodb://admin:s3cUrepa55w0RdGpSurAt@mongodb:27017/hydrotherapy?authSource=admin" --collection=resources --out=resources4aug26.json
 
     // 2. Clear existing data (optional)
     await Resource.deleteMany({});

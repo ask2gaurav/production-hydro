@@ -7,8 +7,9 @@ import { arrowBack, wifiOutline/* , cloudOfflineOutline  */} from 'ionicons/icon
 import { localDB } from '../db/localDB';
 import { useStore } from '../store/useStore';
 import { useHistory } from 'react-router-dom';
-import { sendCommand } from '../services/esp32Service';
+import { sendCommand, fetchMachineInfo } from '../services/esp32Service';
 import MachineInfoModal from '../components/MachineInfoModal';
+
 // Debug panel imports — kept for reference, panel commented out for production release
 // import { getLog, clearLog, fmtTime, type LogEntry } from '../services/debugLog';
 
@@ -68,6 +69,22 @@ const Settings: React.FC = () => {
       }
     });
   }, [machineId]);
+// ESP32 polling — 3s during PREPARING, 15s otherwise
+  useEffect(() => {
+    const interval = 1000;
+    const poll = async () => {
+      try {
+        const info = await fetchMachineInfo();
+        setMachineInfo(info);
+      } catch {
+        setMachineInfo(null);
+      }
+    };
+    console.log ('Starting ESP32 polling...');
+    poll();
+    const id = setInterval(poll, interval);
+    return () => clearInterval(id);
+  }, [ setMachineInfo]);
 
   const handleNumericBlur = (key: keyof typeof inputDraft, min: number, max?: number) => {
     const parsed = parseInt(inputDraft[key], 10);

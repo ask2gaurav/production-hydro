@@ -23,6 +23,8 @@ import Therapy from './pages/Therapy';
 import TherapyLogs from './pages/TherapyLogs';
 import Settings from './pages/Settings';
 import Resources from './pages/Resources';
+import NextTherapyNotification from './pages/NextTherapyNotification';
+import DataExportImport from './pages/DataExportImport';
 import LockScreen from './pages/LockScreen';
 import LoginPage from './pages/LoginPage';
 
@@ -40,7 +42,11 @@ const App: React.FC = () => {
 
   // Start the embedded HTTP server so the ESP32 can POST its LAN IP on connect
   useEffect(() => {
-    if (!Capacitor.isNativePlatform()) return;
+    if (!Capacitor.isNativePlatform()) {
+      localStorage.setItem('esp32_ip', '127.0.0.1:8091');
+      useStore.getState().setMachineConnected(true);
+      return
+    };
     EspServer.startServer();
     const listenerPromise = EspServer.addListener('espRegistered', ({ ip, serial }) => {
       localStorage.setItem('esp32_ip', ip);
@@ -73,6 +79,8 @@ const App: React.FC = () => {
           <Route exact path="/logs" component={machineId ? modeStatus.is_locked ? LockScreen : TherapyLogs : LoginPage} />
           <Route exact path="/settings" component={machineId ? modeStatus.is_locked ? LockScreen : Settings : LoginPage} />
           <Route exact path="/resources" component={machineId ? modeStatus.is_locked ? LockScreen : Resources : LoginPage} />
+          <Route exact path="/notifications" component={machineId ? modeStatus.is_locked ? LockScreen : NextTherapyNotification : LoginPage} />
+          <Route exact path="/data-export-import" component={machineId ? modeStatus.is_locked ? LockScreen : DataExportImport : LoginPage} />
           {/* <Route exact path="/lockscreen" component={LockScreen} /> */}
           <Route exact path="/">
             {machineId ? <Redirect to="/dashboard" /> : <Redirect to="/login" />}

@@ -8,6 +8,7 @@ import { corsHeaders, handleOptions } from '../../lib/cors.server';
 export async function loader({ request }: { request: Request }) {
   if (request.method === 'OPTIONS') return handleOptions();
   await connectDB();
+  const user = await requireUserRole(request, ['Owner']);
   const url = new URL(request.url);
   const machineId = url.searchParams.get('machine_id');
 
@@ -15,7 +16,9 @@ export async function loader({ request }: { request: Request }) {
     const assignment = await MachineSupplier.findOne({ machine_id: machineId }).lean();
     if (assignment) {
       const supplierId = (assignment as any).supplier_id;
-      const resources = await SupplierResource.find({ supplier_id: supplierId, is_active: true }).lean();
+      // Fetch resources specific to the supplier in assending order of creation date time 
+
+      const resources = await SupplierResource.find({ supplier_id: supplierId, is_active: true }).sort({ updated_at: 1 }).lean();
       if (resources.length > 0) {
         return new Response(JSON.stringify(resources), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }

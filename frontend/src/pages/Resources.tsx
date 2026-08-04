@@ -10,7 +10,7 @@ import { localDB, type LocalResource } from '../db/localDB';
 import api from '../services/api';
 import { useHistory } from 'react-router-dom';
 
-const CATEGORIES = ['FAQ', 'Guide', 'Help', 'Troubleshooting'];
+const CATEGORIES = ['FAQ', 'Guide', 'Help', 'Troubleshooting', 'KeyboardTroubleshooting'];
 
 const syncResources = async (machineId: string): Promise<void> => {
   if (!navigator.onLine || !machineId) return;
@@ -85,6 +85,7 @@ const Resources: React.FC = () => {
     Guide: 'Guidelines & Best Practices',
     Help: 'Need More Help?',
     Troubleshooting: 'Troubleshooting',
+    KeyboardTroubleshooting: 'Keyboard Troubleshooting',
   };
 
   return (

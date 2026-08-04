@@ -6,8 +6,8 @@
 | **Session ID** | `8aabd82d-c7e7-48d2-8124-5ab3b87b574a` |
 | **Working Dir** | `d:\projects\production-hydro-colon-therapy` |
 | **Started** | 7/2/2026, 5:21:07 PM |
-| **Last Updated** | 7/8/2026, 1:08:24 PM |
-| **Messages** | 68 |
+| **Last Updated** | 8/4/2026, 6:53:30 PM |
+| **Messages** | 93 |
 
 ---
 
@@ -969,6 +969,352 @@ It's parsed automatically from the ESP32 JSON response along with all other fiel
 **4. Written back** — `handleBlowerToggle` at [Therapy.tsx:658](frontend/src/pages/Therapy.tsx#L658) reads `machineInfo?.blower` to determine the new value, sends it to the ESP32, then updates `machineInfo` with the response.
 
 So yes — `blower` is being read from the ESP32, reflected in the UI, and toggled correctly.
+
+
+---
+
+## User <sup>8/4/2026, 6:26:10 PM</sup>
+
+<ide_opened_file>The user opened the file d:\projects\production-hydro-colon-therapy\frontend\src\pages\Dashboard.tsx in the IDE. This may or may not be related to the current task.</ide_opened_file>
+
+Right now we are already converting @frontend/ into an Android app. Now, Is it possible to convert @frontend/ into an iPhone app on same windows machine?
+
+
+---
+
+## Assistant <sup>8/4/2026, 6:26:21 PM</sup>
+
+
+---
+
+## Assistant <sup>8/4/2026, 6:26:28 PM</sup>
+
+**No, not directly.** Apple enforces a hard requirement: iOS apps must be compiled and signed using **Xcode, which only runs on macOS**. This is a platform restriction from Apple, not a tooling limitation — there is no workaround for local builds on Windows.
+
+Your project already uses Ionic + Capacitor (seen from [capacitor.config.ts](frontend/capacitor.config.ts)), so the **codebase is already iOS-compatible**. The blocker is purely the build machine.
+
+Your options:
+
+**1. Cloud build service (no Mac needed)**
+Services like **Codemagic**, **Ionic Appflow**, or **GitHub Actions with a macOS runner** rent you a macOS VM in the cloud. You push your code, they run `xcodebuild` and return a signed `.ipa`. Codemagic has a free tier that covers small usage.
+
+**2. Rent a Mac in the cloud**
+**MacStadium** or **MacinCloud** give you a real macOS machine via Remote Desktop. You'd run Xcode yourself on it. More control, but costs ~$30–50/month.
+
+**3. Borrow/buy a Mac**
+A used Mac Mini (M1 or Intel) is the cheapest long-term option if you plan to ship iOS regularly.
+
+---
+
+**Bottom line:** Your frontend code needs zero changes — Capacitor handles the iOS target. You just need macOS somewhere (cloud or physical) to do the final build and App Store submission.
+
+
+---
+
+## User <sup>8/4/2026, 6:52:39 PM</sup>
+
+<ide_opened_file>The user opened the file d:\projects\production-hydro-colon-therapy\frontend\src\pages\Dashboard.tsx in the IDE. This may or may not be related to the current task.</ide_opened_file>
+
+Create two new pages for Next Therapy Noticiation and Data Export Import and set the links in @frontend/src/pages/Dashboard.tsx file accordingly. For now, just create the place holder pages with heading. We will add the detailed functionality later.
+
+
+---
+
+## Assistant <sup>8/4/2026, 6:52:42 PM</sup>
+
+
+---
+
+## Assistant <sup>8/4/2026, 6:52:43 PM</sup>
+
+Let me check the router setup first.
+
+
+---
+
+## Assistant <sup>8/4/2026, 6:52:43 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\App.tsx"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/4/2026, 6:52:43 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+1	import { Redirect, Route } from 'react-router-dom';
+2	import { IonApp, IonRouterOutlet, setupIonicReact } from '@ionic/react';
+3	import { IonReactRouter } from '@ionic/react-router';
+4	import { useEffect } from 'react';
+5	import { Capacitor } from '@capacitor/core';
+6	import { EspServer } from './plugins/espServer';
+7	
+8	/* Core CSS required for Ionic components to work properly */
+9	import '@ionic/react/css/core.css';
+10	import '@ionic/react/css/normalize.css';
+11	import '@ionic/react/css/structure.css';
+12	import '@ionic/react/css/typography.css';
+13	import '@ionic/react/css/padding.css';
+14	import '@ionic/react/css/float-elements.css';
+15	import '@ionic/react/css/text-alignment.css';
+16	import '@ionic/react/css/text-transformation.css';
+17	import '@ionic/react/css/flex-utils.css';
+18	import '@ionic/react/css/display.css';
+19	import './theme/variables.css';
+20	
+21	import Dashboard from './pages/Dashboard';
+22	import Therapy from './pages/Therapy';
+23	import TherapyLogs from './page
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/4/2026, 6:52:46 PM</sup>
+
+Now I'll create the two placeholder pages, register the routes, and fix the dashboard links — all at once.
+
+
+---
+
+## Assistant <sup>8/4/2026, 6:52:50 PM</sup>
+
+<details>
+<summary>Tool: <code>Write</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\NextTherapyNotification.tsx",
+  "content": "import React from 'react';\nimport { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonButton, IonIcon } from '@ionic/react';\nimport { arrowBack } from 'ionicons/icons';\nimport { useHistory } from 'react-router';\n\nconst NextTherapyNotification: React.FC = () => {\n  const history = useHistory();\n\n  return (\n    <IonPage>\n      <IonHeader>\n        <IonToolbar color=\"primary\">\n          <IonTitle>Next Therapy Notification</IonTitle>\n          <IonButton slot=\"end\" color=\"primary\" onClick={() => history.goBack()}>\n            <IonIcon icon={arrowBack} />\n          </IonButton>\n        </IonToolbar>\n      </IonHeader>\n      <IonContent className=\"ion-padding\">\n        <h2>Next Therapy Notification</h2>\n        <p>Notification scheduling functionality will be added here.</p>\n      </IonContent>\n    </IonPage>\n  );\n};\n\nexport default NextTherapyNotification;\n"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/4/2026, 6:52:51 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+File created successfully at: d:\projects\production-hydro-colon-therapy\frontend\src\pages\NextTherapyNotification.tsx (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/4/2026, 6:52:56 PM</sup>
+
+<details>
+<summary>Tool: <code>Write</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\DataExportImport.tsx",
+  "content": "import React from 'react';\nimport { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonButton, IonIcon } from '@ionic/react';\nimport { arrowBack } from 'ionicons/icons';\nimport { useHistory } from 'react-router';\n\nconst DataExportImport: React.FC = () => {\n  const history = useHistory();\n\n  return (\n    <IonPage>\n      <IonHeader>\n        <IonToolbar color=\"primary\">\n          <IonTitle>Data Export / Import</IonTitle>\n          <IonButton slot=\"end\" color=\"primary\" onClick={() => history.goBack()}>\n            <IonIcon icon={arrowBack} />\n          </IonButton>\n        </IonToolbar>\n      </IonHeader>\n      <IonContent className=\"ion-padding\">\n        <h2>Data Export / Import</h2>\n        <p>Export and import functionality will be added here.</p>\n      </IonContent>\n    </IonPage>\n  );\n};\n\nexport default DataExportImport;\n"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/4/2026, 6:52:57 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+File created successfully at: d:\projects\production-hydro-colon-therapy\frontend\src\pages\DataExportImport.tsx (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/4/2026, 6:53:00 PM</sup>
+
+Now register the routes in App.tsx:
+
+
+---
+
+## Assistant <sup>8/4/2026, 6:53:02 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\App.tsx",
+  "old_string": "import Resources from './pages/Resources';\nimport LockScreen from './pages/LockScreen';\nimport LoginPage from './pages/LoginPage';",
+  "new_string": "import Resources from './pages/Resources';\nimport NextTherapyNotification from './pages/NextTherapyNotification';\nimport DataExportImport from './pages/DataExportImport';\nimport LockScreen from './pages/LockScreen';\nimport LoginPage from './pages/LoginPage';"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/4/2026, 6:53:03 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\App.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/4/2026, 6:53:05 PM</sup>
+
+Need to add the routes too:
+
+
+---
+
+## Assistant <sup>8/4/2026, 6:53:07 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\App.tsx",
+  "old_string": "          <Route exact path=\"/resources\" component={machineId ? modeStatus.is_locked ? LockScreen : Resources : LoginPage} />",
+  "new_string": "          <Route exact path=\"/resources\" component={machineId ? modeStatus.is_locked ? LockScreen : Resources : LoginPage} />\n          <Route exact path=\"/notifications\" component={machineId ? modeStatus.is_locked ? LockScreen : NextTherapyNotification : LoginPage} />\n          <Route exact path=\"/data-export-import\" component={machineId ? modeStatus.is_locked ? LockScreen : DataExportImport : LoginPage} />"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/4/2026, 6:53:08 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\App.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/4/2026, 6:53:11 PM</sup>
+
+Now fix the dashboard links:
+
+
+---
+
+## Assistant <sup>8/4/2026, 6:53:16 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Dashboard.tsx",
+  "old_string": "            <IonCol size=\"4\">\n              <IonCard button onClick={() => history.push('/resources')} style={{ width: 'auto', textAlign: 'center', height: '90%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', backgroundColor: '#eef5f9' }}>\n                <IonIcon icon={alarmOutline} style={{ fontSize: '4rem', color: '#0a5c99' }} />\n                <IonCardHeader>\n                  <IonCardTitle style={{ lineHeight: '2.4rem' }}>Next Therapy Notification</IonCardTitle>\n                </IonCardHeader>\n              </IonCard>\n            </IonCol>",
+  "new_string": "            <IonCol size=\"4\">\n              <IonCard button onClick={() => history.push('/notifications')} style={{ width: 'auto', textAlign: 'center', height: '90%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', backgroundColor: '#eef5f9' }}>\n                <IonIcon icon={alarmOutline} style={{ fontSize: '4rem', color: '#0a5c99' }} />\n                <IonCardHeader>\n                  <IonCardTitle style={{ lineHeight: '2.4rem' }}>Next Therapy Notification</IonCardTitle>\n                </IonCardHeader>\n              </IonCard>\n            </IonCol>"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/4/2026, 6:53:18 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\Dashboard.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/4/2026, 6:53:24 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Dashboard.tsx",
+  "old_string": "            <IonCol size=\"4\">\n              <IonCard button onClick={() => history.push('/resources')} style={{ width: 'auto', textAlign: 'center', height: '90%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', backgroundColor: '#eef5f9' }}>\n                <IonIcon icon={cloudDownloadOutline} style={{ fontSize: '4rem', color: '#0a5c99', marginRight: '1rem' }} />\n                <IonIcon icon={cloudUploadOutline} style={{ fontSize: '4rem', color: '#0a5c99' }} />\n                <IonCardHeader>\n                  <IonCardTitle>Data Export Import </IonCardTitle>\n                </IonCardHeader>\n              </IonCard>\n            </IonCol>",
+  "new_string": "            <IonCol size=\"4\">\n              <IonCard button onClick={() => history.push('/data-export-import')} style={{ width: 'auto', textAlign: 'center', height: '90%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', backgroundColor: '#eef5f9' }}>\n                <IonIcon icon={cloudDownloadOutline} style={{ fontSize: '4rem', color: '#0a5c99', marginRight: '1rem' }} />\n                <IonIcon icon={cloudUploadOutline} style={{ fontSize: '4rem', color: '#0a5c99' }} />\n                <IonCardHeader>\n                  <IonCardTitle>Data Export Import</IonCardTitle>\n                </IonCardHeader>\n              </IonCard>\n            </IonCol>"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/4/2026, 6:53:26 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\Dashboard.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/4/2026, 6:53:30 PM</sup>
+
+Done. Summary of changes:
+
+- **[NextTherapyNotification.tsx](frontend/src/pages/NextTherapyNotification.tsx)** — new placeholder page at `/notifications`
+- **[DataExportImport.tsx](frontend/src/pages/DataExportImport.tsx)** — new placeholder page at `/data-export-import`
+- **[App.tsx](frontend/src/App.tsx)** — both routes registered with the same auth/lock guard pattern as existing routes
+- **[Dashboard.tsx](frontend/src/pages/Dashboard.tsx)** — both cards now point to their correct routes instead of `/resources`
 
 
 ---
