@@ -55,7 +55,7 @@ const DobPicker: React.FC<Props> = ({ value, onChange }) => {
   const selectStyle: React.CSSProperties = { minWidth: 0, flex: 1 };
 
   return (
-    <div>
+    <div style={{ width:'280px'}}>
       <IonLabel style={{ fontSize: '0.75rem', color: '#666', paddingLeft: '16px', display: 'block', marginBottom: '4px' }}>
         Date of Birth
       </IonLabel>
@@ -65,7 +65,7 @@ const DobPicker: React.FC<Props> = ({ value, onChange }) => {
           value={day || null}
           onIonChange={(e) => handleDay(Number(e.detail.value))}
           interface="popover"
-          style={selectStyle}
+          style={{ ...selectStyle,  }}
         >
           {days.map(d => (
             <IonSelectOption key={d} value={d}>{d}</IonSelectOption>
@@ -77,7 +77,7 @@ const DobPicker: React.FC<Props> = ({ value, onChange }) => {
           value={month || null}
           onIonChange={(e) => handleMonth(Number(e.detail.value))}
           interface="popover"
-          style={selectStyle}
+          style={{ ...selectStyle, flex: 2 }}
         >
           {MONTHS.map((name, i) => (
             <IonSelectOption key={i + 1} value={i + 1}>{name}</IonSelectOption>
@@ -89,7 +89,7 @@ const DobPicker: React.FC<Props> = ({ value, onChange }) => {
           value={year || null}
           onIonChange={(e) => handleYear(Number(e.detail.value))}
           interface="popover"
-          style={{ ...selectStyle, flex: 1.3 }}
+          style={{ ...selectStyle }}
         >
           {YEARS.map(y => (
             <IonSelectOption key={y} value={y}>{y}</IonSelectOption>

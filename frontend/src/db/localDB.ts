@@ -50,6 +50,10 @@ export interface LocalSettings {
   sessions_remaining?: number | null;
   is_locked?: boolean;
   lock_screen_contact?: Record<string, string>;
+
+  // Next therapy reminder settings
+  next_therapy_reminder_days?: number;
+  next_therapy_alert_lead_days?: number;
 }
 
 export interface LocalTherapist {
@@ -78,6 +82,11 @@ export interface LocalPatient {
   notes?: string;
   is_active: boolean;
   synced: number;
+
+  // Next therapy reminder overrides
+  reminder_days_override?: number;
+  alert_lead_days_override?: number;
+  last_reminded_at?: string;
 }
 
 export interface LocalResource {
@@ -131,6 +140,14 @@ export class HydroDb extends Dexie {
     });
     // Version 5: add therapist_server_id and patient_server_id indexes to sessions
     this.version(5).stores({
+      sessions: '++id, machine_id, synced, created_at, server_id, therapist_server_id, patient_server_id',
+      therapists: '++id, machine_id, synced, server_id',
+      patients: '++id, machine_id, synced, server_id',
+      settings: 'machine_id',
+      resources: '++id, machine_id, server_id',
+    });
+    // Version 6: add next-therapy reminder fields (settings + patients) — no new indexes
+    this.version(6).stores({
       sessions: '++id, machine_id, synced, created_at, server_id, therapist_server_id, patient_server_id',
       therapists: '++id, machine_id, synced, server_id',
       patients: '++id, machine_id, synced, server_id',
