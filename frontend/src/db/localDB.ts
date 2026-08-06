@@ -54,6 +54,9 @@ export interface LocalSettings {
   // Next therapy reminder settings
   next_therapy_reminder_days?: number;
   next_therapy_alert_lead_days?: number;
+  next_therapy_reminder_message_en?: string;
+  next_therapy_reminder_message_gu?: string;
+  next_therapy_reminder_message_hi?: string;
 }
 
 export interface LocalTherapist {
@@ -89,6 +92,17 @@ export interface LocalPatient {
   last_reminded_at?: string;
 }
 
+export interface LocalReminderLog {
+  id?: number;
+  machine_id: string;
+  patient_id?: number;        // local Dexie id
+  patient_server_id?: string; // mongo id, mirrors LocalPatient.server_id
+  method: 'sms' | 'whatsapp' | 'email' | 'call';
+  language?: 'en' | 'gu' | 'hi';
+  message?: string;           // empty/undefined for 'call'
+  sent_at: string;            // ISO string
+}
+
 export interface LocalResource {
   id?: number;
   server_id: string;       // MongoDB _id
@@ -106,6 +120,7 @@ export class HydroDb extends Dexie {
   patients!: Table<LocalPatient, number>;
   settings!: Table<LocalSettings, string>;
   resources!: Table<LocalResource, number>;
+  reminder_logs!: Table<LocalReminderLog, number>;
 
   constructor() {
     super('HydrotherapyDB');
@@ -153,6 +168,15 @@ export class HydroDb extends Dexie {
       patients: '++id, machine_id, synced, server_id',
       settings: 'machine_id',
       resources: '++id, machine_id, server_id',
+    });
+    // Version 7: add reminder_logs table
+    this.version(7).stores({
+      sessions: '++id, machine_id, synced, created_at, server_id, therapist_server_id, patient_server_id',
+      therapists: '++id, machine_id, synced, server_id',
+      patients: '++id, machine_id, synced, server_id',
+      settings: 'machine_id',
+      resources: '++id, machine_id, server_id',
+      reminder_logs: '++id, machine_id, patient_id, patient_server_id, sent_at',
     });
   }
 }
