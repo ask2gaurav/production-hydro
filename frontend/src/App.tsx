@@ -25,6 +25,7 @@ import Settings from './pages/Settings';
 import Resources from './pages/Resources';
 import NextTherapyNotification from './pages/NextTherapyNotification';
 import DataExportImport from './pages/DataExportImport';
+import SavedBackups from './pages/SavedBackups';
 import LockScreen from './pages/LockScreen';
 import LoginPage from './pages/LoginPage';
 
@@ -81,6 +82,7 @@ const App: React.FC = () => {
           <Route exact path="/resources" component={machineId ? modeStatus.is_locked ? LockScreen : Resources : LoginPage} />
           <Route exact path="/notifications" component={machineId ? modeStatus.is_locked ? LockScreen : NextTherapyNotification : LoginPage} />
           <Route exact path="/data-export-import" component={machineId ? modeStatus.is_locked ? LockScreen : DataExportImport : LoginPage} />
+          <Route exact path="/saved-backups" component={machineId ? modeStatus.is_locked ? LockScreen : SavedBackups : LoginPage} />
           {/* <Route exact path="/lockscreen" component={LockScreen} /> */}
           <Route exact path="/">
             {machineId ? <Redirect to="/dashboard" /> : <Redirect to="/login" />}

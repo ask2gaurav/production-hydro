@@ -13,6 +13,7 @@
     "build:android": "npm run build -- --mode prod && npx cap sync android && npx capacitor-assets generate --android && node scripts/fix-adaptive-icons.mjs"
   },
   "dependencies": {
+    "@capacitor-community/file-opener": "^8.0.1",
     "@capacitor/android": "^8.3.0",
     "@capacitor/cli": "^8.3.0",
     "@capacitor/core": "8.3.0",

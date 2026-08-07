@@ -6,8 +6,8 @@
 | **Session ID** | `5529d2b3-4ebf-4965-aa06-df984f081bd8` |
 | **Working Dir** | `d:\projects\production-hydro-colon-therapy` |
 | **Started** | 8/6/2026, 11:50:49 AM |
-| **Last Updated** | 8/7/2026, 10:48:57 AM |
-| **Messages** | 173 |
+| **Last Updated** | 8/7/2026, 11:20:26 AM |
+| **Messages** | 313 |
 
 ---
 
@@ -2691,6 +2691,2329 @@ The file C:\Users\Gaurav\.claude\plans\frontend-src-pages-nexttherapynotificat-g
 ```
 
 </details>
+
+
+---
+
+## User <sup>8/7/2026, 10:54:25 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+User has approved your plan. You can now start coding. Start with updating your todo list if applicable
+
+Your plan has been saved to: C:\Users\Gaurav\.claude\plans\frontend-src-pages-nexttherapynotificat-glittery-beacon.md
+You can refer back to it if needed during implementation.
+
+## Approved Plan:
+# Persist exports to on-device storage + restore-from-list
+
+## Context
+Exports (`exportToExcel`, `exportToBackupZip` in `frontend/src/services/backupService.ts`) currently write only to Capacitor's `Directory.Cache` (line 38, via `writeAndShare`) purely to hand off to the OS Share sheet — the file isn't kept anywhere durable, and `Cache` can be purged by the OS at any time. Restoring today requires the user to have kept the shared `.zip` file somewhere external and pick it via the hidden `<input type="file">` in `frontend/src/pages/DataExportImport.tsx` (lines 110-116, 122-128). The user wants exported files (both Excel reports and zip backups) kept in the tablet's persistent local storage, 
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 10:54:29 AM</sup>
+
+<details>
+<summary>Tool: <code>TodoWrite</code></summary>
+
+```json
+{
+  "todos": [
+    {
+      "content": "Refactor backupService.ts: Directory.Data + list/delete/restore functions",
+      "status": "in_progress",
+      "activeForm": "Refactoring backupService.ts"
+    },
+    {
+      "content": "Add Saved Backups UI to DataExportImport.tsx",
+      "status": "pending",
+      "activeForm": "Adding Saved Backups UI to DataExportImport.tsx"
+    },
+    {
+      "content": "Verify with tsc",
+      "status": "pending",
+      "activeForm": "Verifying with tsc"
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 10:54:29 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Todos have been modified successfully. Ensure that you continue to use the todo list to track your progress. Please proceed with the current tasks if applicable
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 10:54:32 AM</sup>
+
+Now implementing. Rewriting `backupService.ts` first.
+
+
+---
+
+## Assistant <sup>8/7/2026, 10:54:33 AM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\services\\backupService.ts"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 10:54:33 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+1	import { Filesystem, Directory } from '@capacitor/filesystem';
+2	import { Share } from '@capacitor/share';
+3	import JSZip from 'jszip';
+4	import * as XLSX from 'xlsx';
+5	import { localDB } from '../db/localDB';
+6	
+7	const BACKUP_SCHEMA_VERSION = 1;
+8	
+9	const TABLE_NAMES = ['sessions', 'therapists', 'patients', 'settings', 'resources'] as const;
+10	type TableName = typeof TABLE_NAMES[number];
+11	
+12	// Resources are excluded from exports (Excel and backup zip) but still supported on import
+13	// so older backups that include a resources.json can still be restored.
+14	const EXPORT_TABLE_NAMES = TABLE_NAMES.filter((t) => t !== 'resources');
+15	
+16	interface BackupManifest {
+17	  schema_version: number;
+18	  exported_at: string;
+19	  machine_id: string;
+20	}
+21	
+22	interface BackupPayload {
+23	  manifest: BackupManifest;
+24	  data: Record<TableName, unknown[]>;
+25	}
+26	
+27	export type ImportMode = 'overwrite' | 'merge';
+28	
+29	export interface ImportResult {
+30	  counts: Record<TableNam
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 10:54:36 AM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 10:54:52 AM</sup>
+
+<details>
+<summary>Tool: <code>Write</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\services\\backupService.ts",
+  "content": "import { Filesystem, Directory } from '@capacitor/filesystem';\nimport { Share } from '@capacitor/share';\nimport JSZip from 'jszip';\nimport * as XLSX from 'xlsx';\nimport { localDB } from '../db/localDB';\n\nconst BACKUP_SCHEMA_VERSION = 1;\nconst BACKUPS_DIR = 'backups';\n\nconst TABLE_NAMES = ['sessions', 'therapists', 'patients', 'settings', 'resources'] as const;\ntype TableName = typeof TABLE_NAMES[number];\n\n// Resources are excluded from exports (Excel and backup zip) but still supported on import\n// so older backups that include a resources.json can still be restored.\nconst EXPORT_TABLE_NAMES = TABLE_NAMES.filter((t) => t !== 'resources');\n\ninterface BackupManifest {\n  schema_version: number;\n  exported_at: string;\n  machine_id: string;\n}\n\ninterface BackupPayload {\n  manifest: BackupManifest;\n  data: Record<TableName, unknown[]>;\n}\n\nexport type ImportMode = 'overwrite' | 'merge';\n\nexport interface ImportResult {\n  counts: Record<TableName, number>;\n}\n\nexport interface LocalBackupFile {\n  name: string;\n  type: 'excel' | 'zip';\n  size: number;\n  modifiedAt: string;\n}\n\nfunction timestamp(): string {\n  return new Date().toISOString().replace(/[:.]/g, '-');\n}\n\nasync function writeAndShare(fileName: string, base64Data: string) {\n  const written = await Filesystem.writeFile({\n    path: `${BACKUPS_DIR}/${fileName}`,\n    data: base64Data,\n    directory: Directory.Data,\n    recursive: true,\n  });\n\n  await Share.share({\n    title: fileName,\n    url: written.uri,\n    dialogTitle: 'Save or share backup file',\n  });\n\n  return written.uri;\n}\n\nfunction arrayBufferToBase64(buffer: ArrayBuffer): string {\n  let binary = '';\n  const bytes = new Uint8Array(buffer);\n  for (let i = 0; i < bytes.byteLength; i++) {\n    binary += String.fromCharCode(bytes[i]);\n  }\n  return btoa(binary);\n}\n\nexport async f
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 10:54:54 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\services\backupService.ts has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 10:54:59 AM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 10:55:00 AM</sup>
+
+<details>
+<summary>Tool: <code>TodoWrite</code></summary>
+
+```json
+{
+  "todos": [
+    {
+      "content": "Refactor backupService.ts: Directory.Data + list/delete/restore functions",
+      "status": "completed",
+      "activeForm": "Refactoring backupService.ts"
+    },
+    {
+      "content": "Add Saved Backups UI to DataExportImport.tsx",
+      "status": "in_progress",
+      "activeForm": "Adding Saved Backups UI to DataExportImport.tsx"
+    },
+    {
+      "content": "Verify with tsc",
+      "status": "pending",
+      "activeForm": "Verifying with tsc"
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 10:55:00 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Todos have been modified successfully. Ensure that you continue to use the todo list to track your progress. Please proceed with the current tasks if applicable
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 10:55:02 AM</sup>
+
+Now updating the UI. Let me rewrite `DataExportImport.tsx`.
+
+
+---
+
+## Assistant <sup>8/7/2026, 10:55:25 AM</sup>
+
+<details>
+<summary>Tool: <code>Write</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\DataExportImport.tsx",
+  "content": "import React, { useCallback, useEffect, useRef, useState } from 'react';\nimport {\n  IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonButton, IonIcon,\n  IonList, IonItem, IonLabel, IonNote, IonLoading, useIonAlert, useIonToast,\n} from '@ionic/react';\nimport {\n  arrowBack, documentTextOutline, archiveOutline, cloudUploadOutline,\n  refreshOutline, trashOutline,\n} from 'ionicons/icons';\nimport { useHistory } from 'react-router';\nimport { useStore } from '../store/useStore';\nimport {\n  exportToExcel, exportToBackupZip, importFromBackupZip, listLocalBackups,\n  deleteLocalBackup, restoreFromLocalBackup, type ImportMode, type LocalBackupFile,\n} from '../services/backupService';\n\nconst formatBytes = (bytes: number): string => {\n  if (bytes < 1024) return `${bytes} B`;\n  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;\n  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;\n};\n\nconst formatDateTime = (iso: string): string => {\n  return new Date(iso).toLocaleString('en-IN', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });\n};\n\nconst DataExportImport: React.FC = () => {\n  const history = useHistory();\n  const { machineId } = useStore();\n  const [presentAlert] = useIonAlert();\n  const [presentToast] = useIonToast();\n  const [busy, setBusy] = useState<string | null>(null);\n  const [backups, setBackups] = useState<LocalBackupFile[]>([]);\n  const fileInputRef = useRef<HTMLInputElement>(null);\n\n  const showError = (message: string) => {\n    presentAlert({ header: 'Error', message, buttons: ['OK'] });\n  };\n\n  const refreshBackups = useCallback(async () => {\n    try {\n      const list = await listLocalBackups();\n      setBackups(list);\n    } catch {\n      // ignore — list stays as-is\n    }\n  }, []);\n\n  useEffect(() => { refreshBackups(); }, [refreshBackup
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 10:55:26 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\DataExportImport.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 10:55:29 AM</sup>
+
+<details>
+<summary>Tool: <code>TodoWrite</code></summary>
+
+```json
+{
+  "todos": [
+    {
+      "content": "Refactor backupService.ts: Directory.Data + list/delete/restore functions",
+      "status": "completed",
+      "activeForm": "Refactoring backupService.ts"
+    },
+    {
+      "content": "Add Saved Backups UI to DataExportImport.tsx",
+      "status": "completed",
+      "activeForm": "Adding Saved Backups UI to DataExportImport.tsx"
+    },
+    {
+      "content": "Verify with tsc",
+      "status": "in_progress",
+      "activeForm": "Verifying with tsc"
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 10:55:29 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Todos have been modified successfully. Ensure that you continue to use the todo list to track your progress. Please proceed with the current tasks if applicable
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 10:55:32 AM</sup>
+
+<details>
+<summary>Tool: <code>Bash</code></summary>
+
+```json
+{
+  "command": "cd \"d:/projects/production-hydro-colon-therapy/frontend\" && npx tsc --noEmit -p . ; echo \"EXIT:$?\"",
+  "description": "Type-check frontend after backup persistence changes",
+  "timeout": 120000
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 10:55:41 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+EXIT:0
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 10:55:47 AM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 10:55:47 AM</sup>
+
+<details>
+<summary>Tool: <code>TodoWrite</code></summary>
+
+```json
+{
+  "todos": [
+    {
+      "content": "Refactor backupService.ts: Directory.Data + list/delete/restore functions",
+      "status": "completed",
+      "activeForm": "Refactoring backupService.ts"
+    },
+    {
+      "content": "Add Saved Backups UI to DataExportImport.tsx",
+      "status": "completed",
+      "activeForm": "Adding Saved Backups UI to DataExportImport.tsx"
+    },
+    {
+      "content": "Verify with tsc",
+      "status": "completed",
+      "activeForm": "Verifying with tsc"
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 10:55:47 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Todos have been modified successfully. Ensure that you continue to use the todo list to track your progress. Please proceed with the current tasks if applicable
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 10:55:53 AM</sup>
+
+Type-check passes clean. Summary of what changed:
+
+- **`frontend/src/services/backupService.ts`**: exports now write to Capacitor's persistent `Directory.Data/backups/` (was the ephemeral `Directory.Cache`), still followed by the same Share-sheet flow as before. Added `listLocalBackups()`, `deleteLocalBackup()`, and `restoreFromLocalBackup()`; extracted the shared restore logic into `restoreFromZip()` so both file-picker import and local-backup restore use the same path.
+- **`frontend/src/pages/DataExportImport.tsx`**: added a "Saved Backups" list below the existing actions, showing every persisted Excel/zip file with date and size, a refresh button, a Restore action (zip only, same Merge/Overwrite confirmation as file import) and a Delete action (both types) with a confirmation prompt. The list auto-refreshes after every export, import, restore, or delete.
+
+Since `Directory.Data`/`readdir`/`stat` behavior is native-specific, this needs a real device/emulator run to confirm end-to-end — worth testing export → see it listed → restore → delete on your tablet build.
+
+
+---
+
+## User <sup>8/7/2026, 11:06:14 AM</sup>
+
+Giving error: Failed to find configured root that contains /data/data/com.advaitsolutions.hydrocolon/files/backups/hydrotherapy-export-6a717ccc30b3e06800cdff91-2026-08-07T05-33-21-273Z.xlsx
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:06:23 AM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:06:23 AM</sup>
+
+The Android `FileProvider` isn't configured to expose `Directory.Data`, only `Directory.Cache` — that's what the "Failed to find configured root" error means. Let me check the provider config.
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:06:24 AM</sup>
+
+<details>
+<summary>Tool: <code>Glob</code></summary>
+
+```json
+{
+  "pattern": "**/file*paths*.xml"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 11:06:26 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+frontend\android\app\build\intermediates\packaged_res\debug\packageDebugResources\xml\file_paths.xml
+frontend\android\app\build\intermediates\packaged_res\release\packageReleaseResources\xml\file_paths.xml
+frontend\android\app\src\main\res\xml\file_paths.xml
+android\app\src\main\res\xml\filepaths.xml
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:06:28 AM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\android\\app\\src\\main\\res\\xml\\file_paths.xml"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 11:06:29 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+1	<?xml version="1.0" encoding="utf-8"?>
+2	<paths xmlns:android="http://schemas.android.com/apk/res/android">
+3	    <external-path name="my_images" path="." />
+4	    <cache-path name="my_cache_images" path="." />
+5	</paths>
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:06:31 AM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:06:32 AM</sup>
+
+Found it — only `cache-path` and `external-path` are declared; `Directory.Data` maps to the app's internal `files` dir, which needs a `<files-path>` entry.
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:06:33 AM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\android\\app\\src\\main\\res\\xml\\file_paths.xml",
+  "old_string": "<paths xmlns:android=\"http://schemas.android.com/apk/res/android\">\n    <external-path name=\"my_images\" path=\".\" />\n    <cache-path name=\"my_cache_images\" path=\".\" />\n</paths>",
+  "new_string": "<paths xmlns:android=\"http://schemas.android.com/apk/res/android\">\n    <external-path name=\"my_images\" path=\".\" />\n    <cache-path name=\"my_cache_images\" path=\".\" />\n    <files-path name=\"my_files\" path=\".\" />\n</paths>"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 11:06:34 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\android\app\src\main\res\xml\file_paths.xml has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:06:37 AM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:06:37 AM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\android\\app\\src\\main\\res\\xml\\filepaths.xml"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 11:06:38 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+1	<!--
+2	    Copyright 2019 Google Inc. All Rights Reserved.
+3	
+4	     Licensed under the Apache License, Version 2.0 (the "License");
+5	     you may not use this file except in compliance with the License.
+6	     You may obtain a copy of the License at
+7	
+8	         http://www.apache.org/licenses/LICENSE-2.0
+9	
+10	     Unless required by applicable law or agreed to in writing, software
+11	     distributed under the License is distributed on an "AS IS" BASIS,
+12	     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+13	     See the License for the specific language governing permissions and
+14	     limitations under the License.
+15	-->
+16	<paths>
+17	    <files-path path="twa_splash/" name="twa_splash" />
+18	</paths>
+19
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:06:43 AM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:06:43 AM</sup>
+
+<details>
+<summary>Tool: <code>Grep</code></summary>
+
+```json
+{
+  "pattern": "file_paths|FileProvider",
+  "path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\android\\app\\src\\main\\AndroidManifest.xml",
+  "output_mode": "content"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 11:06:44 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+27:            android:name="androidx.core.content.FileProvider"
+31:            <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths" />
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:06:48 AM</sup>
+
+Confirmed the manifest already points `FileProvider` at `@xml/file_paths`, so adding the `<files-path>` entry is sufficient — no manifest changes needed.
+
+**Fix**: added `<files-path name="my_files" path="." />` to [file_paths.xml](d:/projects/production-hydro-colon-therapy/frontend/android/app/src/main/res/xml/file_paths.xml) so the FileProvider now covers `Directory.Data` (the app's internal files dir), which is where backups are now persisted. Only `cache-path` and `external-path` were declared before — that's why sharing a file from `Directory.Data` threw "Failed to find configured root."
+
+You'll need to rebuild the native Android app (`npx cap sync android` + rebuild) for this resource change to take effect, since it's a native asset, not JS.
+
+
+---
+
+## User <sup>8/7/2026, 11:10:17 AM</sup>
+
+Instead of listing saved backups underneath, can we have 4th link for View Saved backups with one table for zip and other for exel with pagination in separate page. Let me know if you understand it before start any implemenation.
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:10:22 AM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:10:24 AM</sup>
+
+Understood — I'll:
+
+1. Remove the inline "Saved Backups" list from `DataExportImport.tsx` and replace it with a 4th `IonItem` link "View Saved Backups".
+2. Create a new page (e.g. `SavedBackups.tsx`) with two separate paginated tables — one for `.zip` backups, one for Excel exports — each row keeping the existing Restore (zip only) / Delete actions, reusing `listLocalBackups`/`deleteLocalBackup`/`restoreFromLocalBackup` from `backupService.ts`.
+3. Wire up a new route in the router for this page, matching the pattern used by other pages (e.g. `NextTherapyNotification`).
+
+Two quick things to confirm:
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:10:26 AM</sup>
+
+<details>
+<summary>Tool: <code>AskUserQuestion</code></summary>
+
+```json
+{
+  "questions": [
+    {
+      "question": "How many rows per page for each table?",
+      "header": "Page size",
+      "options": [
+        {
+          "label": "10 per page (Recommended)",
+          "description": "Common default for a compact table on a tablet screen."
+        },
+        {
+          "label": "20 per page",
+          "description": "Fewer page clicks, more scrolling per page."
+        }
+      ]
+    },
+    {
+      "question": "What should the route path for the new page be?",
+      "header": "Route path",
+      "options": [
+        {
+          "label": "/saved-backups (Recommended)",
+          "description": "Simple, matches kebab-case style likely used elsewhere in the router."
+        },
+        {
+          "label": "/data-export-import/backups",
+          "description": "Nested under the existing export/import page's path for a clearer hierarchy."
+        }
+      ]
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 11:11:22 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Your questions have been answered: "How many rows per page for each table?"="20 per page", "What should the route path for the new page be?"="/saved-backups (Recommended)". You can now continue with these answers in mind.
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:11:24 AM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:11:25 AM</sup>
+
+<details>
+<summary>Tool: <code>Grep</code></summary>
+
+```json
+{
+  "pattern": "NextTherapyNotification|DataExportImport",
+  "path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src",
+  "output_mode": "content",
+  "-n": true
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 11:11:25 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+frontend\src\App.tsx:26:import NextTherapyNotification from './pages/NextTherapyNotification';
+frontend\src\App.tsx:27:import DataExportImport from './pages/DataExportImport';
+frontend\src\App.tsx:82:          <Route exact path="/notifications" component={machineId ? modeStatus.is_locked ? LockScreen : NextTherapyNotification : LoginPage} />
+frontend\src\App.tsx:83:          <Route exact path="/data-export-import" component={machineId ? modeStatus.is_locked ? LockScreen : DataExportImport : LoginPage} />
+frontend\src\pages\DataExportImport.tsx:27:const DataExportImport: React.FC = () => {
+frontend\src\pages\DataExportImport.tsx:251:export default DataExportImport;
+frontend\src\pages\NextTherapyNotification.tsx:97:const NextTherapyNotification: React.FC = () => {
+frontend\src\pages\NextTherapyNotification.tsx:644:export default NextTherapyNotification;
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:11:28 AM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\App.tsx",
+  "offset": 1,
+  "limit": 100
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 11:11:28 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+1	import { Redirect, Route } from 'react-router-dom';
+2	import { IonApp, IonRouterOutlet, setupIonicReact } from '@ionic/react';
+3	import { IonReactRouter } from '@ionic/react-router';
+4	import { useEffect } from 'react';
+5	import { Capacitor } from '@capacitor/core';
+6	import { EspServer } from './plugins/espServer';
+7	
+8	/* Core CSS required for Ionic components to work properly */
+9	import '@ionic/react/css/core.css';
+10	import '@ionic/react/css/normalize.css';
+11	import '@ionic/react/css/structure.css';
+12	import '@ionic/react/css/typography.css';
+13	import '@ionic/react/css/padding.css';
+14	import '@ionic/react/css/float-elements.css';
+15	import '@ionic/react/css/text-alignment.css';
+16	import '@ionic/react/css/text-transformation.css';
+17	import '@ionic/react/css/flex-utils.css';
+18	import '@ionic/react/css/display.css';
+19	import './theme/variables.css';
+20	
+21	import Dashboard from './pages/Dashboard';
+22	import Therapy from './pages/Therapy';
+23	import TherapyLogs from './page
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:11:31 AM</sup>
+
+Clear pattern. Now implementing: new route, new page with two paginated tables, and updating the export/import page's list item.
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:11:32 AM</sup>
+
+<details>
+<summary>Tool: <code>TodoWrite</code></summary>
+
+```json
+{
+  "todos": [
+    {
+      "content": "Add /saved-backups route in App.tsx",
+      "status": "pending",
+      "activeForm": "Adding /saved-backups route in App.tsx"
+    },
+    {
+      "content": "Create SavedBackups.tsx page with 2 paginated tables",
+      "status": "pending",
+      "activeForm": "Creating SavedBackups.tsx page"
+    },
+    {
+      "content": "Replace inline backups list in DataExportImport.tsx with a link",
+      "status": "pending",
+      "activeForm": "Replacing inline backups list with a link"
+    },
+    {
+      "content": "Verify with tsc",
+      "status": "pending",
+      "activeForm": "Verifying with tsc"
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 11:11:32 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Todos have been modified successfully. Ensure that you continue to use the todo list to track your progress. Please proceed with the current tasks if applicable
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:11:37 AM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:11:38 AM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\DataExportImport.tsx"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 11:11:38 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+1	import React, { useCallback, useEffect, useRef, useState } from 'react';
+2	import {
+3	  IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonButton, IonIcon,
+4	  IonList, IonItem, IonLabel, IonNote, IonLoading, useIonAlert, useIonToast,
+5	} from '@ionic/react';
+6	import {
+7	  arrowBack, documentTextOutline, archiveOutline, cloudUploadOutline,
+8	  refreshOutline, trashOutline,
+9	} from 'ionicons/icons';
+10	import { useHistory } from 'react-router';
+11	import { useStore } from '../store/useStore';
+12	import {
+13	  exportToExcel, exportToBackupZip, importFromBackupZip, listLocalBackups,
+14	  deleteLocalBackup, restoreFromLocalBackup, type ImportMode, type LocalBackupFile,
+15	} from '../services/backupService';
+16	
+17	const formatBytes = (bytes: number): string => {
+18	  if (bytes < 1024) return `${bytes} B`;
+19	  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+20	  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+21	};
+22	
+23	const formatDateTime = (iso: string)
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:11:41 AM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:12:05 AM</sup>
+
+<details>
+<summary>Tool: <code>Write</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\SavedBackups.tsx",
+  "content": "import React, { useCallback, useEffect, useMemo, useState } from 'react';\nimport {\n  IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonButton, IonIcon,\n  IonNote, IonLoading, useIonAlert, useIonToast,\n} from '@ionic/react';\nimport {\n  arrowBack, refreshOutline, trashOutline, cloudUploadOutline,\n  chevronBackOutline, chevronForwardOutline,\n} from 'ionicons/icons';\nimport { useHistory } from 'react-router';\nimport {\n  listLocalBackups, deleteLocalBackup, restoreFromLocalBackup,\n  type ImportMode, type LocalBackupFile,\n} from '../services/backupService';\n\nconst PAGE_SIZE = 20;\n\nconst thStyle: React.CSSProperties = {\n  padding: '0.6rem 0.75rem', textAlign: 'left', fontWeight: 600,\n  color: '#555', whiteSpace: 'nowrap', fontSize: '0.8rem',\n  backgroundColor: '#f4f5f8', borderBottom: '2px solid #ddd',\n};\n\nconst tdStyle: React.CSSProperties = {\n  padding: '0.6rem 0.75rem', fontSize: '0.82rem',\n  verticalAlign: 'middle', borderBottom: '1px solid #eee',\n};\n\nconst sectionHeaderStyle: React.CSSProperties = {\n  margin: '1.5rem 0 0.75rem', fontSize: '0.95rem', color: '#333',\n  display: 'flex', alignItems: 'center', justifyContent: 'space-between',\n};\n\nconst formatBytes = (bytes: number): string => {\n  if (bytes < 1024) return `${bytes} B`;\n  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;\n  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;\n};\n\nconst formatDateTime = (iso: string): string => {\n  return new Date(iso).toLocaleString('en-IN', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });\n};\n\ninterface BackupTableProps {\n  title: string;\n  items: LocalBackupFile[];\n  showRestore: boolean;\n  onRestore?: (backup: LocalBackupFile) => void;\n  onDelete: (backup: LocalBackupFile) => void;\n}\n\nconst BackupTable: React.FC<BackupTableProps> = ({ title, item
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 11:12:06 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+File created successfully at: d:\projects\production-hydro-colon-therapy\frontend\src\pages\SavedBackups.tsx (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:12:09 AM</sup>
+
+Now update `App.tsx` to add the route, and simplify `DataExportImport.tsx` to a 4th link.
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:12:09 AM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\App.tsx",
+  "old_string": "import DataExportImport from './pages/DataExportImport';",
+  "new_string": "import DataExportImport from './pages/DataExportImport';\nimport SavedBackups from './pages/SavedBackups';"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 11:12:10 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\App.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:12:14 AM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\App.tsx",
+  "old_string": "          <Route exact path=\"/data-export-import\" component={machineId ? modeStatus.is_locked ? LockScreen : DataExportImport : LoginPage} />",
+  "new_string": "          <Route exact path=\"/data-export-import\" component={machineId ? modeStatus.is_locked ? LockScreen : DataExportImport : LoginPage} />\n          <Route exact path=\"/saved-backups\" component={machineId ? modeStatus.is_locked ? LockScreen : SavedBackups : LoginPage} />"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 11:12:15 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\App.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:12:17 AM</sup>
+
+Now simplify `DataExportImport.tsx`, removing the inline list and its state/handlers, adding the 4th link.
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:12:30 AM</sup>
+
+<details>
+<summary>Tool: <code>Write</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\DataExportImport.tsx",
+  "content": "import React, { useRef, useState } from 'react';\nimport {\n  IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonButton, IonIcon,\n  IonList, IonItem, IonLabel, IonNote, IonLoading, useIonAlert, useIonToast,\n} from '@ionic/react';\nimport { arrowBack, documentTextOutline, archiveOutline, cloudUploadOutline, folderOpenOutline } from 'ionicons/icons';\nimport { useHistory } from 'react-router';\nimport { useStore } from '../store/useStore';\nimport { exportToExcel, exportToBackupZip, importFromBackupZip, type ImportMode } from '../services/backupService';\n\nconst DataExportImport: React.FC = () => {\n  const history = useHistory();\n  const { machineId } = useStore();\n  const [presentAlert] = useIonAlert();\n  const [presentToast] = useIonToast();\n  const [busy, setBusy] = useState<string | null>(null);\n  const fileInputRef = useRef<HTMLInputElement>(null);\n\n  const showError = (message: string) => {\n    presentAlert({ header: 'Error', message, buttons: ['OK'] });\n  };\n\n  const handleExportExcel = async () => {\n    setBusy('Generating Excel report...');\n    try {\n      await exportToExcel(machineId);\n      presentToast({ message: 'Excel report ready to save/share.', duration: 2500, color: 'success' });\n    } catch (err) {\n      showError(err instanceof Error ? err.message : 'Failed to export Excel report.');\n    } finally {\n      setBusy(null);\n    }\n  };\n\n  const handleExportBackup = async () => {\n    setBusy('Creating backup file...');\n    try {\n      await exportToBackupZip(machineId);\n      presentToast({ message: 'Backup file ready to save/share.', duration: 2500, color: 'success' });\n    } catch (err) {\n      showError(err instanceof Error ? err.message : 'Failed to create backup file.');\n    } finally {\n      setBusy(null);\n    }\n  };\n\n  const handlePickImportFile = () => {\n    fileInputRef.current?
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 11:12:31 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\DataExportImport.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:12:35 AM</sup>
+
+<details>
+<summary>Tool: <code>TodoWrite</code></summary>
+
+```json
+{
+  "todos": [
+    {
+      "content": "Add /saved-backups route in App.tsx",
+      "status": "completed",
+      "activeForm": "Adding /saved-backups route in App.tsx"
+    },
+    {
+      "content": "Create SavedBackups.tsx page with 2 paginated tables",
+      "status": "completed",
+      "activeForm": "Creating SavedBackups.tsx page"
+    },
+    {
+      "content": "Replace inline backups list in DataExportImport.tsx with a link",
+      "status": "completed",
+      "activeForm": "Replacing inline backups list with a link"
+    },
+    {
+      "content": "Verify with tsc",
+      "status": "in_progress",
+      "activeForm": "Verifying with tsc"
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 11:12:35 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Todos have been modified successfully. Ensure that you continue to use the todo list to track your progress. Please proceed with the current tasks if applicable
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:12:37 AM</sup>
+
+<details>
+<summary>Tool: <code>Bash</code></summary>
+
+```json
+{
+  "command": "cd \"d:/projects/production-hydro-colon-therapy/frontend\" && npx tsc --noEmit -p . ; echo \"EXIT:$?\"",
+  "description": "Type-check frontend after Saved Backups page changes",
+  "timeout": 120000
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 11:12:46 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+EXIT:0
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:12:49 AM</sup>
+
+<details>
+<summary>Tool: <code>TodoWrite</code></summary>
+
+```json
+{
+  "todos": [
+    {
+      "content": "Add /saved-backups route in App.tsx",
+      "status": "completed",
+      "activeForm": "Adding /saved-backups route in App.tsx"
+    },
+    {
+      "content": "Create SavedBackups.tsx page with 2 paginated tables",
+      "status": "completed",
+      "activeForm": "Creating SavedBackups.tsx page"
+    },
+    {
+      "content": "Replace inline backups list in DataExportImport.tsx with a link",
+      "status": "completed",
+      "activeForm": "Replacing inline backups list with a link"
+    },
+    {
+      "content": "Verify with tsc",
+      "status": "completed",
+      "activeForm": "Verifying with tsc"
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 11:12:49 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Todos have been modified successfully. Ensure that you continue to use the todo list to track your progress. Please proceed with the current tasks if applicable
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:12:53 AM</sup>
+
+Type-check passes clean. Summary:
+
+- **`frontend/src/pages/DataExportImport.tsx`**: removed the inline "Saved Backups" list; added a 4th `IonItem` — "View Saved Backups" — that navigates to `/saved-backups`.
+- **`frontend/src/pages/SavedBackups.tsx`** (new): a dedicated page with two separate tables — "Zip Backups" (with Restore + Delete) and "Excel Exports" (Delete only) — each independently paginated at 20 rows/page via a shared `BackupTable` component, reusing `listLocalBackups`/`deleteLocalBackup`/`restoreFromLocalBackup` from `backupService.ts`.
+- **`frontend/src/App.tsx`**: registered the new `/saved-backups` route following the existing `machineId`/`is_locked` guard pattern used by the other pages.
+
+
+---
+
+## User <sup>8/7/2026, 11:16:53 AM</sup>
+
+@frontend/src/pages/SavedBackups.tsx add view link/icon for excel list and add share link/icon for both zip and excel flist. Let me know if you understand it clearly befor start implementation.
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:16:57 AM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:16:58 AM</sup>
+
+<details>
+<summary>Tool: <code>Grep</code></summary>
+
+```json
+{
+  "pattern": "\"@capacitor",
+  "path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\package.json",
+  "output_mode": "content"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 11:16:58 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+16:    "@capacitor/android": "^8.3.0",
+17:    "@capacitor/cli": "^8.3.0",
+18:    "@capacitor/core": "8.3.0",
+19:    "@capacitor/filesystem": "^8.1.2",
+20:    "@capacitor/share": "^8.0.1",
+34:    "@capacitor/assets": "^3.0.5",
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:17:13 AM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:17:13 AM</sup>
+
+Good — let me clarify one point before implementing, since it affects which native capability I need.
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:17:16 AM</sup>
+
+<details>
+<summary>Tool: <code>AskUserQuestion</code></summary>
+
+```json
+{
+  "questions": [
+    {
+      "question": "There's no file-viewer plugin installed yet (only @capacitor/filesystem and @capacitor/share). What should \"View\" do for an Excel file?",
+      "header": "View action",
+      "options": [
+        {
+          "label": "Open with device's default app (Recommended)",
+          "description": "Add a small native \"open file\" capability (Android intent to open the .xlsx with whatever app is registered, e.g. Excel/Sheets/WPS). Requires installing a community file-opener plugin and a native rebuild."
+        },
+        {
+          "label": "Reuse the Share sheet",
+          "description": "\"View\" just opens the same OS Share sheet as \"Share\" (Android's share chooser often includes apps that can open the file too). No new plugin needed, but View and Share behave identically."
+        }
+      ]
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 11:17:40 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Your questions have been answered: "There's no file-viewer plugin installed yet (only @capacitor/filesystem and @capacitor/share). What should "View" do for an Excel file?"="Open with device's default app (Recommended)". You can now continue with these answers in mind.
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:17:44 AM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:17:45 AM</sup>
+
+<details>
+<summary>Tool: <code>Bash</code></summary>
+
+```json
+{
+  "command": "cd \"d:/projects/production-hydro-colon-therapy/frontend\" && npm view @capacitor-community/file-opener versions --json 2>&1 | tail -30",
+  "description": "Check available versions of file-opener community plugin",
+  "timeout": 30000
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 11:17:49 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+[
+  "1.0.0",
+  "1.0.1",
+  "1.0.2",
+  "1.0.3",
+  "1.0.4",
+  "1.0.5",
+  "1.0.6",
+  "6.0.0",
+  "6.0.1",
+  "7.0.0",
+  "7.0.1",
+  "8.0.0",
+  "8.0.1"
+]
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:17:52 AM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:17:53 AM</sup>
+
+<details>
+<summary>Tool: <code>Bash</code></summary>
+
+```json
+{
+  "command": "cd \"d:/projects/production-hydro-colon-therapy/frontend\" && npm view @capacitor-community/file-opener@8.0.1 peerDependencies dependencies 2>&1",
+  "description": "Check peer deps of file-opener 8.0.1",
+  "timeout": 30000
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 11:17:57 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+{ '@capacitor/core': '>=8.0.0' }
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:17:59 AM</sup>
+
+Good, that's compatible with the installed `@capacitor/core@8.3.0`. Now let's check its API surface.
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:18:00 AM</sup>
+
+<details>
+<summary>Tool: <code>Bash</code></summary>
+
+```json
+{
+  "command": "cd /tmp && rm -rf fo-check && mkdir fo-check && cd fo-check && npm pack @capacitor-community/file-opener@8.0.1 --silent 2>&1 && tar -xzf capacitor-community-file-opener-8.0.1.tgz && find package -name \"*.d.ts\" | xargs -I{} sh -c 'echo ==={}===; cat {}'",
+  "description": "Inspect file-opener plugin TypeScript API",
+  "timeout": 60000
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 11:18:06 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+capacitor-community-file-opener-8.0.1.tgz
+===package/dist/esm/definitions.d.ts===
+/**
+ * file open method options
+ *
+ * @since 1.0.0
+ */
+export interface FileOpenerOptions {
+    /**
+     * file path
+     *
+     * @since 1.0.0
+     */
+    filePath: string;
+    /**
+     * MIME type (optional)
+     *
+     * @since 1.0.0
+     */
+    contentType?: string;
+    /**
+     * Use the default platform chooser, if true, otherwise:
+     * On Android: it will show "Open File in.." title of the chooser dialog, the system will always present the chooser dialog
+     * even if the user has chosen a default one and if no activity is found to handle the file, the system will still
+     * present a dialog with the specified title and an error message No application can perform this action
+     * On iOS: it will presents a menu restricted to a list of apps capable of opening the current document.
+     * This determination is made based on the document type and on the document types supported by the installed
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:18:11 AM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:18:11 AM</sup>
+
+<details>
+<summary>Tool: <code>Bash</code></summary>
+
+```json
+{
+  "command": "cd /tmp/fo-check && find package -iname \"*.java\" -o -iname \"*.kt\" -o -iname \"AndroidManifest.xml\" -o -iname \"*paths*.xml\" | head -30",
+  "description": "List native Android source files in file-opener package"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 11:18:15 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+package/android/src/main/AndroidManifest.xml
+package/android/src/main/java/com/ryltsov/alex/plugins/file/opener/FileOpenerPlugin.java
+package/android/src/main/java/com/ryltsov/alex/plugins/file/opener/FileOpenerProvider.java
+package/android/src/main/res/xml/file_opener_paths.xml
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:18:17 AM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "/tmp/fo-check/package/android/src/main/java/com/ryltsov/alex/plugins/file/opener/FileOpenerPlugin.java"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 11:18:17 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+File does not exist. Note: your current working directory is D:\projects\production-hydro-colon-therapy\frontend.
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:18:20 AM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:18:20 AM</sup>
+
+<details>
+<summary>Tool: <code>Bash</code></summary>
+
+```json
+{
+  "command": "cd /tmp/fo-check && cat package/android/src/main/java/com/ryltsov/alex/plugins/file/opener/FileOpenerPlugin.java",
+  "description": "Print FileOpenerPlugin.java source"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 11:18:22 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+package com.ryltsov.alex.plugins.file.opener;
+
+import android.content.Context;
+import android.content.Intent;
+import android.net.Uri;
+import android.webkit.MimeTypeMap;
+import androidx.core.content.FileProvider;
+import com.getcapacitor.Plugin;
+import com.getcapacitor.PluginCall;
+import com.getcapacitor.PluginMethod;
+import com.getcapacitor.annotation.CapacitorPlugin;
+import android.database.Cursor;
+import android.content.ContentResolver;
+
+import org.json.JSONObject;
+
+import java.io.File;
+
+@CapacitorPlugin(name = "FileOpener")
+public class FileOpenerPlugin extends Plugin {
+
+    @PluginMethod()
+    public void open(PluginCall call) {
+        String filePath = call.getString("filePath");
+        String contentType = call.getString("contentType");
+        boolean openWithDefault = call.getBoolean("openWithDefault", true);
+
+        String fileName = "";
+        Uri fileUri = null;
+        try {
+            fileUri = Uri.parse(filePath);
+            fileName = fileUri.getPath();
+        } ca
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:18:26 AM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:18:27 AM</sup>
+
+<details>
+<summary>Tool: <code>Bash</code></summary>
+
+```json
+{
+  "command": "cd /tmp/fo-check && cat package/android/src/main/AndroidManifest.xml && echo \"---paths---\" && cat package/android/src/main/res/xml/file_opener_paths.xml",
+  "description": "Print plugin's own manifest and paths xml"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 11:18:29 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application>
+        <provider
+            android:name=".FileOpenerProvider"
+            android:authorities="${applicationId}.file.opener.provider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_opener_paths"></meta-data>
+        </provider>
+    </application>
+
+</manifest>
+---paths---
+<?xml version="1.0" encoding="utf-8"?>
+<!-- https://developer.android.com/reference/android/support/v4/content/FileProvider.html#SpecifyFiles -->
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- internal data directory -->
+    <files-path name="files" path="." />
+    <!-- internal cache directory -->
+    <cache-path name="cache" path="." />
+    <!-- external data directory -->
+    <external-files-path name="external-files" pa
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:18:45 AM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:18:47 AM</sup>
+
+<details>
+<summary>Tool: <code>TodoWrite</code></summary>
+
+```json
+{
+  "todos": [
+    {
+      "content": "Install @capacitor-community/file-opener plugin",
+      "status": "in_progress",
+      "activeForm": "Installing @capacitor-community/file-opener plugin"
+    },
+    {
+      "content": "Add viewLocalFile/shareLocalFile to backupService.ts",
+      "status": "pending",
+      "activeForm": "Adding viewLocalFile/shareLocalFile to backupService.ts"
+    },
+    {
+      "content": "Add View (excel) and Share (both) icons to SavedBackups.tsx",
+      "status": "pending",
+      "activeForm": "Adding View and Share icons to SavedBackups.tsx"
+    },
+    {
+      "content": "cap sync android + verify with tsc",
+      "status": "pending",
+      "activeForm": "Running cap sync android and tsc verification"
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 11:18:47 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Todos have been modified successfully. Ensure that you continue to use the todo list to track your progress. Please proceed with the current tasks if applicable
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:18:50 AM</sup>
+
+<details>
+<summary>Tool: <code>Bash</code></summary>
+
+```json
+{
+  "command": "cd \"d:/projects/production-hydro-colon-therapy/frontend\" && npm install @capacitor-community/file-opener@^8.0.1 --save 2>&1 | tail -30",
+  "description": "Install file-opener capacitor plugin",
+  "timeout": 120000
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 11:19:01 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+added 1 package, and audited 1220 packages in 9s
+
+226 packages are looking for funding
+  run `npm fund` for details
+
+36 vulnerabilities (2 low, 11 moderate, 21 high, 2 critical)
+
+To address issues that do not require attention, run:
+  npm audit fix
+
+To address all issues possible (including breaking changes), run:
+  npm audit fix --force
+
+Some issues need review, and may require choosing
+a different dependency.
+
+Run `npm audit` for details.
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:19:05 AM</sup>
+
+Installed. Now updating `backupService.ts` with `viewLocalFile`/`shareLocalFile`.
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:19:05 AM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\services\\backupService.ts"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 11:19:05 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+1	import { Filesystem, Directory } from '@capacitor/filesystem';
+2	import { Share } from '@capacitor/share';
+3	import JSZip from 'jszip';
+4	import * as XLSX from 'xlsx';
+5	import { localDB } from '../db/localDB';
+6	
+7	const BACKUP_SCHEMA_VERSION = 1;
+8	const BACKUPS_DIR = 'backups';
+9	
+10	const TABLE_NAMES = ['sessions', 'therapists', 'patients', 'settings', 'resources'] as const;
+11	type TableName = typeof TABLE_NAMES[number];
+12	
+13	// Resources are excluded from exports (Excel and backup zip) but still supported on import
+14	// so older backups that include a resources.json can still be restored.
+15	const EXPORT_TABLE_NAMES = TABLE_NAMES.filter((t) => t !== 'resources');
+16	
+17	interface BackupManifest {
+18	  schema_version: number;
+19	  exported_at: string;
+20	  machine_id: string;
+21	}
+22	
+23	interface BackupPayload {
+24	  manifest: BackupManifest;
+25	  data: Record<TableName, unknown[]>;
+26	}
+27	
+28	export type ImportMode = 'overwrite' | 'merge';
+29	
+30	export interface ImportRes
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:19:10 AM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\services\\backupService.ts",
+  "old_string": "import { Filesystem, Directory } from '@capacitor/filesystem';\nimport { Share } from '@capacitor/share';\nimport JSZip from 'jszip';\nimport * as XLSX from 'xlsx';\nimport { localDB } from '../db/localDB';\n\nconst BACKUP_SCHEMA_VERSION = 1;\nconst BACKUPS_DIR = 'backups';",
+  "new_string": "import { Filesystem, Directory } from '@capacitor/filesystem';\nimport { Share } from '@capacitor/share';\nimport { FileOpener } from '@capacitor-community/file-opener';\nimport JSZip from 'jszip';\nimport * as XLSX from 'xlsx';\nimport { localDB } from '../db/localDB';\n\nconst BACKUP_SCHEMA_VERSION = 1;\nconst BACKUPS_DIR = 'backups';\n\nconst MIME_TYPES: Record<string, string> = {\n  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',\n  zip: 'application/zip',\n};\n\nfunction mimeTypeFor(name: string): string {\n  const ext = name.split('.').pop()?.toLowerCase() ?? '';\n  return MIME_TYPES[ext] ?? 'application/octet-stream';\n}"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 11:19:11 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\services\backupService.ts has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:19:14 AM</sup>
+
+Now add `viewLocalFile` and `shareLocalFile` functions.
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:19:17 AM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\services\\backupService.ts",
+  "old_string": "export async function deleteLocalBackup(name: string): Promise<void> {\n  await Filesystem.deleteFile({ path: `${BACKUPS_DIR}/${name}`, directory: Directory.Data });\n}",
+  "new_string": "export async function deleteLocalBackup(name: string): Promise<void> {\n  await Filesystem.deleteFile({ path: `${BACKUPS_DIR}/${name}`, directory: Directory.Data });\n}\n\nexport async function viewLocalFile(name: string): Promise<void> {\n  const { uri } = await Filesystem.getUri({ path: `${BACKUPS_DIR}/${name}`, directory: Directory.Data });\n  await FileOpener.open({ filePath: uri, contentType: mimeTypeFor(name), openWithDefault: true });\n}\n\nexport async function shareLocalFile(name: string): Promise<void> {\n  const { uri } = await Filesystem.getUri({ path: `${BACKUPS_DIR}/${name}`, directory: Directory.Data });\n  await Share.share({\n    title: name,\n    url: uri,\n    dialogTitle: 'Save or share backup file',\n  });\n}"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 11:19:18 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\services\backupService.ts has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:19:20 AM</sup>
+
+Now update `SavedBackups.tsx` to add View (excel only) and Share (both) icons.
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:19:23 AM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\SavedBackups.tsx",
+  "old_string": "import {\n  arrowBack, refreshOutline, trashOutline, cloudUploadOutline,\n  chevronBackOutline, chevronForwardOutline,\n} from 'ionicons/icons';\nimport { useHistory } from 'react-router';\nimport {\n  listLocalBackups, deleteLocalBackup, restoreFromLocalBackup,\n  type ImportMode, type LocalBackupFile,\n} from '../services/backupService';",
+  "new_string": "import {\n  arrowBack, refreshOutline, trashOutline, cloudUploadOutline,\n  chevronBackOutline, chevronForwardOutline, eyeOutline, shareSocialOutline,\n} from 'ionicons/icons';\nimport { useHistory } from 'react-router';\nimport {\n  listLocalBackups, deleteLocalBackup, restoreFromLocalBackup, viewLocalFile, shareLocalFile,\n  type ImportMode, type LocalBackupFile,\n} from '../services/backupService';"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 11:19:24 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\SavedBackups.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:19:29 AM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\SavedBackups.tsx",
+  "old_string": "interface BackupTableProps {\n  title: string;\n  items: LocalBackupFile[];\n  showRestore: boolean;\n  onRestore?: (backup: LocalBackupFile) => void;\n  onDelete: (backup: LocalBackupFile) => void;\n}\n\nconst BackupTable: React.FC<BackupTableProps> = ({ title, items, showRestore, onRestore, onDelete }) => {",
+  "new_string": "interface BackupTableProps {\n  title: string;\n  items: LocalBackupFile[];\n  showRestore: boolean;\n  showView: boolean;\n  onRestore?: (backup: LocalBackupFile) => void;\n  onView?: (backup: LocalBackupFile) => void;\n  onShare: (backup: LocalBackupFile) => void;\n  onDelete: (backup: LocalBackupFile) => void;\n}\n\nconst BackupTable: React.FC<BackupTableProps> = ({ title, items, showRestore, showView, onRestore, onView, onShare, onDelete }) => {"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 11:19:30 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\SavedBackups.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:19:37 AM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\SavedBackups.tsx",
+  "old_string": "                <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>\n                  {showRestore && (\n                    <IonIcon\n                      icon={cloudUploadOutline}\n                      title=\"Restore\"\n                      style={{ color: '#0a5c99', cursor: 'pointer', fontSize: '1.2rem', marginRight: '0.75rem' }}\n                      onClick={() => onRestore?.(backup)}\n                    />\n                  )}\n                  <IonIcon\n                    icon={trashOutline}\n                    title=\"Delete\"\n                    style={{ color: '#eb445a', cursor: 'pointer', fontSize: '1.2rem' }}\n                    onClick={() => onDelete(backup)}\n                  />\n                </td>",
+  "new_string": "                <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>\n                  {showView && (\n                    <IonIcon\n                      icon={eyeOutline}\n                      title=\"View\"\n                      style={{ color: '#0a5c99', cursor: 'pointer', fontSize: '1.2rem', marginRight: '0.75rem' }}\n                      onClick={() => onView?.(backup)}\n                    />\n                  )}\n                  {showRestore && (\n                    <IonIcon\n                      icon={cloudUploadOutline}\n                      title=\"Restore\"\n                      style={{ color: '#0a5c99', cursor: 'pointer', fontSize: '1.2rem', marginRight: '0.75rem' }}\n                      onClick={() => onRestore?.(backup)}\n                    />\n                  )}\n                  <IonIcon\n                    icon={shareSocialOutline}\n                    title=\"Share\"\n                    style={{ color: '#0a5c99', cursor: 'pointer', fontSize: '1.2rem', marginRight: '0.75rem' }}\n                    onClick={() => onShare(backup)}\n               
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 11:19:38 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\SavedBackups.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:19:40 AM</sup>
+
+Now wire up the handlers in the main `SavedBackups` component and pass new props to both `BackupTable` usages.
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:19:43 AM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\SavedBackups.tsx",
+  "old_string": "  const handleDeleteLocal = (backup: LocalBackupFile) => {",
+  "new_string": "  const handleViewLocal = async (backup: LocalBackupFile) => {\n    try {\n      await viewLocalFile(backup.name);\n    } catch (err) {\n      showError(err instanceof Error ? err.message : 'Failed to open file. No app found to view this file type.');\n    }\n  };\n\n  const handleShareLocal = async (backup: LocalBackupFile) => {\n    try {\n      await shareLocalFile(backup.name);\n    } catch (err) {\n      showError(err instanceof Error ? err.message : 'Failed to share file.');\n    }\n  };\n\n  const handleDeleteLocal = (backup: LocalBackupFile) => {"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 11:19:44 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\SavedBackups.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:19:49 AM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\SavedBackups.tsx",
+  "old_string": "        <BackupTable\n          title=\"Zip Backups\"\n          items={zipBackups}\n          showRestore\n          onRestore={handleRestoreLocal}\n          onDelete={handleDeleteLocal}\n        />\n\n        <BackupTable\n          title=\"Excel Exports\"\n          items={excelBackups}\n          showRestore={false}\n          onDelete={handleDeleteLocal}\n        />",
+  "new_string": "        <BackupTable\n          title=\"Zip Backups\"\n          items={zipBackups}\n          showRestore\n          showView={false}\n          onRestore={handleRestoreLocal}\n          onShare={handleShareLocal}\n          onDelete={handleDeleteLocal}\n        />\n\n        <BackupTable\n          title=\"Excel Exports\"\n          items={excelBackups}\n          showRestore={false}\n          showView\n          onView={handleViewLocal}\n          onShare={handleShareLocal}\n          onDelete={handleDeleteLocal}\n        />"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 11:19:50 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\SavedBackups.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:19:52 AM</sup>
+
+Now sync Android native project and verify with `tsc`.
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:19:54 AM</sup>
+
+<details>
+<summary>Tool: <code>TodoWrite</code></summary>
+
+```json
+{
+  "todos": [
+    {
+      "content": "Install @capacitor-community/file-opener plugin",
+      "status": "completed",
+      "activeForm": "Installing @capacitor-community/file-opener plugin"
+    },
+    {
+      "content": "Add viewLocalFile/shareLocalFile to backupService.ts",
+      "status": "completed",
+      "activeForm": "Adding viewLocalFile/shareLocalFile to backupService.ts"
+    },
+    {
+      "content": "Add View (excel) and Share (both) icons to SavedBackups.tsx",
+      "status": "completed",
+      "activeForm": "Adding View and Share icons to SavedBackups.tsx"
+    },
+    {
+      "content": "cap sync android + verify with tsc",
+      "status": "in_progress",
+      "activeForm": "Running cap sync android and tsc verification"
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 11:19:54 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Todos have been modified successfully. Ensure that you continue to use the todo list to track your progress. Please proceed with the current tasks if applicable
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:19:57 AM</sup>
+
+<details>
+<summary>Tool: <code>Bash</code></summary>
+
+```json
+{
+  "command": "cd \"d:/projects/production-hydro-colon-therapy/frontend\" && npx tsc --noEmit -p . ; echo \"TSC_EXIT:$?\"",
+  "description": "Type-check frontend after view/share additions",
+  "timeout": 120000
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 11:20:07 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+TSC_EXIT:0
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:20:10 AM</sup>
+
+Type-check passes. Now sync the Android native project so the new plugin's manifest/provider gets merged in.
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:20:10 AM</sup>
+
+<details>
+<summary>Tool: <code>Bash</code></summary>
+
+```json
+{
+  "command": "cd \"d:/projects/production-hydro-colon-therapy/frontend\" && npx cap sync android 2>&1 | tail -60",
+  "description": "Sync Capacitor Android project with new plugin",
+  "timeout": 180000
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 11:20:15 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+√ Copying web assets from dist to android\app\src\main\assets\public in 33.59ms
+√ Creating capacitor.config.json in android\app\src\main\assets in 1.04ms
+√ copy android in 93.84ms
+√ Updating Android plugins in 13.72ms
+[info] Found 3 Capacitor plugins for android:
+       @capacitor-community/file-opener@8.0.1
+       @capacitor/filesystem@8.1.2
+       @capacitor/share@8.0.1
+√ update android in 261.74ms
+[info] Sync finished in 0.432s
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:20:18 AM</sup>
+
+`cap sync android` picked up the new plugin cleanly.
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:20:19 AM</sup>
+
+<details>
+<summary>Tool: <code>TodoWrite</code></summary>
+
+```json
+{
+  "todos": [
+    {
+      "content": "Install @capacitor-community/file-opener plugin",
+      "status": "completed",
+      "activeForm": "Installing @capacitor-community/file-opener plugin"
+    },
+    {
+      "content": "Add viewLocalFile/shareLocalFile to backupService.ts",
+      "status": "completed",
+      "activeForm": "Adding viewLocalFile/shareLocalFile to backupService.ts"
+    },
+    {
+      "content": "Add View (excel) and Share (both) icons to SavedBackups.tsx",
+      "status": "completed",
+      "activeForm": "Adding View and Share icons to SavedBackups.tsx"
+    },
+    {
+      "content": "cap sync android + verify with tsc",
+      "status": "completed",
+      "activeForm": "Running cap sync android and tsc verification"
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 11:20:19 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Todos have been modified successfully. Ensure that you continue to use the todo list to track your progress. Please proceed with the current tasks if applicable
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:20:26 AM</sup>
+
+Done. Summary:
+
+- Installed `@capacitor-community/file-opener@8.0.1` (compatible with your installed `@capacitor/core@8.3.0`) — it registers its own `FileProvider` with its own authority/paths, so no changes were needed to your app's `file_paths.xml` or `AndroidManifest.xml`.
+- **`backupService.ts`**: added `viewLocalFile(name)` (uses `FileOpener.open` with the file's `Directory.Data` URI and a MIME type inferred from the extension, `openWithDefault: true`) and `shareLocalFile(name)` (reuses `Share.share`, same as the existing export flow).
+- **`SavedBackups.tsx`**: 
+  - Excel rows now get a **View** (eye) icon that opens the file in the device's default app.
+  - Both Zip and Excel rows get a **Share** icon.
+  - Errors (e.g. no app registered to open `.xlsx`) surface via the existing alert dialog.
+- Ran `npx cap sync android` — the plugin was picked up correctly.
+
+Since `FileOpener` is a native capability, this needs a real Android build/rebuild + device test — worth confirming the "View" action actually opens Excel with whatever app is installed (Sheets/WPS/Excel) and that Share still works for both file types.
 
 
 ---

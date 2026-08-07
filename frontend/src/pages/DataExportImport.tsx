@@ -3,7 +3,7 @@ import {
   IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonButton, IonIcon,
   IonList, IonItem, IonLabel, IonNote, IonLoading, useIonAlert, useIonToast,
 } from '@ionic/react';
-import { arrowBack, documentTextOutline, archiveOutline, cloudUploadOutline } from 'ionicons/icons';
+import { arrowBack, documentTextOutline, archiveOutline, cloudUploadOutline, folderOpenOutline } from 'ionicons/icons';
 import { useHistory } from 'react-router';
 import { useStore } from '../store/useStore';
 import { exportToExcel, exportToBackupZip, importFromBackupZip, type ImportMode } from '../services/backupService';
@@ -112,6 +112,14 @@ const DataExportImport: React.FC = () => {
             <IonLabel>
               <h2>Import Backup</h2>
               <p>Restore data from a previously exported .zip backup file.</p>
+            </IonLabel>
+          </IonItem>
+
+          <IonItem button onClick={() => history.push('/saved-backups')} detail={false}>
+            <IonIcon icon={folderOpenOutline} slot="start" />
+            <IonLabel>
+              <h2>View Saved Backups</h2>
+              <p>Browse, restore, or delete backups previously saved on this tablet.</p>
             </IonLabel>
           </IonItem>
         </IonList>

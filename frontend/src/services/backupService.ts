@@ -1,10 +1,22 @@
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
+import { FileOpener } from '@capacitor-community/file-opener';
 import JSZip from 'jszip';
 import * as XLSX from 'xlsx';
 import { localDB } from '../db/localDB';
 
 const BACKUP_SCHEMA_VERSION = 1;
+const BACKUPS_DIR = 'backups';
+
+const MIME_TYPES: Record<string, string> = {
+  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  zip: 'application/zip',
+};
+
+function mimeTypeFor(name: string): string {
+  const ext = name.split('.').pop()?.toLowerCase() ?? '';
+  return MIME_TYPES[ext] ?? 'application/octet-stream';
+}
 
 const TABLE_NAMES = ['sessions', 'therapists', 'patients', 'settings', 'resources'] as const;
 type TableName = typeof TABLE_NAMES[number];
@@ -30,15 +42,23 @@ export interface ImportResult {
   counts: Record<TableName, number>;
 }
 
+export interface LocalBackupFile {
+  name: string;
+  type: 'excel' | 'zip';
+  size: number;
+  modifiedAt: string;
+}
+
 function timestamp(): string {
   return new Date().toISOString().replace(/[:.]/g, '-');
 }
 
-async function writeAndShare(fileName: string, base64Data: string, mimeType: string) {
+async function writeAndShare(fileName: string, base64Data: string) {
   const written = await Filesystem.writeFile({
-    path: fileName,
+    path: `${BACKUPS_DIR}/${fileName}`,
     data: base64Data,
-    directory: Directory.Cache,
+    directory: Directory.Data,
+    recursive: true,
   });
 
   await Share.share({
@@ -73,7 +93,7 @@ export async function exportToExcel(machineId: string): Promise<string> {
   const base64 = arrayBufferToBase64(arrayBuffer);
   const fileName = `hydrotherapy-export-${machineId}-${timestamp()}.xlsx`;
 
-  return writeAndShare(fileName, base64, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  return writeAndShare(fileName, base64);
 }
 
 export async function exportToBackupZip(machineId: string): Promise<string> {
@@ -101,12 +121,48 @@ export async function exportToBackupZip(machineId: string): Promise<string> {
   const base64 = await zip.generateAsync({ type: 'base64' });
   const fileName = `hydrotherapy-backup-${machineId}-${timestamp()}.zip`;
 
-  return writeAndShare(fileName, base64, 'application/zip');
+  return writeAndShare(fileName, base64);
 }
 
-export async function importFromBackupZip(file: File, mode: ImportMode): Promise<ImportResult> {
-  const zip = await JSZip.loadAsync(file);
+export async function listLocalBackups(): Promise<LocalBackupFile[]> {
+  try {
+    const res = await Filesystem.readdir({ path: BACKUPS_DIR, directory: Directory.Data });
+    const files = await Promise.all(res.files.map(async (f) => {
+      const stat = await Filesystem.stat({ path: `${BACKUPS_DIR}/${f.name}`, directory: Directory.Data });
+      return {
+        name: f.name,
+        type: f.name.toLowerCase().endsWith('.zip') ? 'zip' as const : 'excel' as const,
+        size: stat.size,
+        modifiedAt: new Date(stat.mtime).toISOString(),
+      };
+    }));
+    files.sort((a, b) => b.modifiedAt.localeCompare(a.modifiedAt));
+    return files;
+  } catch {
+    // Backups folder doesn't exist yet (nothing exported so far).
+    return [];
+  }
+}
 
+export async function deleteLocalBackup(name: string): Promise<void> {
+  await Filesystem.deleteFile({ path: `${BACKUPS_DIR}/${name}`, directory: Directory.Data });
+}
+
+export async function viewLocalFile(name: string): Promise<void> {
+  const { uri } = await Filesystem.getUri({ path: `${BACKUPS_DIR}/${name}`, directory: Directory.Data });
+  await FileOpener.open({ filePath: uri, contentType: mimeTypeFor(name), openWithDefault: true });
+}
+
+export async function shareLocalFile(name: string): Promise<void> {
+  const { uri } = await Filesystem.getUri({ path: `${BACKUPS_DIR}/${name}`, directory: Directory.Data });
+  await Share.share({
+    title: name,
+    url: uri,
+    dialogTitle: 'Save or share backup file',
+  });
+}
+
+async function restoreFromZip(zip: JSZip, mode: ImportMode): Promise<ImportResult> {
   const manifestEntry = zip.file('manifest.json');
   if (!manifestEntry) {
     throw new Error('Not a valid backup file: manifest.json is missing.');
@@ -137,4 +193,15 @@ export async function importFromBackupZip(file: File, mode: ImportMode): Promise
   });
 
   return { counts };
+}
+
+export async function importFromBackupZip(file: File, mode: ImportMode): Promise<ImportResult> {
+  const zip = await JSZip.loadAsync(file);
+  return restoreFromZip(zip, mode);
+}
+
+export async function restoreFromLocalBackup(name: string, mode: ImportMode): Promise<ImportResult> {
+  const read = await Filesystem.readFile({ path: `${BACKUPS_DIR}/${name}`, directory: Directory.Data });
+  const zip = await JSZip.loadAsync(read.data as string, { base64: true });
+  return restoreFromZip(zip, mode);
 }
