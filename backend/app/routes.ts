@@ -73,6 +73,7 @@ export default [
       route("users", "routes/admin.users.tsx"),
       route("owners", "routes/admin.owners.tsx"),
       route("suppliers", "routes/admin.suppliers.tsx"),
+      route("transfer-supplier", "routes/admin.transfer-supplier.tsx"),
       route("invoices", "routes/admin.invoices.tsx"),
       route("resources", "routes/admin.resources.tsx"),
       route("profile", "routes/admin.profile.tsx"),

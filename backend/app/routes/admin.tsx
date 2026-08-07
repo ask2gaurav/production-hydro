@@ -26,6 +26,7 @@ export default function AdminLayout() {
     { to: "/admin/users", label: "Users", abbr: "Us" },
     { to: "/admin/owners", label: "Owners", abbr: "Ow" },
     { to: "/admin/suppliers", label: "Suppliers", abbr: "Su" },
+    { to: "/admin/transfer-supplier", label: "Transfer Supplier", abbr: "Tr" },
     { to: "/admin/invoices", label: "Invoices", abbr: "In" },
     { to: "/admin/resources", label: "CMS Resources", abbr: "CM" },
   ];

@@ -10,6 +10,10 @@ interface DeleteConfirmModalProps {
   extraFields?: Record<string, string>;
   isSubmitting?: boolean;
   error?: string | null;
+  confirmWord?: string;
+  confirmButtonLabel?: string;
+  submittingLabel?: string;
+  confirmButtonClassName?: string;
   onCancel: () => void;
 }
 
@@ -22,13 +26,17 @@ export function DeleteConfirmModal({
   extraFields,
   isSubmitting,
   error,
+  confirmWord = "DELETE",
+  confirmButtonLabel = "Delete Permanently",
+  submittingLabel = "Deleting...",
+  confirmButtonClassName = "bg-red-600 hover:bg-red-700",
   onCancel,
 }: DeleteConfirmModalProps) {
   const [confirmText, setConfirmText] = useState("");
 
   if (!isOpen) return null;
 
-  const canDelete = confirmText === "DELETE";
+  const canConfirm = confirmText === confirmWord;
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
@@ -63,24 +71,24 @@ export function DeleteConfirmModal({
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Type <span className="font-mono font-bold">DELETE</span> to confirm
+              Type <span className="font-mono font-bold">{confirmWord}</span> to confirm
             </label>
             <input
               autoFocus
               value={confirmText}
               onChange={(e) => setConfirmText(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-red-500 text-sm font-mono"
-              placeholder="DELETE"
+              placeholder={confirmWord}
             />
           </div>
 
           <div className="flex gap-3 pt-2">
             <button
               type="submit"
-              disabled={!canDelete || isSubmitting}
-              className="flex-1 py-2 bg-red-600 text-white rounded hover:bg-red-700 font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={!canConfirm || isSubmitting}
+              className={`flex-1 py-2 text-white rounded font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed ${confirmButtonClassName}`}
             >
-              {isSubmitting ? "Deleting..." : "Delete Permanently"}
+              {isSubmitting ? submittingLabel : confirmButtonLabel}
             </button>
             <button
               type="button"

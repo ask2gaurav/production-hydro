@@ -6,8 +6,8 @@
 | **Session ID** | `5529d2b3-4ebf-4965-aa06-df984f081bd8` |
 | **Working Dir** | `d:\projects\production-hydro-colon-therapy` |
 | **Started** | 8/6/2026, 11:50:49 AM |
-| **Last Updated** | 8/7/2026, 12:22:08 PM |
-| **Messages** | 525 |
+| **Last Updated** | 8/7/2026, 12:36:28 PM |
+| **Messages** | 594 |
 
 ---
 
@@ -8803,6 +8803,1196 @@ Type-check passes clean.
 **Added**: a new download icon on both Zip Backups and Excel Exports rows in `SavedBackups.tsx` that copies the file into the device's public Documents folder — the closest thing to "Downloads" the installed `@capacitor/filesystem` plugin exposes without extra native work (per your choice). Backed by `copyLocalFileToDownloads()` in `backupService.ts` (reads from `Directory.Data/backups/`, writes to `Directory.Documents`), with a success/error toast in the UI.
 
 Since this touches native storage, it's worth a real-device check that the copied file actually shows up and is openable from a file manager or other app.
+
+
+---
+
+## User <sup>8/7/2026, 12:27:18 PM</sup>
+
+@backend/app/routes/admin.tsx need a new module in admin panel to move one supplier's all owners and machine data including all related data like session logs, patients, therapiests etc into other. The new module would ask to select To supplier and From supplier, show confirmation that which owners and machine would be moved to other second supplier and confirm button with text box to type move to confirm the move.
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:27:33 PM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:27:34 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\models\\User.ts"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:27:34 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+1	import mongoose from 'mongoose';
+2	
+3	const UserSchema = new mongoose.Schema({
+4	  user_type_id: { type: mongoose.Schema.Types.ObjectId, ref: 'UserType', required: true },
+5	  first_name: { type: String, required: true },
+6	  last_name: { type: String, required: true },
+7	  email: { type: String, required: true, unique: true },
+8	  phone: { type: String },
+9	  address: { type: String },
+10	  billing_address: { type: String },
+11	  date_created: { type: Date, default: Date.now },
+12	  date_modified: { type: Date, default: Date.now },
+13	  is_active: { type: Boolean, default: true },
+14	  machine_id: { type: String }, // which machine they belong to, if applicable
+15	  supplier_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User' } // supplier who manages this owner
+16	});
+17	
+18	export default mongoose.models.User || mongoose.model('User', UserSchema);
+19
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:27:37 PM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:27:38 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\models\\MachineOwner.ts"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:27:38 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+1	import mongoose from 'mongoose';
+2	
+3	const MachineOwnerSchema = new mongoose.Schema({
+4	  machine_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Machine', required: true },
+5	  owner_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+6	  supplier_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+7	  sale_date: { type: Date, default: Date.now },
+8	  invoice_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Invoice' }
+9	});
+10	
+11	MachineOwnerSchema.index({ machine_id: 1 }, { unique: true });
+12	
+13	export default mongoose.models.MachineOwner || mongoose.model('MachineOwner', MachineOwnerSchema);
+14
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:27:42 PM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:27:42 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\models\\MachineSupplier.ts"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:27:42 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+1	import mongoose from 'mongoose';
+2	
+3	const MachineSupplierSchema = new mongoose.Schema({
+4	  machine_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Machine', required: true },
+5	  supplier_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+6	  assigned_date: { type: Date, default: Date.now }
+7	});
+8	
+9	MachineSupplierSchema.index({ machine_id: 1 }, { unique: true });
+10	
+11	export default mongoose.models.MachineSupplier || mongoose.model('MachineSupplier', MachineSupplierSchema);
+12
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:27:56 PM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:27:57 PM</sup>
+
+<details>
+<summary>Tool: <code>Grep</code></summary>
+
+```json
+{
+  "pattern": "supplier_id",
+  "path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\supplier.owners.tsx",
+  "output_mode": "content",
+  "-n": true
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:27:57 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+41:    supplier_id: supplierId,
+120:        supplier_id: supplierId,
+143:    const owner = await User.findOne({ _id: id, supplier_id: supplierId });
+181:    const owner = await User.findOne({ _id: id, supplier_id: supplierId });
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:28:01 PM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:28:01 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\supplier.owners.tsx",
+  "offset": 1,
+  "limit": 150
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:28:01 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+1	import { useLoaderData, useActionData, Form, useNavigation, useSubmit } from "react-router";
+2	import { useState, useEffect } from "react";
+3	import bcrypt from "bcrypt";
+4	import { requireSupplier } from "../lib/auth.server";
+5	import { connectDB } from "../lib/db";
+6	import User from "../models/User";
+7	import UserType from "../models/UserType";
+8	import AuthCredential from "../models/AuthCredential";
+9	import MachineOwner from "../models/MachineOwner";
+10	
+11	const LIMIT = 50;
+12	
+13	type OwnerDoc = {
+14	  _id: string;
+15	  first_name: string;
+16	  last_name: string;
+17	  email: string;
+18	  phone?: string;
+19	  address?: string;
+20	  billing_address?: string;
+21	  is_active: boolean;
+22	  assignedMachine?: { _id: string; serial_number: string; model_name: string } | null;
+23	};
+24	
+25	export async function loader({ request }: { request: Request }) {
+26	  const decoded: any = await requireSupplier(request);
+27	  const supplierId = decoded.userId;
+28	  await connectDB();
+29	
+30	  c
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:28:14 PM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:28:14 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes.ts"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:28:14 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+1	import { type RouteConfig, index, route, layout, prefix } from "@react-router/dev/routes";
+2	
+3	export default [
+4	  index("routes/home.tsx"),
+5	
+6	  // Health
+7	  route("api/health", "routes/api/health.ts"),
+8	
+9	  // Auth
+10	  route("api/auth/login", "routes/api/auth.login.ts"),
+11	  route("api/auth/logout", "routes/api/auth.logout.ts"),
+12	  route("api/auth/me", "routes/api/auth.me.ts"),
+13	  route("api/auth/change-password", "routes/api/auth.change-password.ts"),
+14	  
+15	  // Users
+16	  route("api/users", "routes/api/users.ts"),
+17	  route("api/users/:id", "routes/api/users.$id.ts"),
+18	
+19	  // User Types
+20	  route("api/user-types", "routes/api/user-types.ts"),
+21	
+22	  // Machines
+23	  route("api/machines", "routes/api/machines.ts"),
+24	  route("api/machines/:id", "routes/api/machines.$id.ts"),
+25	  route("api/machines/:id/mode-status", "routes/api/machines.$id.mode-status.ts"),
+26	  route("api/machines/:id/activate-full-mode", "routes/api/machines.$id.activate-full-mode.ts")
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:28:17 PM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:28:18 PM</sup>
+
+<details>
+<summary>Tool: <code>Grep</code></summary>
+
+```json
+{
+  "pattern": "MachineOwner|supplier_id",
+  "path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\supplier.machines.tsx",
+  "output_mode": "content",
+  "-n": true
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:28:18 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+8:import MachineOwner from "../models/MachineOwner";
+46:  const assignments = await MachineSupplier.find({ supplier_id: supplierId })
+52:  const ownerAssignments = await MachineOwner.find({ machine_id: { $in: machineIds } })
+139:    await MachineSupplier.create({ machine_id: machine._id, supplier_id: supplierId });
+147:  const supplierMachine = await MachineSupplier.findOne({ machine_id, supplier_id: supplierId });
+272:    await MachineOwner.deleteMany({ machine_id });
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:28:22 PM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:28:23 PM</sup>
+
+<details>
+<summary>Tool: <code>Grep</code></summary>
+
+```json
+{
+  "pattern": "MachineOwner.create|MachineOwner.findOneAndUpdate|MachineOwner.findByIdAndUpdate",
+  "path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes",
+  "output_mode": "content",
+  "-n": true
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:28:23 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+backend\app\routes\admin.owners.tsx:146:      await MachineOwner.create({
+backend\app\routes\admin.owners.tsx:193:        await MachineOwner.findByIdAndUpdate(existing._id, { machine_id });
+backend\app\routes\admin.owners.tsx:195:        await MachineOwner.create({ machine_id, owner_id: id, sale_date: new Date() });
+backend\app\routes\supplier.owners.$id.tsx:132:      await MachineOwner.findByIdAndUpdate(existing._id, { machine_id, supplier_id: supplierId });
+backend\app\routes\supplier.owners.$id.tsx:134:      await MachineOwner.create({
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:28:25 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\supplier.owners.$id.tsx",
+  "offset": 100,
+  "limit": 50
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:28:25 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+100	      phone: p.phone,
+101	    })),
+102	  };
+103	}
+104	
+105	export async function action({ request, params }: { request: Request; params: { id: string } }) {
+106	  const decoded: any = await requireSupplier(request);
+107	  const supplierId = decoded.userId;
+108	  await connectDB();
+109	
+110	  // Verify owner belongs to this supplier
+111	  const owner = await User.findOne({ _id: params.id, supplier_id: supplierId });
+112	  if (!owner) return { error: "Owner not found." };
+113	
+114	  const formData = await request.formData();
+115	  const intent = formData.get("intent") as string;
+116	
+117	  if (intent === "assign_machine") {
+118	    const machine_id = formData.get("machine_id") as string;
+119	    if (!machine_id) return { error: "Please select a machine." };
+120	
+121	    // Verify machine belongs to this supplier
+122	    const supplierMachine = await MachineSupplier.findOne({ machine_id, supplier_id: supplierId });
+123	    if (!supplierMachine) return { error: "Machine not found in yo
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:28:35 PM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:28:35 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\models\\Invoice.ts"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:28:35 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+1	import mongoose from 'mongoose';
+2	
+3	const InvoiceSchema = new mongoose.Schema({
+4	  owner_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+5	  machine_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Machine', required: true },
+6	  total_amount: { type: Number, required: true },
+7	  paid_amount: { type: Number, default: 0 },
+8	  balance: { type: Number, required: true },
+9	  status: { type: String, enum: ['Pending', 'Partial', 'Paid'], default: 'Pending' },
+10	  created_by: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+11	  date_created: { type: Date, default: Date.now },
+12	  payments: [{
+13	    amount: Number,
+14	    date: { type: Date, default: Date.now },
+15	    received_by: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+16	    note: String
+17	  }]
+18	});
+19	
+20	export default mongoose.models.Invoice || mongoose.model('Invoice', InvoiceSchema);
+21
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:29:12 PM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:29:39 PM</sup>
+
+<details>
+<summary>Tool: <code>Write</code></summary>
+
+```json
+{
+  "file_path": "C:\\Users\\Gaurav\\.claude\\plans\\frontend-src-pages-nexttherapynotificat-glittery-beacon.md",
+  "content": "# New admin module: move a supplier's owners & machines to another supplier\n\n## Context\nThe user wants a new admin panel module to bulk-transfer everything belonging to one supplier (\"From\") to another supplier (\"To\"): all of the From supplier's owners and all of their machines, including \"related data\" (session logs, patients, therapists). It must show a preview of exactly what will move, then require typing `MOVE` in a confirmation popup before committing.\n\nReading the actual schema clarifies what \"related data\" really means here — it's not data that needs copying, it's data that's already scoped by `machine_id`, so it automatically travels with the machine once the machine's supplier link is repointed:\n\n- **`User.supplier_id`** (`backend/app/models/User.ts:15`) — the owner's `supplier_id` field is the authoritative link from an owner to their supplier (set when a supplier creates an owner via `backend/app/routes/supplier.owners.tsx:120`, and queried as the scope filter in that same file's loader, line 40-41). This is \"all owners\" to move.\n- **`MachineSupplier.supplier_id`** (`backend/app/models/MachineSupplier.ts`) — the authoritative link from a machine to its supplier (unique per `machine_id`), used as the scope filter for a supplier's machine inventory in `backend/app/routes/supplier.machines.tsx:46`. This is \"all machine data\" to move.\n- **`MachineOwner.supplier_id`** (`backend/app/models/MachineOwner.ts:6`) — a denormalized supplier reference set when a supplier assigns a machine to one of their owners (`backend/app/routes/supplier.owners.$id.tsx:132-138`). Needs to move alongside the above for consistency.\n- **`Session`, `Patient`, `Therapist`** are keyed only by `machine_id` (confirmed in the earlier admin hard-delete work) — they have no `supplier_id` at all, so once `MachineSupplier.supplier_id` is repointe
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:29:40 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file C:\Users\Gaurav\.claude\plans\frontend-src-pages-nexttherapynotificat-glittery-beacon.md has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:29:43 PM</sup>
+
+<details>
+<summary>Tool: <code>ExitPlanMode</code></summary>
+
+```json
+{
+  "plan": "# New admin module: move a supplier's owners & machines to another supplier\n\n## Context\nThe user wants a new admin panel module to bulk-transfer everything belonging to one supplier (\"From\") to another supplier (\"To\"): all of the From supplier's owners and all of their machines, including \"related data\" (session logs, patients, therapists). It must show a preview of exactly what will move, then require typing `MOVE` in a confirmation popup before committing.\n\nReading the actual schema clarifies what \"related data\" really means here — it's not data that needs copying, it's data that's already scoped by `machine_id`, so it automatically travels with the machine once the machine's supplier link is repointed:\n\n- **`User.supplier_id`** (`backend/app/models/User.ts:15`) — the owner's `supplier_id` field is the authoritative link from an owner to their supplier (set when a supplier creates an owner via `backend/app/routes/supplier.owners.tsx:120`, and queried as the scope filter in that same file's loader, line 40-41). This is \"all owners\" to move.\n- **`MachineSupplier.supplier_id`** (`backend/app/models/MachineSupplier.ts`) — the authoritative link from a machine to its supplier (unique per `machine_id`), used as the scope filter for a supplier's machine inventory in `backend/app/routes/supplier.machines.tsx:46`. This is \"all machine data\" to move.\n- **`MachineOwner.supplier_id`** (`backend/app/models/MachineOwner.ts:6`) — a denormalized supplier reference set when a supplier assigns a machine to one of their owners (`backend/app/routes/supplier.owners.$id.tsx:132-138`). Needs to move alongside the above for consistency.\n- **`Session`, `Patient`, `Therapist`** are keyed only by `machine_id` (confirmed in the earlier admin hard-delete work) — they have no `supplier_id` at all, so once `MachineSupplier.supplier_id` is repointed to the new supplier, these records are automatically visible/queryable under the new supplier without any row-lev
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:34:15 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+User has approved your plan. You can now start coding. Start with updating your todo list if applicable
+
+Your plan has been saved to: C:\Users\Gaurav\.claude\plans\frontend-src-pages-nexttherapynotificat-glittery-beacon.md
+You can refer back to it if needed during implementation.
+
+## Approved Plan:
+# New admin module: move a supplier's owners & machines to another supplier
+
+## Context
+The user wants a new admin panel module to bulk-transfer everything belonging to one supplier ("From") to another supplier ("To"): all of the From supplier's owners and all of their machines, including "related data" (session logs, patients, therapists). It must show a preview of exactly what will move, then require typing `MOVE` in a confirmation popup before committing.
+
+Reading the actual schema clarifies what "related data" really means here — it's not data that needs copying, it's data that's already scoped by `machine_id`, so it automatically travels with the machine once the machine's supplier link
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:34:19 PM</sup>
+
+<details>
+<summary>Tool: <code>TodoWrite</code></summary>
+
+```json
+{
+  "todos": [
+    {
+      "content": "Generalize DeleteConfirmModal.tsx with confirmWord/label/className props",
+      "status": "in_progress",
+      "activeForm": "Generalizing DeleteConfirmModal.tsx"
+    },
+    {
+      "content": "Create admin.transfer-supplier.tsx (loader, action, UI)",
+      "status": "pending",
+      "activeForm": "Creating admin.transfer-supplier.tsx"
+    },
+    {
+      "content": "Register route in routes.ts and nav item in admin.tsx",
+      "status": "pending",
+      "activeForm": "Registering route and nav item"
+    },
+    {
+      "content": "Verify with tsc",
+      "status": "pending",
+      "activeForm": "Verifying with tsc"
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:34:19 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Todos have been modified successfully. Ensure that you continue to use the todo list to track your progress. Please proceed with the current tasks if applicable
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:34:26 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\components\\DeleteConfirmModal.tsx"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:34:26 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+1	import { useState, type ReactNode } from "react";
+2	import { Form } from "react-router";
+3	
+4	interface DeleteConfirmModalProps {
+5	  isOpen: boolean;
+6	  title: string;
+7	  warningText: ReactNode;
+8	  id: string;
+9	  intent?: string;
+10	  extraFields?: Record<string, string>;
+11	  isSubmitting?: boolean;
+12	  error?: string | null;
+13	  onCancel: () => void;
+14	}
+15	
+16	export function DeleteConfirmModal({
+17	  isOpen,
+18	  title,
+19	  warningText,
+20	  id,
+21	  intent = "hard_delete",
+22	  extraFields,
+23	  isSubmitting,
+24	  error,
+25	  onCancel,
+26	}: DeleteConfirmModalProps) {
+27	  const [confirmText, setConfirmText] = useState("");
+28	
+29	  if (!isOpen) return null;
+30	
+31	  const canDelete = confirmText === "DELETE";
+32	
+33	  return (
+34	    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+35	      <div className="bg-white rounded-lg shadow-xl w-full max-w-lg">
+36	        <div className="flex items-center justify-between p-6 border-b">
+37	 
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:34:29 PM</sup>
+
+Generalizing the modal with backward-compatible defaults.
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:34:37 PM</sup>
+
+<details>
+<summary>Tool: <code>Write</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\components\\DeleteConfirmModal.tsx",
+  "content": "import { useState, type ReactNode } from \"react\";\nimport { Form } from \"react-router\";\n\ninterface DeleteConfirmModalProps {\n  isOpen: boolean;\n  title: string;\n  warningText: ReactNode;\n  id: string;\n  intent?: string;\n  extraFields?: Record<string, string>;\n  isSubmitting?: boolean;\n  error?: string | null;\n  confirmWord?: string;\n  confirmButtonLabel?: string;\n  confirmButtonClassName?: string;\n  onCancel: () => void;\n}\n\nexport function DeleteConfirmModal({\n  isOpen,\n  title,\n  warningText,\n  id,\n  intent = \"hard_delete\",\n  extraFields,\n  isSubmitting,\n  error,\n  confirmWord = \"DELETE\",\n  confirmButtonLabel = \"Delete Permanently\",\n  confirmButtonClassName = \"bg-red-600 hover:bg-red-700\",\n  onCancel,\n}: DeleteConfirmModalProps) {\n  const [confirmText, setConfirmText] = useState(\"\");\n\n  if (!isOpen) return null;\n\n  const canConfirm = confirmText === confirmWord;\n\n  return (\n    <div className=\"fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4\">\n      <div className=\"bg-white rounded-lg shadow-xl w-full max-w-lg\">\n        <div className=\"flex items-center justify-between p-6 border-b\">\n          <h2 className=\"text-lg font-semibold text-gray-800\">{title}</h2>\n          <button\n            onClick={onCancel}\n            className=\"text-gray-400 hover:text-gray-600 text-xl leading-none\"\n          >\n            ✕\n          </button>\n        </div>\n\n        <Form method=\"post\" className=\"p-6 flex flex-col gap-4\" onSubmit={() => setConfirmText(\"\")}>\n          <input type=\"hidden\" name=\"intent\" value={intent} />\n          <input type=\"hidden\" name=\"id\" value={id} />\n          {extraFields &&\n            Object.entries(extraFields).map(([name, value]) => (\n              <input key={name} type=\"hidden\" name={name} value={value} />\n    
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:34:38 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\components\DeleteConfirmModal.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:34:43 PM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:34:46 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\components\\DeleteConfirmModal.tsx",
+  "old_string": "  confirmWord?: string;\n  confirmButtonLabel?: string;\n  confirmButtonClassName?: string;\n  onCancel: () => void;\n}\n\nexport function DeleteConfirmModal({\n  isOpen,\n  title,\n  warningText,\n  id,\n  intent = \"hard_delete\",\n  extraFields,\n  isSubmitting,\n  error,\n  confirmWord = \"DELETE\",\n  confirmButtonLabel = \"Delete Permanently\",\n  confirmButtonClassName = \"bg-red-600 hover:bg-red-700\",\n  onCancel,\n}: DeleteConfirmModalProps) {",
+  "new_string": "  confirmWord?: string;\n  confirmButtonLabel?: string;\n  submittingLabel?: string;\n  confirmButtonClassName?: string;\n  onCancel: () => void;\n}\n\nexport function DeleteConfirmModal({\n  isOpen,\n  title,\n  warningText,\n  id,\n  intent = \"hard_delete\",\n  extraFields,\n  isSubmitting,\n  error,\n  confirmWord = \"DELETE\",\n  confirmButtonLabel = \"Delete Permanently\",\n  submittingLabel = \"Deleting...\",\n  confirmButtonClassName = \"bg-red-600 hover:bg-red-700\",\n  onCancel,\n}: DeleteConfirmModalProps) {"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:34:48 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\components\DeleteConfirmModal.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:34:55 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\components\\DeleteConfirmModal.tsx",
+  "old_string": "              {isSubmitting ? \"Working...\" : confirmButtonLabel}",
+  "new_string": "              {isSubmitting ? submittingLabel : confirmButtonLabel}"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:34:56 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\components\DeleteConfirmModal.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:35:00 PM</sup>
+
+Now create the new admin route.
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:35:01 PM</sup>
+
+<details>
+<summary>Tool: <code>TodoWrite</code></summary>
+
+```json
+{
+  "todos": [
+    {
+      "content": "Generalize DeleteConfirmModal.tsx with confirmWord/label/className props",
+      "status": "completed",
+      "activeForm": "Generalizing DeleteConfirmModal.tsx"
+    },
+    {
+      "content": "Create admin.transfer-supplier.tsx (loader, action, UI)",
+      "status": "in_progress",
+      "activeForm": "Creating admin.transfer-supplier.tsx"
+    },
+    {
+      "content": "Register route in routes.ts and nav item in admin.tsx",
+      "status": "pending",
+      "activeForm": "Registering route and nav item"
+    },
+    {
+      "content": "Verify with tsc",
+      "status": "pending",
+      "activeForm": "Verifying with tsc"
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:35:01 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Todos have been modified successfully. Ensure that you continue to use the todo list to track your progress. Please proceed with the current tasks if applicable
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:35:05 PM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:35:31 PM</sup>
+
+<details>
+<summary>Tool: <code>Write</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.transfer-supplier.tsx",
+  "content": "import { useLoaderData, useActionData, Form, useNavigation, useSubmit } from \"react-router\";\nimport { useEffect, useState } from \"react\";\nimport { connectDB } from \"../lib/db\";\nimport { DeleteConfirmModal } from \"../components/DeleteConfirmModal\";\nimport User from \"../models/User\";\nimport UserType from \"../models/UserType\";\nimport MachineSupplier from \"../models/MachineSupplier\";\nimport MachineOwner from \"../models/MachineOwner\";\nimport Session from \"../models/Session\";\nimport Patient from \"../models/Patient\";\nimport Therapist from \"../models/Therapist\";\nimport Invoice from \"../models/Invoice\";\n\ntype SupplierOption = { _id: string; first_name: string; last_name: string; email: string };\ntype OwnerPreview = { _id: string; first_name: string; last_name: string; email: string };\ntype MachinePreview = { _id: string; serial_number: string; model_name: string };\n\nexport async function loader({ request }: { request: Request }) {\n  await connectDB();\n  const url = new URL(request.url);\n  const from = url.searchParams.get(\"from\") || \"\";\n  const to = url.searchParams.get(\"to\") || \"\";\n\n  const supplierType = await UserType.findOne({ name: \"Supplier\" }).lean();\n  const ownerType = await UserType.findOne({ name: \"Owner\" }).lean();\n\n  const suppliers = supplierType\n    ? await User.find({ user_type_id: (supplierType as any)._id, is_active: true })\n        .select(\"first_name last_name email\")\n        .sort({ first_name: 1 })\n        .lean()\n    : [];\n\n  const supplierOptions: SupplierOption[] = suppliers.map((s: any) => ({\n    _id: s._id.toString(),\n    first_name: s.first_name,\n    last_name: s.last_name,\n    email: s.email,\n  }));\n\n  let owners: OwnerPreview[] = [];\n  let machines: MachinePreview[] = [];\n  let counts = { sessions: 0, patients: 0, therapists: 0, invoices: 
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:35:32 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+File created successfully at: d:\projects\production-hydro-colon-therapy\backend\app\routes\admin.transfer-supplier.tsx (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:35:35 PM</sup>
+
+Now register the route and nav item.
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:35:36 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes.ts",
+  "old_string": "      route(\"suppliers\", \"routes/admin.suppliers.tsx\"),",
+  "new_string": "      route(\"suppliers\", \"routes/admin.suppliers.tsx\"),\n      route(\"transfer-supplier\", \"routes/admin.transfer-supplier.tsx\"),"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:35:37 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes.ts has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:35:41 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.tsx",
+  "old_string": "    { to: \"/admin/suppliers\", label: \"Suppliers\", abbr: \"Su\" },",
+  "new_string": "    { to: \"/admin/suppliers\", label: \"Suppliers\", abbr: \"Su\" },\n    { to: \"/admin/transfer-supplier\", label: \"Transfer Supplier\", abbr: \"Tr\" },"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:35:42 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\admin.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:35:46 PM</sup>
+
+<details>
+<summary>Tool: <code>TodoWrite</code></summary>
+
+```json
+{
+  "todos": [
+    {
+      "content": "Generalize DeleteConfirmModal.tsx with confirmWord/label/className props",
+      "status": "completed",
+      "activeForm": "Generalizing DeleteConfirmModal.tsx"
+    },
+    {
+      "content": "Create admin.transfer-supplier.tsx (loader, action, UI)",
+      "status": "completed",
+      "activeForm": "Creating admin.transfer-supplier.tsx"
+    },
+    {
+      "content": "Register route in routes.ts and nav item in admin.tsx",
+      "status": "completed",
+      "activeForm": "Registering route and nav item"
+    },
+    {
+      "content": "Verify with tsc",
+      "status": "in_progress",
+      "activeForm": "Verifying with tsc"
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:35:46 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Todos have been modified successfully. Ensure that you continue to use the todo list to track your progress. Please proceed with the current tasks if applicable
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:35:50 PM</sup>
+
+<details>
+<summary>Tool: <code>Bash</code></summary>
+
+```json
+{
+  "command": "cd \"d:/projects/production-hydro-colon-therapy/backend\" && npx tsc --noEmit 2>&1 | grep -v \"auth.login.ts\" ; echo \"EXIT:$?\"",
+  "description": "Type-check backend excluding pre-existing unrelated error",
+  "timeout": 120000
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:36:00 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Property 'userId' does not exist on type 'string'.
+  Property 'userId' does not exist on type 'string'.
+EXIT:0
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:36:05 PM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:36:06 PM</sup>
+
+<details>
+<summary>Tool: <code>Bash</code></summary>
+
+```json
+{
+  "command": "cd \"d:/projects/production-hydro-colon-therapy/backend\" && npx tsc --noEmit 2>&1",
+  "description": "Full type-check output",
+  "timeout": 120000
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:36:16 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Exit code 2
+app/routes/api/auth.login.ts(34,36): error TS2339: Property 'userId' does not exist on type 'string | JwtPayload'.
+  Property 'userId' does not exist on type 'string'.
+app/routes/api/auth.login.ts(36,77): error TS2339: Property 'userId' does not exist on type 'string | JwtPayload'.
+  Property 'userId' does not exist on type 'string'.
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:36:18 PM</sup>
+
+Only the same pre-existing, unrelated error remains — nothing from my changes.
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:36:19 PM</sup>
+
+<details>
+<summary>Tool: <code>TodoWrite</code></summary>
+
+```json
+{
+  "todos": [
+    {
+      "content": "Generalize DeleteConfirmModal.tsx with confirmWord/label/className props",
+      "status": "completed",
+      "activeForm": "Generalizing DeleteConfirmModal.tsx"
+    },
+    {
+      "content": "Create admin.transfer-supplier.tsx (loader, action, UI)",
+      "status": "completed",
+      "activeForm": "Creating admin.transfer-supplier.tsx"
+    },
+    {
+      "content": "Register route in routes.ts and nav item in admin.tsx",
+      "status": "completed",
+      "activeForm": "Registering route and nav item"
+    },
+    {
+      "content": "Verify with tsc",
+      "status": "completed",
+      "activeForm": "Verifying with tsc"
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:36:19 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Todos have been modified successfully. Ensure that you continue to use the todo list to track your progress. Please proceed with the current tasks if applicable
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:36:28 PM</sup>
+
+Done. Summary:
+
+- **New page**: `backend/app/routes/admin.transfer-supplier.tsx`, registered at `/admin/transfer-supplier` (`routes.ts`) with a "Transfer Supplier" sidebar link (`admin.tsx`). From/To supplier dropdowns live-reload a preview of the owners and machines that would move, plus a count of sessions/patients/therapists/invoices that automatically follow (since those are keyed by `machine_id`, not supplier — nothing to touch there).
+- **Move action**: reassigns ownership via three `updateMany` calls — `User.supplier_id`, `MachineSupplier.supplier_id`, `MachineOwner.supplier_id` — from the old supplier to the new one. Supplier-private `SupplierResource` and invoice audit fields (`created_by`/`payments[].received_by`) are intentionally left untouched.
+- **`DeleteConfirmModal.tsx`** was generalized (new optional `confirmWord`, `confirmButtonLabel`, `submittingLabel`, `confirmButtonClassName` props, all defaulting to the exact previous "type DELETE" behavior) so this page could reuse it with "type MOVE to confirm" instead of duplicating a modal — the six existing hard-delete callers are unaffected.
+
+`npx tsc --noEmit` in `backend/` shows no new errors (the one remaining error is pre-existing and unrelated, in `auth.login.ts`).
+
+This needs a real run against the dev DB to verify — worth logging into `/admin/transfer-supplier`, picking a From supplier with actual owners/machines, and confirming the preview and post-move state match what's shown on `/admin/suppliers` and `/admin/owners`.
 
 
 ---
