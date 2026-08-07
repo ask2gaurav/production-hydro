@@ -9,6 +9,10 @@ const BACKUP_SCHEMA_VERSION = 1;
 const TABLE_NAMES = ['sessions', 'therapists', 'patients', 'settings', 'resources'] as const;
 type TableName = typeof TABLE_NAMES[number];
 
+// Resources are excluded from exports (Excel and backup zip) but still supported on import
+// so older backups that include a resources.json can still be restored.
+const EXPORT_TABLE_NAMES = TABLE_NAMES.filter((t) => t !== 'resources');
+
 interface BackupManifest {
   schema_version: number;
   exported_at: string;
@@ -58,7 +62,7 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
 export async function exportToExcel(machineId: string): Promise<string> {
   const workbook = XLSX.utils.book_new();
 
-  for (const table of TABLE_NAMES) {
+  for (const table of EXPORT_TABLE_NAMES) {
     const dexieTable = localDB[table] as unknown as { toArray: () => Promise<unknown[]> };
     const rows = await dexieTable.toArray();
     const sheet = XLSX.utils.json_to_sheet(rows as Record<string, unknown>[]);
@@ -74,7 +78,7 @@ export async function exportToExcel(machineId: string): Promise<string> {
 
 export async function exportToBackupZip(machineId: string): Promise<string> {
   const data = {} as Record<TableName, unknown[]>;
-  for (const table of TABLE_NAMES) {
+  for (const table of EXPORT_TABLE_NAMES) {
     const dexieTable = localDB[table] as unknown as { toArray: () => Promise<unknown[]> };
     data[table] = await dexieTable.toArray();
   }
@@ -90,7 +94,7 @@ export async function exportToBackupZip(machineId: string): Promise<string> {
 
   const zip = new JSZip();
   zip.file('manifest.json', JSON.stringify(payload.manifest, null, 2));
-  for (const table of TABLE_NAMES) {
+  for (const table of EXPORT_TABLE_NAMES) {
     zip.file(`${table}.json`, JSON.stringify(payload.data[table], null, 2));
   }
 

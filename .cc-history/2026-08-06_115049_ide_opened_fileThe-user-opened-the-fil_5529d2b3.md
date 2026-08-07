@@ -6,8 +6,8 @@
 | **Session ID** | `5529d2b3-4ebf-4965-aa06-df984f081bd8` |
 | **Working Dir** | `d:\projects\production-hydro-colon-therapy` |
 | **Started** | 8/6/2026, 11:50:49 AM |
-| **Last Updated** | 8/6/2026, 12:39:57 PM |
-| **Messages** | 143 |
+| **Last Updated** | 8/7/2026, 10:48:57 AM |
+| **Messages** | 173 |
 
 ---
 
@@ -2217,6 +2217,480 @@ The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\NextThera
 ## Assistant <sup>8/6/2026, 12:39:57 PM</sup>
 
 Fixed — replaced `--height: auto` (which collapses `IonContent` to zero height inside a custom-sized modal) with a fixed `--height: 560px`, matching the pattern used by `MachineInfoModal.tsx`.
+
+
+---
+
+## User <sup>8/7/2026, 10:43:17 AM</sup>
+
+<ide_opened_file>The user opened the file d:\projects\production-hydro-colon-therapy\frontend\.env.prod in the IDE. This may or may not be related to the current task.</ide_opened_file>
+
+@frontend/src/pages/DataExportImport.tsx  remove resoureces from export (both excel and zip)
+
+
+---
+
+## Assistant <sup>8/7/2026, 10:43:20 AM</sup>
+
+Let's look at `backupService.ts` to find where resources are included in both export functions.
+
+
+---
+
+## Assistant <sup>8/7/2026, 10:43:21 AM</sup>
+
+<details>
+<summary>Tool: <code>Grep</code></summary>
+
+```json
+{
+  "pattern": "resource",
+  "path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\services\\backupService.ts",
+  "output_mode": "content",
+  "-n": true,
+  "-i": true
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 10:43:21 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+9:const TABLE_NAMES = ['sessions', 'therapists', 'patients', 'settings', 'resources'] as const;
+121:  const counts: Record<TableName, number> = { sessions: 0, therapists: 0, patients: 0, settings: 0, resources: 0 };
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 10:43:25 AM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\services\\backupService.ts"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 10:43:25 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+1	import { Filesystem, Directory } from '@capacitor/filesystem';
+2	import { Share } from '@capacitor/share';
+3	import JSZip from 'jszip';
+4	import * as XLSX from 'xlsx';
+5	import { localDB } from '../db/localDB';
+6	
+7	const BACKUP_SCHEMA_VERSION = 1;
+8	
+9	const TABLE_NAMES = ['sessions', 'therapists', 'patients', 'settings', 'resources'] as const;
+10	type TableName = typeof TABLE_NAMES[number];
+11	
+12	interface BackupManifest {
+13	  schema_version: number;
+14	  exported_at: string;
+15	  machine_id: string;
+16	}
+17	
+18	interface BackupPayload {
+19	  manifest: BackupManifest;
+20	  data: Record<TableName, unknown[]>;
+21	}
+22	
+23	export type ImportMode = 'overwrite' | 'merge';
+24	
+25	export interface ImportResult {
+26	  counts: Record<TableName, number>;
+27	}
+28	
+29	function timestamp(): string {
+30	  return new Date().toISOString().replace(/[:.]/g, '-');
+31	}
+32	
+33	async function writeAndShare(fileName: string, base64Data: string, mimeType: string) {
+34	  const written = await Filesystem
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 10:43:30 AM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 10:43:32 AM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\services\\backupService.ts",
+  "old_string": "const TABLE_NAMES = ['sessions', 'therapists', 'patients', 'settings', 'resources'] as const;\ntype TableName = typeof TABLE_NAMES[number];",
+  "new_string": "const TABLE_NAMES = ['sessions', 'therapists', 'patients', 'settings', 'resources'] as const;\ntype TableName = typeof TABLE_NAMES[number];\n\n// Resources are excluded from exports (Excel and backup zip) but still supported on import\n// so older backups that include a resources.json can still be restored.\nconst EXPORT_TABLE_NAMES = TABLE_NAMES.filter((t) => t !== 'resources');"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 10:43:33 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\services\backupService.ts has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 10:43:37 AM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\services\\backupService.ts",
+  "old_string": "  for (const table of TABLE_NAMES) {\n    const dexieTable = localDB[table] as unknown as { toArray: () => Promise<unknown[]> };\n    const rows = await dexieTable.toArray();\n    const sheet = XLSX.utils.json_to_sheet(rows as Record<string, unknown>[]);\n    XLSX.utils.book_append_sheet(workbook, sheet, table);\n  }",
+  "new_string": "  for (const table of EXPORT_TABLE_NAMES) {\n    const dexieTable = localDB[table] as unknown as { toArray: () => Promise<unknown[]> };\n    const rows = await dexieTable.toArray();\n    const sheet = XLSX.utils.json_to_sheet(rows as Record<string, unknown>[]);\n    XLSX.utils.book_append_sheet(workbook, sheet, table);\n  }"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 10:43:38 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\services\backupService.ts has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 10:43:44 AM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\services\\backupService.ts",
+  "old_string": "export async function exportToBackupZip(machineId: string): Promise<string> {\n  const data = {} as Record<TableName, unknown[]>;\n  for (const table of TABLE_NAMES) {\n    const dexieTable = localDB[table] as unknown as { toArray: () => Promise<unknown[]> };\n    data[table] = await dexieTable.toArray();\n  }\n\n  const payload: BackupPayload = {\n    manifest: {\n      schema_version: BACKUP_SCHEMA_VERSION,\n      exported_at: new Date().toISOString(),\n      machine_id: machineId,\n    },\n    data,\n  };\n\n  const zip = new JSZip();\n  zip.file('manifest.json', JSON.stringify(payload.manifest, null, 2));\n  for (const table of TABLE_NAMES) {\n    zip.file(`${table}.json`, JSON.stringify(payload.data[table], null, 2));\n  }",
+  "new_string": "export async function exportToBackupZip(machineId: string): Promise<string> {\n  const data = {} as Record<TableName, unknown[]>;\n  for (const table of EXPORT_TABLE_NAMES) {\n    const dexieTable = localDB[table] as unknown as { toArray: () => Promise<unknown[]> };\n    data[table] = await dexieTable.toArray();\n  }\n\n  const payload: BackupPayload = {\n    manifest: {\n      schema_version: BACKUP_SCHEMA_VERSION,\n      exported_at: new Date().toISOString(),\n      machine_id: machineId,\n    },\n    data,\n  };\n\n  const zip = new JSZip();\n  zip.file('manifest.json', JSON.stringify(payload.manifest, null, 2));\n  for (const table of EXPORT_TABLE_NAMES) {\n    zip.file(`${table}.json`, JSON.stringify(payload.data[table], null, 2));\n  }"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 10:43:45 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\services\backupService.ts has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 10:43:49 AM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 10:43:50 AM</sup>
+
+<details>
+<summary>Tool: <code>Bash</code></summary>
+
+```json
+{
+  "command": "cd \"d:/projects/production-hydro-colon-therapy/frontend\" && npx tsc --noEmit -p . ; echo \"EXIT:$?\"",
+  "description": "Type-check frontend after backupService change",
+  "timeout": 120000
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 10:44:04 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+EXIT:0
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 10:44:06 AM</sup>
+
+Done. `resources` is now excluded from both the Excel export and the backup `.zip` export ([backupService.ts:9-13](d:/projects/production-hydro-colon-therapy/frontend/src/services/backupService.ts#L9-L13)) via a new `EXPORT_TABLE_NAMES` list, while import still supports restoring `resources` from older backup files that included it. Type-check passes clean.
+
+
+---
+
+## User <sup>8/7/2026, 10:46:30 AM</sup>
+
+Can we store the exporeted files in local storage of tabate? And may be list all old backup to restore? Confirm you undrestand the requirement before implementation.
+
+
+---
+
+## Assistant <sup>8/7/2026, 10:46:35 AM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 10:46:42 AM</sup>
+
+<details>
+<summary>Tool: <code>Agent</code></summary>
+
+```json
+{
+  "description": "Research Capacitor Filesystem usage patterns",
+  "subagent_type": "Explore",
+  "prompt": "In this Ionic/React + Capacitor project at d:\\projects\\production-hydro-colon-therapy, I'm planning a feature to persist exported backup files (currently written to Capacitor Filesystem `Directory.Cache` and shared via the Share plugin, see frontend/src/services/backupService.ts) to a more permanent local directory on the tablet, and then list previously-saved backups so the user can pick one to restore without using the OS file picker.\n\nPlease research and report back (under 300 words):\n1. Search the whole frontend (and backend if relevant) for other usages of `@capacitor/filesystem` (Filesystem.readdir, Filesystem.readFile, Directory.Data, Directory.Documents, etc.) to see if there's an existing pattern for listing/reading files from a persistent directory.\n2. Check `frontend/src/services/backupService.ts` in full (read the whole file) and note exactly what `writeAndShare` does today, what Directory it uses, and what the current import flow (`importFromBackupZip`) expects as input (currently a browser `File` object from an `<input type=file>`).\n3. Check `frontend/src/pages/DataExportImport.tsx` in full to see the current UI patterns (IonList/IonItem, useIonAlert, useIonToast, IonLoading) used there.\n4. Check package.json (frontend) for what Capacitor plugins are already installed (search for `@capacitor/`) — specifically confirm `@capacitor/filesystem` and `@capacitor/share` versions, and whether there's anything like `@capacitor/preferences` or a SQLite plugin that might be relevant alternative storage.\n5. Note whether this app also runs in a plain browser context (not just Capacitor native) — check for any web fallback handling of Filesystem calls elsewhere in the code, since Directory.Data/Documents may behave differently or be restricted on web vs native platforms.\n\nReport file paths, relevant code snippets, and line numbers for each finding
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 10:46:42 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Async agent launched successfully. (This tool result is internal metadata — never quote or paste any part of it, including the agentId below, into a user-facing reply.)
+agentId: a92caabfb7e20b9f2 (internal ID - do not mention to user. Use SendMessage with to: 'a92caabfb7e20b9f2', summary: '<5-10 word recap>' to continue this agent.)
+The agent is working in the background. You will be notified automatically when it completes. You know nothing about its results until that notification arrives — do not report, assume, or predict them; continue other work or respond to the user in the meantime.
+Do not duplicate this agent's work — avoid working with the same files or topics it is using.
+output_file: C:\Users\Gaurav\AppData\Local\Temp\claude\d--projects-production-hydro-colon-therapy\5529d2b3-4ebf-4965-aa06-df984f081bd8\tasks\a92caabfb7e20b9f2.output
+Do NOT Read or tail this file via the shell tool — it is the full subagent JSONL transcript and reading it will overflow your context. If the 
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 10:46:46 AM</sup>
+
+Researching how the app uses Capacitor Filesystem today (directories, web-vs-native handling, existing patterns) before designing the "save backups locally + list to restore" feature.
+
+
+---
+
+## User <sup>8/7/2026, 10:47:09 AM</sup>
+
+<task-notification>
+<task-id>a92caabfb7e20b9f2</task-id>
+<tool-use-id>toolu_01Be7FcRpnmPEoyAoHruCQXa</tool-use-id>
+<output-file>C:\Users\Gaurav\AppData\Local\Temp\claude\d--projects-production-hydro-colon-therapy\5529d2b3-4ebf-4965-aa06-df984f081bd8\tasks\a92caabfb7e20b9f2.output</output-file>
+<status>completed</status>
+<summary>Agent "Research Capacitor Filesystem usage patterns" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>Findings (under 300 words):
+
+**1. Other `@capacitor/filesystem` usages** — None. `frontend/src/services/backupService.ts` is the *only* file importing `Filesystem`/`Directory` (grep across `frontend/src` confirms just lines 1, 38, 41). No existing `readdir`/`readFile`/`Directory.Data`/`Directory.Documents` pattern to reuse — this feature will be greenfield.
+
+**2. `backupService.ts` (full file read, 141 lines)**
+- `writeAndShare(fileName, base64Data, mimeType)` (lines 37‑51): writes via `Filesystem.writeFile({ path: fileName, data: base64Data, directory: Directory.Cache })`, then immediately calls `Share.share({ title, url: written.uri, dialogTitle: 'Save or share backup file' })`, returns `written.uri`. Used by `exportToExcel` (line 76) and `exportToBackupZip` (line 104), both base64-encoded strings written flatly to `Directory.Cache` root (no subfolder).
+- `importFromBackupZip(file: File, mode: ImportMode)` (line 107) expects a browser `File` object and does `JSZip.loadAsync(file)` — works directly with a `File`/`Blob`. To restore from a persisted native path you'd need to convert (e.g., `Filesystem.readFile` → base64 → `Blob`/`Uint8Array`, or pass base64 directly into `JSZip.loadAsync` with `{ base64: true }`) since there's no path-based import currently.
+
+**3. `DataExportImport.tsx` (full file, 137 lines)** UI patterns: `IonList inset` with `IonItem button onClick detail={false}` rows containing `IonIcon` + `IonLabel` (h2/p); `useIonAlert` for confirm/error dialogs (`presentAlert`); `useIonToast` for success messages (`presentToast`); `IonLoading isOpen={busy !== null} message={busy}` as a single busy-state gate; hidden `&lt;input type="file"&gt;` + `ref` for import trigger.
+
+**4. package.json** — `@capacitor/filesystem: ^8.1.2`, `@capacitor/share: ^8.0.1`, plus `android`, `cli`, `core` 8.3.0, `@capacitor/assets` (dev). No `@capacitor/preferences` or any SQLite plugin (`@capacitor-community/sqlite` etc.) installed.
+
+**5. Web fallback** — App does run in plain browser too: `Capacitor.isNativePlatform()` checks exist in `frontend/src/App.tsx`, `frontend/src/pages/Therapy.tsx`, and `frontend/src/services/nativeHttp.ts` (e.g. lines 18, 73) for HTTP/ESP32 behavior, but **no such native/web branching exists for Filesystem calls anywhere** — `writeAndShare` always calls `Filesystem.writeFile`/`Directory.Cache` unconditionally, so on web this relies on Capacitor's web Filesystem shim (IndexedDB-backed), which has no real "Documents" persistence guarantee — worth handling explicitly for the new persistent-directory feature.</result>
+<usage><subagent_tokens>23441</subagent_tokens><tool_uses>7</tool_uses><duration_ms>27185</duration_ms></usage>
+</task-notification>
+
+
+---
+
+## Assistant <sup>8/7/2026, 10:47:20 AM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 10:47:27 AM</sup>
+
+<details>
+<summary>Tool: <code>AskUserQuestion</code></summary>
+
+```json
+{
+  "questions": [
+    {
+      "question": "Should local on-device storage + restore-list apply to just the .zip backups (which are restorable), or also Excel exports (which are read-only reports, not restorable)?",
+      "header": "Scope",
+      "options": [
+        {
+          "label": "Zip backups only (Recommended)",
+          "description": "Only .zip backups get saved to persistent local storage and listed for restore. Excel export keeps working exactly as today (share-only, not saved/listed)."
+        },
+        {
+          "label": "Both Excel and zip",
+          "description": "Both file types get saved to local storage; Excel files would appear in a 'saved exports' list but wouldn't be restorable, just re-shareable/deletable."
+        }
+      ]
+    },
+    {
+      "question": "Should the local backups list let the user delete old backups to free up space, or just list them for restore?",
+      "header": "Delete option",
+      "options": [
+        {
+          "label": "Yes, allow delete (Recommended)",
+          "description": "Each backup in the list gets a delete icon/action (with confirmation) so old backups can be cleaned up over time."
+        },
+        {
+          "label": "No, list-only",
+          "description": "Backups just accumulate; no delete UI for now."
+        }
+      ]
+    },
+    {
+      "question": "Right now exporting also opens the native Share sheet (save to Drive/email/etc). Should that continue alongside the new local save, or should local save replace the share step?",
+      "header": "Share behavior",
+      "options": [
+        {
+          "label": "Keep both (Recommended)",
+          "description": "Export saves a persistent local copy AND still opens the Share sheet, so the user can also send it elsewhere if they want."
+        },
+        {
+          "label": "Local save only",
+          "description": "Stop opening the Share sheet automatically; exporting just saves locally, and restoring/re-sharing happens from the local backups
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 10:48:11 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Your questions have been answered: "Should local on-device storage + restore-list apply to just the .zip backups (which are restorable), or also Excel exports (which are read-only reports, not restorable)?"="Both Excel and zip", "Should the local backups list let the user delete old backups to free up space, or just list them for restore?"="Yes, allow delete (Recommended)", "Right now exporting also opens the native Share sheet (save to Drive/email/etc). Should that continue alongside the new local save, or should local save replace the share step?"="Keep both (Recommended)". You can now continue with these answers in mind.
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 10:48:32 AM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 10:48:54 AM</sup>
+
+<details>
+<summary>Tool: <code>Write</code></summary>
+
+```json
+{
+  "file_path": "C:\\Users\\Gaurav\\.claude\\plans\\frontend-src-pages-nexttherapynotificat-glittery-beacon.md",
+  "content": "# Persist exports to on-device storage + restore-from-list\n\n## Context\nExports (`exportToExcel`, `exportToBackupZip` in `frontend/src/services/backupService.ts`) currently write only to Capacitor's `Directory.Cache` (line 38, via `writeAndShare`) purely to hand off to the OS Share sheet — the file isn't kept anywhere durable, and `Cache` can be purged by the OS at any time. Restoring today requires the user to have kept the shared `.zip` file somewhere external and pick it via the hidden `<input type=\"file\">` in `frontend/src/pages/DataExportImport.tsx` (lines 110-116, 122-128). The user wants exported files (both Excel reports and zip backups) kept in the tablet's persistent local storage, listed in the UI, with the ability to restore (zip only) or delete old ones directly from that list — while keeping the existing Share-sheet behavior working exactly as it does today.\n\n## `frontend/src/services/backupService.ts` changes\n- Import `Capacitor` from `@capacitor/core` (for `Capacitor.isNativePlatform()`, matching the pattern already used in `frontend/src/App.tsx` / `frontend/src/pages/Therapy.tsx`).\n- Introduce a constant `BACKUPS_DIR = 'backups'` and switch persisted writes from `Directory.Cache` to `Directory.Data` (Capacitor's persistent, app-private storage) under that subfolder, e.g. path `backups/${fileName}`.\n- Update `writeAndShare` (lines 37-51) to write to `Directory.Data` at `backups/${fileName}` with `recursive: true` (so the subfolder is created on first use), then continue sharing using the returned `written.uri` exactly as today — no behavior change to the Share sheet, just a different underlying directory. Both `exportToExcel` and `exportToBackupZip` keep calling it unchanged.\n- Add `export interface LocalBackupFile { name: string; type: 'excel' | 'zip'; size: number; modifiedAt: string }`.\n- Add `export async func
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 10:48:55 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file C:\Users\Gaurav\.claude\plans\frontend-src-pages-nexttherapynotificat-glittery-beacon.md has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 10:48:57 AM</sup>
+
+<details>
+<summary>Tool: <code>ExitPlanMode</code></summary>
+
+```json
+{
+  "plan": "# Persist exports to on-device storage + restore-from-list\n\n## Context\nExports (`exportToExcel`, `exportToBackupZip` in `frontend/src/services/backupService.ts`) currently write only to Capacitor's `Directory.Cache` (line 38, via `writeAndShare`) purely to hand off to the OS Share sheet — the file isn't kept anywhere durable, and `Cache` can be purged by the OS at any time. Restoring today requires the user to have kept the shared `.zip` file somewhere external and pick it via the hidden `<input type=\"file\">` in `frontend/src/pages/DataExportImport.tsx` (lines 110-116, 122-128). The user wants exported files (both Excel reports and zip backups) kept in the tablet's persistent local storage, listed in the UI, with the ability to restore (zip only) or delete old ones directly from that list — while keeping the existing Share-sheet behavior working exactly as it does today.\n\n## `frontend/src/services/backupService.ts` changes\n- Import `Capacitor` from `@capacitor/core` (for `Capacitor.isNativePlatform()`, matching the pattern already used in `frontend/src/App.tsx` / `frontend/src/pages/Therapy.tsx`).\n- Introduce a constant `BACKUPS_DIR = 'backups'` and switch persisted writes from `Directory.Cache` to `Directory.Data` (Capacitor's persistent, app-private storage) under that subfolder, e.g. path `backups/${fileName}`.\n- Update `writeAndShare` (lines 37-51) to write to `Directory.Data` at `backups/${fileName}` with `recursive: true` (so the subfolder is created on first use), then continue sharing using the returned `written.uri` exactly as today — no behavior change to the Share sheet, just a different underlying directory. Both `exportToExcel` and `exportToBackupZip` keep calling it unchanged.\n- Add `export interface LocalBackupFile { name: string; type: 'excel' | 'zip'; size: number; modifiedAt: string }`.\n- Add `export async function listLocalBackups(): Promise<LocalBackupFile[]>`:\n  - `Filesystem.readdir({ path: BACKUPS_DIR, directory: Dire
+...(truncated)
+```
+
+</details>
 
 
 ---
