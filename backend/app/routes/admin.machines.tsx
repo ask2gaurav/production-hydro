@@ -1,7 +1,15 @@
 import { useLoaderData, useActionData, Form, useNavigation } from "react-router";
 import { useState, useEffect, useRef } from "react";
 import { connectDB } from "../lib/db";
+import { DeleteConfirmModal } from "../components/DeleteConfirmModal";
 import Machine from "../models/Machine";
+import MachineOwner from "../models/MachineOwner";
+import MachineSupplier from "../models/MachineSupplier";
+import Session from "../models/Session";
+import Patient from "../models/Patient";
+import Therapist from "../models/Therapist";
+import Invoice from "../models/Invoice";
+import Settings from "../models/Settings";
 
 const LIMIT = 50;
 
@@ -109,6 +117,26 @@ export async function action({ request }: { request: Request }) {
     return { success: true };
   }
 
+  if (intent === "hard_delete") {
+    const id = formData.get("id") as string;
+    const machine = await Machine.findById(id);
+    if (!machine) return { error: "Machine not found." };
+    if (machine.mode !== "demo") {
+      return { error: "Only demo mode machines can be permanently deleted." };
+    }
+
+    const machine_id = id;
+    await MachineOwner.deleteMany({ machine_id });
+    await MachineSupplier.deleteMany({ machine_id });
+    await Session.deleteMany({ machine_id });
+    await Patient.deleteMany({ machine_id });
+    await Therapist.deleteMany({ machine_id });
+    await Invoice.deleteMany({ machine_id });
+    await Settings.deleteMany({ machine_id });
+    await Machine.findByIdAndDelete(id);
+    return { success: true };
+  }
+
   return { error: "Unknown intent." };
 }
 
@@ -147,6 +175,7 @@ export default function AdminMachines() {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editItem, setEditItem] = useState<MachineDoc | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<MachineDoc | null>(null);
   const [newSsid, setNewSsid] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const installationDateRef = useRef<HTMLInputElement>(null);
@@ -155,6 +184,7 @@ export default function AdminMachines() {
     if (actionData?.success) {
       setModalOpen(false);
       setEditItem(null);
+      setDeleteTarget(null);
     }
   }, [actionData]);
 
@@ -259,6 +289,15 @@ export default function AdminMachines() {
                           Deactivate
                         </button>
                       </Form>
+                    )}
+                    &nbsp;|&nbsp;
+                    {m.mode === "demo" && (
+                      <button
+                        onClick={() => setDeleteTarget(m as MachineDoc)}
+                        className="text-red-700 hover:underline text-xs font-bold"
+                      >
+                        Delete
+                      </button>
                     )}
                   </div>
                 </td>
@@ -408,6 +447,21 @@ export default function AdminMachines() {
           </div>
         </div>
       )}
+
+      <DeleteConfirmModal
+        isOpen={!!deleteTarget}
+        title={`Delete Machine ${deleteTarget?.serial_number ?? ""}`}
+        warningText={
+          <>
+            This will permanently delete this machine and all associated data: sessions, patients,
+            therapists, invoices, settings, and owner/supplier assignments. This cannot be undone.
+          </>
+        }
+        id={deleteTarget?._id ?? ""}
+        isSubmitting={isSubmitting}
+        error={deleteTarget ? actionData?.error : null}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

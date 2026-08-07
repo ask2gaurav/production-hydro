@@ -6,8 +6,8 @@
 | **Session ID** | `5529d2b3-4ebf-4965-aa06-df984f081bd8` |
 | **Working Dir** | `d:\projects\production-hydro-colon-therapy` |
 | **Started** | 8/6/2026, 11:50:49 AM |
-| **Last Updated** | 8/7/2026, 11:20:26 AM |
-| **Messages** | 313 |
+| **Last Updated** | 8/7/2026, 12:10:49 PM |
+| **Messages** | 474 |
 
 ---
 
@@ -5014,6 +5014,3019 @@ Done. Summary:
 - Ran `npx cap sync android` — the plugin was picked up correctly.
 
 Since `FileOpener` is a native capability, this needs a real Android build/rebuild + device test — worth confirming the "View" action actually opens Excel with whatever app is installed (Sheets/WPS/Excel) and that Share still works for both file types.
+
+
+---
+
+## User <sup>8/7/2026, 11:57:23 AM</sup>
+
+<ide_selection>The user selected the lines 70 to 70 from d:\projects\production-hydro-colon-therapy\backend\app\routes.ts:
+admin
+
+This may or may not be related to the current task.</ide_selection>
+
+@backend/app/routes/admin.tsx we need to add delete funcationality in all listing pages of admin panel. Delete all associated data also with particular module. Added popup to type delete as delete confirmation before hard delete. Confirm you understood the requirement before making any change in file.
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:57:27 AM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:57:37 AM</sup>
+
+<details>
+<summary>Tool: <code>Agent</code></summary>
+
+```json
+{
+  "description": "Explore admin panel routes and models",
+  "subagent_type": "Explore",
+  "prompt": "In this React Router v7 backend app at d:\\projects\\production-hydro-colon-therapy\\backend, I need to add \"delete\" functionality to every admin panel listing page, where deleting a record also cascades to delete associated/related data in other collections, gated behind a \"type DELETE to confirm\" popup.\n\nPlease investigate and report back (this is a big task, be thorough, up to 500 words):\n\n1. List all admin listing/route files under `backend/app/routes/admin*` (or wherever admin routes live per `backend/app/routes.ts`). For each of: machines, users, owners, suppliers, invoices, CMS resources — find the route file(s) that render the listing page (loader + component), and the route file(s)/actions that currently handle create/update (to see the existing action pattern: how forms POST, how `Form method=\"post\"` + intent fields are structured, error handling, redirects).\n\n2. For each of those modules, find the Mongoose model definition (`backend/app/models/*.ts` or similar) and note:\n   - The exact field names that reference other collections (e.g. does a Session/Therapist/Patient have a `machine_id`? does an Invoice reference a machine or owner? does a User have a role like admin/owner/supplier that determines what \"associated data\" means?)\n   - Any existing cascade-delete logic already in the codebase (grep for `deleteMany`, `findByIdAndDelete`, `remove(`, or comments about cascading).\n\n3. Report the full relationship map you find: e.g. \"Machine has many: Session, Therapist, Patient, LocalSettings-equivalent, Resource(?)\" \"User (owner role) has many: Machine(s)?\" \"Supplier has many: ?\" etc. Be precise about field names and collection names (use the actual Mongoose model/collection names, not guesses).\n\n4. Check if there's an existing \"confirm delete\" or \"type to confirm\" modal/popup pattern anywhere in the admin frontend already (searc
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 11:57:37 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Async agent launched successfully. (This tool result is internal metadata — never quote or paste any part of it, including the agentId below, into a user-facing reply.)
+agentId: a451224875a3b4587 (internal ID - do not mention to user. Use SendMessage with to: 'a451224875a3b4587', summary: '<5-10 word recap>' to continue this agent.)
+The agent is working in the background. You will be notified automatically when it completes. You know nothing about its results until that notification arrives — do not report, assume, or predict them; continue other work or respond to the user in the meantime.
+Do not duplicate this agent's work — avoid working with the same files or topics it is using.
+output_file: C:\Users\Gaurav\AppData\Local\Temp\claude\d--projects-production-hydro-colon-therapy\5529d2b3-4ebf-4965-aa06-df984f081bd8\tasks\a451224875a3b4587.output
+Do NOT Read or tail this file via the shell tool — it is the full subagent JSONL transcript and reading it will overflow your context. If the 
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:57:40 AM</sup>
+
+This is a new, unrelated task (backend admin panel), so I'm exploring the admin routes, models, and existing relationships before drafting a plan. Researching now — will follow up once the exploration completes.
+
+
+---
+
+## User <sup>8/7/2026, 11:58:56 AM</sup>
+
+<task-notification>
+<task-id>a451224875a3b4587</task-id>
+<tool-use-id>toolu_0185FCH5donT3dFYJdr87sRg</tool-use-id>
+<output-file>C:\Users\Gaurav\AppData\Local\Temp\claude\d--projects-production-hydro-colon-therapy\5529d2b3-4ebf-4965-aa06-df984f081bd8\tasks\a451224875a3b4587.output</output-file>
+<status>completed</status>
+<summary>Agent "Explore admin panel routes and models" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>I now have all the information needed to write the report.
+
+## Report
+
+### 1. Admin routes (from `backend/app/routes.ts`, lines 66–79)
+All under `prefix("admin", …)`, wrapped in layout `routes/admin.tsx`:
+- **Machines**: `backend/app/routes/admin.machines.tsx` — loader (L22-41), action with `create`/`update`/`delete` intents (L43-113). Current "delete" (L105-110) is a **soft-delete** (sets `machine_status: "Inactive"`), not a real delete.
+- **Users**: `backend/app/routes/admin.users.tsx` — loader (L25-57), action (L59-170). `delete`/`restore` (L156-167) toggle `User.is_active` + `AuthCredential.is_active`.
+- **Owners**: `backend/app/routes/admin.owners.tsx` — loader (L27-93), action (L95-208), filters `User` by `UserType name:"Owner"`. `delete` (L200-205) same soft-delete pattern; also touches `MachineOwner` on create/update (L143-149, L186-195) but not on delete.
+- **Suppliers**: `backend/app/routes/admin.suppliers.tsx` — loader (L32-109), action (L111-262). `delete` (L214-219) soft-deletes user; separate `assign_machine`/`unassign_machine` intents manage `MachineSupplier` (L221-238) but delete doesn't touch supplier's `MachineSupplier`/`SupplierResource` docs.
+- **Invoices**: `backend/app/routes/admin.invoices.tsx` — loader only (L5-9), **no action at all**, no create/update/delete UI (just a "Create Invoice" button with no handler).
+- **CMS Resources**: `backend/app/routes/admin.resources.tsx` — loader (L26-44), action (L46-105), `delete`/`restore` (L94-102) soft-toggle `is_active`.
+
+Form pattern used everywhere: `&lt;Form method="post"&gt;` with hidden `intent` + `id` fields, `useActionData`/`useNavigation` for submitting state, `window.confirm(...)` in `onSubmit` before hard/soft-delete submits, action returns `{ success: true }` or `{ error: string }`, `useEffect` closes modal on `actionData.success`.
+
+### 2 &amp; 3. Models and relationship map
+- **Machine** (`backend/app/models/Machine.ts`) — referenced by: `MachineOwner.machine_id`, `MachineSupplier.machine_id`, `Session.machine_id`, `Therapist.machine_id`, `Patient.machine_id`, `Invoice.machine_id`, `Settings.machine_id` (stored as plain String, not ObjectId ref — inconsistent).
+- **User** (`backend/app/models/User.ts`) — single collection for Admin/Owner/Supplier/Therapist/Patient roles via `user_type_id` → `UserType`. Also has own `machine_id` (String) and `supplier_id` (self-ref, owner's supplier). Referenced by: `AuthCredential.user_id` (1:1), `MachineOwner.owner_id`/`supplier_id`, `MachineSupplier.supplier_id`, `Invoice.owner_id`/`created_by`/`payments[].received_by`, `Resource.updated_by`, `SupplierResource.supplier_id`/`updated_by`, `Machine.activated_full_mode_by`/`demo_extended_at[].extended_by`/`owner_login_extended_at[].extended_by`, `AuditLog.user_id`.
+- **MachineOwner/MachineSupplier** — pure join docs linking Machine↔User, unique per `machine_id`.
+- **Invoice** — references `owner_id`, `machine_id`, `created_by`.
+- **Resource** (global CMS) vs **SupplierResource** (per-supplier copy, seeded from Resource on supplier creation, L156-175 in admin.suppliers.tsx) — no back-reference from Resource to SupplierResource.
+- **Session/Therapist/Patient** — all keyed by `machine_id` only.
+
+**Existing cascade-delete logic already exists** — but only in the **supplier** frontend, not admin:
+- `backend/app/routes/supplier.machines.tsx` intent `delete_machine` (L264-280): only allowed when `machine.mode === "demo"`; cascades `MachineSupplier.deleteMany`, `MachineOwner.deleteMany`, `Session.deleteMany`, `Patient.deleteMany`, `Therapist.deleteMany`, `Invoice.deleteMany` (all filtered by `{ machine_id }`), then `Machine.findByIdAndDelete`. This is the reference pattern to replicate/extend for admin machine hard-delete, minus the demo-mode restriction if desired.
+- `backend/app/routes/supplier.owners.tsx` intent `delete` (L179-186): still soft-delete only (no cascade).
+- No cascade exists anywhere for Supplier deletion (would need `MachineSupplier.deleteMany({supplier_id})`, `SupplierResource.deleteMany({supplier_id})`) or Resource deletion.
+
+### 4. "Type DELETE to confirm" pattern
+**Does not exist anywhere in the repo** (grepped whole project, only stray matches in unrelated `android/build.gradle`). All current destructive actions use plain `window.confirm("...")` in the `Form`'s `onSubmit`. This will be **entirely new UI** — no modal/dialog component for confirmation text input exists; only `ActionsDropdown` (`backend/app/components/ActionsDropdown.tsx`) for the "⋮" action menu, and inline centered modals (`fixed inset-0 bg-black/40 flex items-center justify-center z-50`) used for create/edit forms.
+
+### 5. Styling conventions
+Table: `bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden` wrapper, `&lt;table className="w-full text-sm"&gt;`, header `bg-gray-50 border-b border-gray-200`, header cells `text-left px-4 py-3 font-semibold text-gray-600`, body rows `divide-y divide-gray-100`, `hover:bg-gray-50`. Status pills: `px-2 py-0.5 rounded-full text-xs font-medium` + color map (green/red/yellow/blue/purple/teal/orange `-100`/`-700`). Action buttons: `text-blue-600 hover:underline text-xs font-medium` (Edit), `text-red-500 hover:underline text-xs font-medium` (Deactivate/Delete), separated by `&amp;nbsp;|&amp;nbsp;` or `gap-3` flex, or via `ActionsDropdown` items with `variant: "danger"` → `text-red-600 hover:bg-red-50 font-medium`. Modal: `fixed inset-0 bg-black/40 ... z-50 p-4` → `bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto`, header `flex items-center justify-between p-6 border-b`, close `✕` button `text-gray-400 hover:text-gray-600 text-xl`. Inputs share `inputCls = "w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"`. Primary button `bg-blue-700 text-white rounded hover:bg-blue-800`; a new Delete confirm modal should reuse this shell with a red primary button (`bg-red-600 hover:bg-red-700`) and disable submit until typed text matches "DELETE".</result>
+<usage><subagent_tokens>70437</subagent_tokens><tool_uses>33</tool_uses><duration_ms>78608</duration_ms></usage>
+</task-notification>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:59:01 AM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:59:01 AM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.machines.tsx"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 11:59:01 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+1	import { useLoaderData, useActionData, Form, useNavigation } from "react-router";
+2	import { useState, useEffect, useRef } from "react";
+3	import { connectDB } from "../lib/db";
+4	import Machine from "../models/Machine";
+5	
+6	const LIMIT = 50;
+7	
+8	type MachineDoc = {
+9	  _id: string;
+10	  model_name: string;
+11	  serial_number: string;
+12	  machine_status: string;
+13	  mode: string;
+14	  production_date?: string;
+15	  asset_type?: string;
+16	  installation_date?: string;
+17	  installation_location?: string;
+18	  ssid?: string;
+19	  password?: string;
+20	};
+21	
+22	export async function loader({ request }: { request: Request }) {
+23	  await connectDB();
+24	  const url = new URL(request.url);
+25	  const page = Math.max(1, parseInt(url.searchParams.get("page") || "1"));
+26	  const skip = (page - 1) * LIMIT;
+27	
+28	  const [rawMachines, total] = await Promise.all([
+29	    Machine.find({}).sort({ createdAt: -1 }).skip(skip).limit(LIMIT).lean(),
+30	    Machine.countDocuments({}),
+31	  ]);
+
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:59:07 AM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:59:09 AM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\supplier.machines.tsx",
+  "offset": 255,
+  "limit": 30
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 11:59:09 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+255	    const supplier_available_hours = (formData.get("supplier_available_hours") as string)?.trim();
+256	    const custom_message = (formData.get("custom_message") as string)?.trim();
+257	
+258	    await Machine.findByIdAndUpdate(machine_id, {
+259	      lock_screen_contact: { supplier_name, supplier_email, supplier_phone, supplier_available_hours, custom_message },
+260	    });
+261	    return { success: true, intent };
+262	  }
+263	
+264	  if (intent === "delete_machine") {
+265	    const machine = await Machine.findById(machine_id);
+266	    if (!machine) return { error: "Machine not found." };
+267	    if (machine.mode !== "demo") {
+268	      return { error: "Machine is not in demo mode. Only demo mode machines can be deleted." };
+269	    }
+270	
+271	    await MachineSupplier.deleteMany({ machine_id });
+272	    await MachineOwner.deleteMany({ machine_id });
+273	    await Session.deleteMany({ machine_id });
+274	    await Patient.deleteMany({ machine_id });
+275	    await Therapist.deleteMany
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:59:14 AM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:59:14 AM</sup>
+
+<details>
+<summary>Tool: <code>Glob</code></summary>
+
+```json
+{
+  "pattern": "backend/app/models/*.ts"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 11:59:15 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+backend\app\models\AuditLog.ts
+backend\app\models\AuthCredential.ts
+backend\app\models\Invoice.ts
+backend\app\models\MachineOwner.ts
+backend\app\models\MachineSupplier.ts
+backend\app\models\Resource.ts
+backend\app\models\Settings.ts
+backend\app\models\User.ts
+backend\app\models\UserType.ts
+backend\app\models\Therapist.ts
+backend\app\models\Patient.ts
+backend\app\models\Session.ts
+backend\app\models\SupplierResource.ts
+backend\app\models\Machine.ts
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:59:17 AM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.users.tsx"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 11:59:17 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+1	import { useLoaderData, useActionData, Form, useNavigation } from "react-router";
+2	import { useState, useEffect } from "react";
+3	import bcrypt from "bcrypt";
+4	import { connectDB } from "../lib/db";
+5	import User from "../models/User";
+6	import UserType from "../models/UserType";
+7	import AuthCredential from "../models/AuthCredential";
+8	
+9	const LIMIT = 50;
+10	
+11	type UserDoc = {
+12	  _id: string;
+13	  first_name: string;
+14	  last_name: string;
+15	  email: string;
+16	  phone?: string;
+17	  address?: string;
+18	  billing_address?: string;
+19	  is_active: boolean;
+20	  user_type_id: { _id: string; name: string } | string;
+21	};
+22	
+23	type UserTypeDoc = { _id: string; name: string };
+24	
+25	export async function loader({ request }: { request: Request }) {
+26	  await connectDB();
+27	  const url = new URL(request.url);
+28	  const page = Math.max(1, parseInt(url.searchParams.get("page") || "1"));
+29	  const skip = (page - 1) * LIMIT;
+30	
+31	  const [rawUsers, total, rawUserTypes] = a
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:59:22 AM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:59:22 AM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.owners.tsx",
+  "offset": 1,
+  "limit": 220
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 11:59:22 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+1	import { useLoaderData, useActionData, Form, useNavigation, useSubmit } from "react-router";
+2	import { useState, useEffect } from "react";
+3	import bcrypt from "bcrypt";
+4	import { connectDB } from "../lib/db";
+5	import User from "../models/User";
+6	import UserType from "../models/UserType";
+7	import AuthCredential from "../models/AuthCredential";
+8	import MachineOwner from "../models/MachineOwner";
+9	import Machine from "../models/Machine";
+10	
+11	const LIMIT = 50;
+12	
+13	type OwnerDoc = {
+14	  _id: string;
+15	  first_name: string;
+16	  last_name: string;
+17	  email: string;
+18	  phone?: string;
+19	  address?: string;
+20	  billing_address?: string;
+21	  is_active: boolean;
+22	  assignedMachines: { _id: string; serial_number: string; model_name: string }[];
+23	};
+24	
+25	type MachineOption = { _id: string; serial_number: string; model_name: string };
+26	
+27	export async function loader({ request }: { request: Request }) {
+28	  await connectDB();
+29	  const url = new URL(request.url);
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:59:28 AM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:59:29 AM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.suppliers.tsx",
+  "offset": 1,
+  "limit": 260
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 11:59:29 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+1	import { useLoaderData, useActionData, Form, useNavigation, useSubmit } from "react-router";
+2	import { useState, useEffect } from "react";
+3	import { ActionsDropdown, type ActionItem } from "../components/ActionsDropdown";
+4	import bcrypt from "bcrypt";
+5	import { requireAdmin, signToken } from "../lib/auth.server";
+6	import { connectDB } from "../lib/db";
+7	import User from "../models/User";
+8	import UserType from "../models/UserType";
+9	import AuthCredential from "../models/AuthCredential";
+10	import Machine from "../models/Machine";
+11	import MachineSupplier from "../models/MachineSupplier";
+12	import Resource from "../models/Resource";
+13	import SupplierResource from "../models/SupplierResource";
+14	
+15	const LIMIT = 50;
+16	
+17	type SupplierDoc = {
+18	  _id: string;
+19	  first_name: string;
+20	  last_name: string;
+21	  email: string;
+22	  phone?: string;
+23	  address?: string;
+24	  is_active: boolean;
+25	  assignedMachines: { _id: string; serial_number: string; model_name: strin
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:59:31 AM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:59:32 AM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\components\\ActionsDropdown.tsx"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 11:59:32 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+1	import { useState, useRef, useEffect, type ReactNode } from "react";
+2	
+3	type ButtonItem = {
+4	  type: "button";
+5	  label: string;
+6	  onClick: () => void;
+7	  variant?: "default" | "danger" | "warning";
+8	  disabled?: boolean;
+9	};
+10	
+11	type NodeItem = {
+12	  type: "node";
+13	  node: ReactNode;
+14	};
+15	
+16	export type ActionItem = ButtonItem | NodeItem;
+17	
+18	const variantClass: Record<NonNullable<ButtonItem["variant"]>, string> = {
+19	  default: "text-gray-700 hover:bg-gray-50",
+20	  danger: "text-red-600 hover:bg-red-50 font-medium",
+21	  warning: "text-yellow-700 hover:bg-gray-50",
+22	};
+23	
+24	export function ActionsDropdown({ items }: { items: ActionItem[] }) {
+25	  const [open, setOpen] = useState(false);
+26	  const [pos, setPos] = useState({ top: 0, left: 0 });
+27	  const btnRef = useRef<HTMLButtonElement>(null);
+28	
+29	  useEffect(() => {
+30	    if (!open) return;
+31	    function onKey(e: KeyboardEvent) {
+32	      if (e.key === "Escape") setOpen(false);
+33	    }
+34	   
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:59:37 AM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:59:38 AM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.resources.tsx",
+  "offset": 1,
+  "limit": 110
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 11:59:38 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+1	import { useLoaderData, useActionData, Form, useNavigation } from "react-router";
+2	import { useState, useEffect } from "react";
+3	import { connectDB } from "../lib/db";
+4	import Resource from "../models/Resource";
+5	
+6	const LIMIT = 50;
+7	
+8	type ResourceDoc = {
+9	  _id: string;
+10	  title: string;
+11	  slug: string;
+12	  content: string;
+13	  category: string;
+14	  is_active: boolean;
+15	};
+16	
+17	function generateSlug(title: string): string {
+18	  return title
+19	    .toLowerCase()
+20	    .trim()
+21	    .replace(/[^a-z0-9\s-]/g, "")
+22	    .replace(/\s+/g, "-")
+23	    .replace(/-+/g, "-");
+24	}
+25	
+26	export async function loader({ request }: { request: Request }) {
+27	  await connectDB();
+28	  const url = new URL(request.url);
+29	  const page = Math.max(1, parseInt(url.searchParams.get("page") || "1"));
+30	  const skip = (page - 1) * LIMIT;
+31	
+32	  const [rawResources, total] = await Promise.all([
+33	    Resource.find({}).sort({ updated_at: -1 }).skip(skip).limit(LIMIT).lean(),
+
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:59:44 AM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 11:59:44 AM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.invoices.tsx"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 11:59:44 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+1	import { useLoaderData } from "react-router";
+2	import { connectDB } from "../lib/db";
+3	import Invoice from "../models/Invoice";
+4	
+5	export async function loader() {
+6	  await connectDB();
+7	  const invoices = await Invoice.find({}).populate('owner_id machine_id').lean();
+8	  return { invoices };
+9	}
+10	
+11	export default function AdminInvoices() {
+12	  const { invoices } = useLoaderData<typeof loader>();
+13	
+14	  return (
+15	    <div>
+16	      <div className="flex justify-between items-center mb-6">
+17	         <h1 className="text-3xl font-bold text-gray-800">Invoices & Billing</h1>
+18	         <button className="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700">Create Invoice</button>
+19	      </div>
+20	      <div className="bg-white rounded-lg shadow overflow-hidden">
+21	        <div className="overflow-x-auto">
+22	        <table className="min-w-full divide-y divide-gray-200">
+23	          <thead className="bg-gray-50">
+24	            <tr>
+25	              <th 
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:00:19 PM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:00:19 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\models\\Settings.ts"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:00:19 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+1	import mongoose from 'mongoose';
+2	
+3	const SettingsSchema = new mongoose.Schema({
+4	  machine_id: { type: String, required: true, unique: true }, // string ID passed in env or ObjectId 
+5	  default_session_minutes: { type: Number, default: 40 },
+6	  max_temperature: { type: Number, default: 40 },
+7	  default_temperature: { type: Number, default: 37 },
+8	  water_inlet_valve: { type: Boolean, default: false },
+9	  flush_valve: { type: Boolean, default: false },
+10	  blower_switch: { type: Boolean, default: false },
+11	  heater_switch: { type: Boolean, default: false },
+12	  global_demo_session_limit: { type: Number, default: 10 } // Global default admin setting
+13	});
+14	
+15	export default mongoose.models.Settings || mongoose.model('Settings', SettingsSchema);
+16
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:00:26 PM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:00:32 PM</sup>
+
+<details>
+<summary>Tool: <code>AskUserQuestion</code></summary>
+
+```json
+{
+  "questions": [
+    {
+      "question": "For Owners and Suppliers, an Invoice references owner_id. Should hard-deleting an Owner/Supplier also delete their invoices (financial records), or leave invoices in place?",
+      "header": "Invoice cascade",
+      "options": [
+        {
+          "label": "Delete invoices too (Recommended per request)",
+          "description": "Full cascade — matches \"delete all associated data\". Invoice.deleteMany({owner_id}) runs as part of the owner's hard delete."
+        },
+        {
+          "label": "Keep invoices, block delete if any exist",
+          "description": "Financial records are often required to be retained. If the owner/supplier has any invoices, hard delete is refused with a message to remove/reassign invoices first."
+        }
+      ]
+    },
+    {
+      "question": "Should the existing soft-delete (\"Deactivate\"/\"Restore\") buttons stay as-is, with the new hard \"Delete\" added as a separate, additional destructive action?",
+      "header": "Keep Deactivate",
+      "options": [
+        {
+          "label": "Yes, keep both (Recommended)",
+          "description": "Deactivate/Restore continues to just flip is_active for temporary disabling. A new red \"Delete\" action is added alongside it for permanent, cascading removal."
+        },
+        {
+          "label": "Replace Deactivate with Delete",
+          "description": "Remove the soft-delete toggle entirely; the only destructive action left is the new hard delete with cascade."
+        }
+      ]
+    },
+    {
+      "question": "Should Machine hard-delete be restricted to demo-mode machines only (like the existing supplier-side delete_machine flow), or allowed for any machine since this is the admin panel?",
+      "header": "Machine delete scope",
+      "options": [
+        {
+          "label": "Allow any machine (Recommended for admin)",
+          "description": "Admin has full authority; no mode restriction on hard delete."
+        },
+        {
+          "lab
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:04:02 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Your questions have been answered: "For Owners and Suppliers, an Invoice references owner_id. Should hard-deleting an Owner/Supplier also delete their invoices (financial records), or leave invoices in place?"="Keep invoices, block delete if any exist", "Should the existing soft-delete ("Deactivate"/"Restore") buttons stay as-is, with the new hard "Delete" added as a separate, additional destructive action?"="Yes, keep both (Recommended)", "Should Machine hard-delete be restricted to demo-mode machines only (like the existing supplier-side delete_machine flow), or allowed for any machine since this is the admin panel?"="Demo-mode only, matching supplier flow". You can now continue with these answers in mind.
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:04:05 PM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:04:38 PM</sup>
+
+<details>
+<summary>Tool: <code>Write</code></summary>
+
+```json
+{
+  "file_path": "C:\\Users\\Gaurav\\.claude\\plans\\frontend-src-pages-nexttherapynotificat-glittery-beacon.md",
+  "content": "# Hard delete with cascade + \"type DELETE to confirm\" across admin panel listings\n\n## Context\nEvery admin listing page (`backend/app/routes/admin.machines.tsx`, `admin.users.tsx`, `admin.owners.tsx`, `admin.suppliers.tsx`, `admin.resources.tsx`, `admin.invoices.tsx`) currently only supports **soft delete** — flipping `is_active`/`machine_status` to hide a record, guarded by a plain `window.confirm(...)`. There is no true hard delete anywhere in the admin panel, and no \"type to confirm\" UI exists in the repo at all (only `window.confirm`). The user wants a real, permanent delete added to every listing page that also removes the record's associated data in other collections (cascade), gated behind a modal where the admin must type `DELETE` before the action submits. This is additive: the existing Deactivate/Restore soft-delete stays exactly as-is; hard Delete is a new, separate destructive action next to it.\n\nThe cascade pattern to follow already exists (supplier-side) in `backend/app/routes/supplier.machines.tsx` intent `delete_machine` (~line 264-280): it deletes dependent docs across collections by `machine_id` before `Machine.findByIdAndDelete`. We replicate/extend that pattern for every module, using the relationship map below (confirmed by reading every model and admin route).\n\n## Relationship map (confirmed from `backend/app/models/*.ts` and route reads)\n- **Machine** (`Machine.ts`) is referenced by: `MachineOwner.machine_id`, `MachineSupplier.machine_id`, `Session.machine_id`, `Therapist.machine_id`, `Patient.machine_id`, `Invoice.machine_id`, `Settings.machine_id` (all stored as plain `machine_id` string/ref).\n- **User** (`User.ts`, single collection for Admin/Owner/Supplier/Therapist/Patient via `user_type_id` → `UserType`) is referenced by: `AuthCredential.user_id` (1:1), `MachineOwner.owner_id`, `MachineSupplier.suppl
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:04:39 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file C:\Users\Gaurav\.claude\plans\frontend-src-pages-nexttherapynotificat-glittery-beacon.md has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:04:42 PM</sup>
+
+<details>
+<summary>Tool: <code>ExitPlanMode</code></summary>
+
+```json
+{
+  "plan": "# Hard delete with cascade + \"type DELETE to confirm\" across admin panel listings\n\n## Context\nEvery admin listing page (`backend/app/routes/admin.machines.tsx`, `admin.users.tsx`, `admin.owners.tsx`, `admin.suppliers.tsx`, `admin.resources.tsx`, `admin.invoices.tsx`) currently only supports **soft delete** — flipping `is_active`/`machine_status` to hide a record, guarded by a plain `window.confirm(...)`. There is no true hard delete anywhere in the admin panel, and no \"type to confirm\" UI exists in the repo at all (only `window.confirm`). The user wants a real, permanent delete added to every listing page that also removes the record's associated data in other collections (cascade), gated behind a modal where the admin must type `DELETE` before the action submits. This is additive: the existing Deactivate/Restore soft-delete stays exactly as-is; hard Delete is a new, separate destructive action next to it.\n\nThe cascade pattern to follow already exists (supplier-side) in `backend/app/routes/supplier.machines.tsx` intent `delete_machine` (~line 264-280): it deletes dependent docs across collections by `machine_id` before `Machine.findByIdAndDelete`. We replicate/extend that pattern for every module, using the relationship map below (confirmed by reading every model and admin route).\n\n## Relationship map (confirmed from `backend/app/models/*.ts` and route reads)\n- **Machine** (`Machine.ts`) is referenced by: `MachineOwner.machine_id`, `MachineSupplier.machine_id`, `Session.machine_id`, `Therapist.machine_id`, `Patient.machine_id`, `Invoice.machine_id`, `Settings.machine_id` (all stored as plain `machine_id` string/ref).\n- **User** (`User.ts`, single collection for Admin/Owner/Supplier/Therapist/Patient via `user_type_id` → `UserType`) is referenced by: `AuthCredential.user_id` (1:1), `MachineOwner.owner_id`, `MachineSupplier.supplier_id`, `Invoice.owner_id`/`created_by`/`payments[].received_by`, `SupplierResource.supplier_id`/`updated_by`, `Re
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:05:08 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+User has approved your plan. You can now start coding. Start with updating your todo list if applicable
+
+Your plan has been saved to: C:\Users\Gaurav\.claude\plans\frontend-src-pages-nexttherapynotificat-glittery-beacon.md
+You can refer back to it if needed during implementation.
+
+## Approved Plan:
+# Hard delete with cascade + "type DELETE to confirm" across admin panel listings
+
+## Context
+Every admin listing page (`backend/app/routes/admin.machines.tsx`, `admin.users.tsx`, `admin.owners.tsx`, `admin.suppliers.tsx`, `admin.resources.tsx`, `admin.invoices.tsx`) currently only supports **soft delete** — flipping `is_active`/`machine_status` to hide a record, guarded by a plain `window.confirm(...)`. There is no true hard delete anywhere in the admin panel, and no "type to confirm" UI exists in the repo at all (only `window.confirm`). The user wants a real, permanent delete added to every listing page that also removes the record's associated data in other collections (cascade), gated be
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:05:11 PM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:05:14 PM</sup>
+
+<details>
+<summary>Tool: <code>TodoWrite</code></summary>
+
+```json
+{
+  "todos": [
+    {
+      "content": "Create DeleteConfirmModal.tsx shared component",
+      "status": "in_progress",
+      "activeForm": "Creating DeleteConfirmModal.tsx shared component"
+    },
+    {
+      "content": "Add hard delete cascade to admin.machines.tsx",
+      "status": "pending",
+      "activeForm": "Adding hard delete cascade to admin.machines.tsx"
+    },
+    {
+      "content": "Add hard delete cascade to admin.owners.tsx (with invoice guard)",
+      "status": "pending",
+      "activeForm": "Adding hard delete cascade to admin.owners.tsx"
+    },
+    {
+      "content": "Add hard delete cascade to admin.suppliers.tsx",
+      "status": "pending",
+      "activeForm": "Adding hard delete cascade to admin.suppliers.tsx"
+    },
+    {
+      "content": "Add hard delete cascade to admin.users.tsx (role-aware)",
+      "status": "pending",
+      "activeForm": "Adding hard delete cascade to admin.users.tsx"
+    },
+    {
+      "content": "Add hard delete to admin.resources.tsx",
+      "status": "pending",
+      "activeForm": "Adding hard delete to admin.resources.tsx"
+    },
+    {
+      "content": "Add action + hard delete to admin.invoices.tsx",
+      "status": "pending",
+      "activeForm": "Adding action and hard delete to admin.invoices.tsx"
+    },
+    {
+      "content": "Verify with tsc",
+      "status": "pending",
+      "activeForm": "Verifying with tsc"
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:05:14 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Todos have been modified successfully. Ensure that you continue to use the todo list to track your progress. Please proceed with the current tasks if applicable
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:05:16 PM</sup>
+
+Let's build the shared modal first.
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:05:24 PM</sup>
+
+<details>
+<summary>Tool: <code>Write</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\components\\DeleteConfirmModal.tsx",
+  "content": "import { useState, type ReactNode } from \"react\";\nimport { Form } from \"react-router\";\n\ninterface DeleteConfirmModalProps {\n  isOpen: boolean;\n  title: string;\n  warningText: ReactNode;\n  id: string;\n  intent?: string;\n  extraFields?: Record<string, string>;\n  isSubmitting?: boolean;\n  onCancel: () => void;\n}\n\nexport function DeleteConfirmModal({\n  isOpen,\n  title,\n  warningText,\n  id,\n  intent = \"hard_delete\",\n  extraFields,\n  isSubmitting,\n  onCancel,\n}: DeleteConfirmModalProps) {\n  const [confirmText, setConfirmText] = useState(\"\");\n\n  if (!isOpen) return null;\n\n  const canDelete = confirmText === \"DELETE\";\n\n  return (\n    <div className=\"fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4\">\n      <div className=\"bg-white rounded-lg shadow-xl w-full max-w-lg\">\n        <div className=\"flex items-center justify-between p-6 border-b\">\n          <h2 className=\"text-lg font-semibold text-gray-800\">{title}</h2>\n          <button\n            onClick={onCancel}\n            className=\"text-gray-400 hover:text-gray-600 text-xl leading-none\"\n          >\n            ✕\n          </button>\n        </div>\n\n        <Form method=\"post\" className=\"p-6 flex flex-col gap-4\" onSubmit={() => setConfirmText(\"\")}>\n          <input type=\"hidden\" name=\"intent\" value={intent} />\n          <input type=\"hidden\" name=\"id\" value={id} />\n          {extraFields &&\n            Object.entries(extraFields).map(([name, value]) => (\n              <input key={name} type=\"hidden\" name={name} value={value} />\n            ))}\n\n          <div className=\"p-3 bg-red-50 border border-red-200 text-red-700 rounded text-sm\">\n            {warningText}\n          </div>\n\n          <div>\n            <label className=\"block text-sm font-medium text-gray-700 mb-1\">\n              
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:05:25 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+File created successfully at: d:\projects\production-hydro-colon-therapy\backend\app\components\DeleteConfirmModal.tsx (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:05:28 PM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:05:31 PM</sup>
+
+<details>
+<summary>Tool: <code>TodoWrite</code></summary>
+
+```json
+{
+  "todos": [
+    {
+      "content": "Create DeleteConfirmModal.tsx shared component",
+      "status": "completed",
+      "activeForm": "Creating DeleteConfirmModal.tsx shared component"
+    },
+    {
+      "content": "Add hard delete cascade to admin.machines.tsx",
+      "status": "in_progress",
+      "activeForm": "Adding hard delete cascade to admin.machines.tsx"
+    },
+    {
+      "content": "Add hard delete cascade to admin.owners.tsx (with invoice guard)",
+      "status": "pending",
+      "activeForm": "Adding hard delete cascade to admin.owners.tsx"
+    },
+    {
+      "content": "Add hard delete cascade to admin.suppliers.tsx",
+      "status": "pending",
+      "activeForm": "Adding hard delete cascade to admin.suppliers.tsx"
+    },
+    {
+      "content": "Add hard delete cascade to admin.users.tsx (role-aware)",
+      "status": "pending",
+      "activeForm": "Adding hard delete cascade to admin.users.tsx"
+    },
+    {
+      "content": "Add hard delete to admin.resources.tsx",
+      "status": "pending",
+      "activeForm": "Adding hard delete to admin.resources.tsx"
+    },
+    {
+      "content": "Add action + hard delete to admin.invoices.tsx",
+      "status": "pending",
+      "activeForm": "Adding action and hard delete to admin.invoices.tsx"
+    },
+    {
+      "content": "Verify with tsc",
+      "status": "pending",
+      "activeForm": "Verifying with tsc"
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:05:31 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Todos have been modified successfully. Ensure that you continue to use the todo list to track your progress. Please proceed with the current tasks if applicable
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:05:35 PM</sup>
+
+<details>
+<summary>Tool: <code>Grep</code></summary>
+
+```json
+{
+  "pattern": "export default|export const",
+  "path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\models\\Session.ts",
+  "output_mode": "content"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:05:35 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+18:export default mongoose.models.Session || mongoose.model('Session', SessionSchema);
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:05:38 PM</sup>
+
+Good — all models use default exports. Now edit `admin.machines.tsx`.
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:05:40 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.machines.tsx",
+  "old_string": "import { useLoaderData, useActionData, Form, useNavigation } from \"react-router\";\nimport { useState, useEffect, useRef } from \"react\";\nimport { connectDB } from \"../lib/db\";\nimport Machine from \"../models/Machine\";",
+  "new_string": "import { useLoaderData, useActionData, Form, useNavigation } from \"react-router\";\nimport { useState, useEffect, useRef } from \"react\";\nimport { connectDB } from \"../lib/db\";\nimport { DeleteConfirmModal } from \"../components/DeleteConfirmModal\";\nimport Machine from \"../models/Machine\";\nimport MachineOwner from \"../models/MachineOwner\";\nimport MachineSupplier from \"../models/MachineSupplier\";\nimport Session from \"../models/Session\";\nimport Patient from \"../models/Patient\";\nimport Therapist from \"../models/Therapist\";\nimport Invoice from \"../models/Invoice\";\nimport Settings from \"../models/Settings\";"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:05:41 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\admin.machines.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:05:47 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.machines.tsx",
+  "old_string": "  if (intent === \"delete\") {\n    await Machine.findByIdAndUpdate(formData.get(\"id\"), {\n      machine_status: \"Inactive\",\n    });\n    return { success: true };\n  }\n\n  return { error: \"Unknown intent.\" };\n}",
+  "new_string": "  if (intent === \"delete\") {\n    await Machine.findByIdAndUpdate(formData.get(\"id\"), {\n      machine_status: \"Inactive\",\n    });\n    return { success: true };\n  }\n\n  if (intent === \"hard_delete\") {\n    const id = formData.get(\"id\") as string;\n    const machine = await Machine.findById(id);\n    if (!machine) return { error: \"Machine not found.\" };\n    if (machine.mode !== \"demo\") {\n      return { error: \"Only demo mode machines can be permanently deleted.\" };\n    }\n\n    const machine_id = id;\n    await MachineOwner.deleteMany({ machine_id });\n    await MachineSupplier.deleteMany({ machine_id });\n    await Session.deleteMany({ machine_id });\n    await Patient.deleteMany({ machine_id });\n    await Therapist.deleteMany({ machine_id });\n    await Invoice.deleteMany({ machine_id });\n    await Settings.deleteMany({ machine_id });\n    await Machine.findByIdAndDelete(id);\n    return { success: true };\n  }\n\n  return { error: \"Unknown intent.\" };\n}"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:05:48 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\admin.machines.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:05:53 PM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:05:57 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.machines.tsx",
+  "old_string": "  const [modalOpen, setModalOpen] = useState(false);\n  const [editItem, setEditItem] = useState<MachineDoc | null>(null);\n  const [newSsid, setNewSsid] = useState(\"\");\n  const [newPassword, setNewPassword] = useState(\"\");\n  const installationDateRef = useRef<HTMLInputElement>(null);\n  const productionDateRef = useRef<HTMLInputElement>(null);\n  useEffect(() => {\n    if (actionData?.success) {\n      setModalOpen(false);\n      setEditItem(null);\n    }\n  }, [actionData]);",
+  "new_string": "  const [modalOpen, setModalOpen] = useState(false);\n  const [editItem, setEditItem] = useState<MachineDoc | null>(null);\n  const [deleteTarget, setDeleteTarget] = useState<MachineDoc | null>(null);\n  const [newSsid, setNewSsid] = useState(\"\");\n  const [newPassword, setNewPassword] = useState(\"\");\n  const installationDateRef = useRef<HTMLInputElement>(null);\n  const productionDateRef = useRef<HTMLInputElement>(null);\n  useEffect(() => {\n    if (actionData?.success) {\n      setModalOpen(false);\n      setEditItem(null);\n      setDeleteTarget(null);\n    }\n  }, [actionData]);"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:05:58 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\admin.machines.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:06:03 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.machines.tsx",
+  "old_string": "                    {m.machine_status !== \"Inactive\" && (\n                      <Form\n                        method=\"post\"\n                        onSubmit={(e) => {\n                          if (!confirm(\"Deactivate this machine?\")) e.preventDefault();\n                        }}\n                      >\n                        <input type=\"hidden\" name=\"intent\" value=\"delete\" />\n                        <input type=\"hidden\" name=\"id\" value={m._id} />\n                        <button\n                          type=\"submit\"\n                          className=\"text-red-500 hover:underline text-xs font-medium\"\n                        >\n                          Deactivate\n                        </button>\n                      </Form>\n                    )}",
+  "new_string": "                    {m.machine_status !== \"Inactive\" && (\n                      <Form\n                        method=\"post\"\n                        onSubmit={(e) => {\n                          if (!confirm(\"Deactivate this machine?\")) e.preventDefault();\n                        }}\n                      >\n                        <input type=\"hidden\" name=\"intent\" value=\"delete\" />\n                        <input type=\"hidden\" name=\"id\" value={m._id} />\n                        <button\n                          type=\"submit\"\n                          className=\"text-red-500 hover:underline text-xs font-medium\"\n                        >\n                          Deactivate\n                        </button>\n                      </Form>\n                    )}\n                    &nbsp;|&nbsp;\n                    {m.mode === \"demo\" && (\n                      <button\n                        onClick={() => setDeleteTarget(m as MachineDoc)}\n                        className=\"text-red-
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:06:04 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\admin.machines.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:06:08 PM</sup>
+
+Now add the modal render at the bottom of the component.
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:06:10 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.machines.tsx",
+  "old_string": "            </Form>\n          </div>\n        </div>\n      )}\n    </div>\n  );\n}",
+  "new_string": "            </Form>\n          </div>\n        </div>\n      )}\n\n      <DeleteConfirmModal\n        isOpen={!!deleteTarget}\n        title={`Delete Machine ${deleteTarget?.serial_number ?? \"\"}`}\n        warningText={\n          <>\n            This will permanently delete this machine and all associated data: sessions, patients,\n            therapists, invoices, settings, and owner/supplier assignments. This cannot be undone.\n          </>\n        }\n        id={deleteTarget?._id ?? \"\"}\n        isSubmitting={isSubmitting}\n        onCancel={() => setDeleteTarget(null)}\n      />\n    </div>\n  );\n}"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:06:11 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\admin.machines.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:06:21 PM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:06:23 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\components\\DeleteConfirmModal.tsx",
+  "old_string": "  extraFields?: Record<string, string>;\n  isSubmitting?: boolean;\n  onCancel: () => void;\n}\n\nexport function DeleteConfirmModal({\n  isOpen,\n  title,\n  warningText,\n  id,\n  intent = \"hard_delete\",\n  extraFields,\n  isSubmitting,\n  onCancel,\n}: DeleteConfirmModalProps) {",
+  "new_string": "  extraFields?: Record<string, string>;\n  isSubmitting?: boolean;\n  error?: string | null;\n  onCancel: () => void;\n}\n\nexport function DeleteConfirmModal({\n  isOpen,\n  title,\n  warningText,\n  id,\n  intent = \"hard_delete\",\n  extraFields,\n  isSubmitting,\n  error,\n  onCancel,\n}: DeleteConfirmModalProps) {"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:06:24 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\components\DeleteConfirmModal.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:06:29 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\components\\DeleteConfirmModal.tsx",
+  "old_string": "          <div className=\"p-3 bg-red-50 border border-red-200 text-red-700 rounded text-sm\">\n            {warningText}\n          </div>\n\n          <div>",
+  "new_string": "          <div className=\"p-3 bg-red-50 border border-red-200 text-red-700 rounded text-sm\">\n            {warningText}\n          </div>\n\n          {error && (\n            <div className=\"p-3 bg-red-100 border border-red-300 text-red-800 rounded text-sm font-medium\">\n              {error}\n            </div>\n          )}\n\n          <div>"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:06:30 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\components\DeleteConfirmModal.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:06:34 PM</sup>
+
+Now wire the `error` prop into `admin.machines.tsx`'s modal usage.
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:06:36 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.machines.tsx",
+  "old_string": "        id={deleteTarget?._id ?? \"\"}\n        isSubmitting={isSubmitting}\n        onCancel={() => setDeleteTarget(null)}\n      />",
+  "new_string": "        id={deleteTarget?._id ?? \"\"}\n        isSubmitting={isSubmitting}\n        error={deleteTarget ? actionData?.error : null}\n        onCancel={() => setDeleteTarget(null)}\n      />"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:06:37 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\admin.machines.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:06:42 PM</sup>
+
+Now onto `admin.owners.tsx` — cascade + invoice guard.
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:06:43 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.owners.tsx",
+  "offset": 220,
+  "limit": 350
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:06:43 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+220	
+221	  const [modalOpen, setModalOpen] = useState(false);
+222	  const [editItem, setEditItem] = useState<OwnerDoc | null>(null);
+223	
+224	  useEffect(() => {
+225	    if (actionData?.success) {
+226	      setModalOpen(false);
+227	      setEditItem(null);
+228	    }
+229	  }, [actionData]);
+230	
+231	  const openCreate = () => {
+232	    setEditItem(null);
+233	    setModalOpen(true);
+234	  };
+235	  const openEdit = (o: OwnerDoc) => {
+236	    setEditItem(o);
+237	    setModalOpen(true);
+238	  };
+239	
+240	  const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
+241	    e.preventDefault();
+242	    const form = e.currentTarget;
+243	    submit(form);
+244	  };
+245	
+246	  const firstAssignedMachineId = (o: OwnerDoc) =>
+247	    o.assignedMachines?.[0]?._id.toString() || "";
+248	
+249	  return (
+250	    <div>
+251	      <div className="flex items-center justify-between mb-4">
+252	        <div>
+253	          <h1 className="text-2xl font-bold text-gray-800">Owners</h1>
+254	          <p classNa
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:06:46 PM</sup>
+
+Now editing `admin.owners.tsx` — imports, action, UI.
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:06:50 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.owners.tsx",
+  "old_string": "import { useLoaderData, useActionData, Form, useNavigation, useSubmit } from \"react-router\";\nimport { useState, useEffect } from \"react\";\nimport bcrypt from \"bcrypt\";\nimport { connectDB } from \"../lib/db\";\nimport User from \"../models/User\";\nimport UserType from \"../models/UserType\";\nimport AuthCredential from \"../models/AuthCredential\";\nimport MachineOwner from \"../models/MachineOwner\";\nimport Machine from \"../models/Machine\";",
+  "new_string": "import { useLoaderData, useActionData, Form, useNavigation, useSubmit } from \"react-router\";\nimport { useState, useEffect } from \"react\";\nimport bcrypt from \"bcrypt\";\nimport { connectDB } from \"../lib/db\";\nimport { DeleteConfirmModal } from \"../components/DeleteConfirmModal\";\nimport User from \"../models/User\";\nimport UserType from \"../models/UserType\";\nimport AuthCredential from \"../models/AuthCredential\";\nimport MachineOwner from \"../models/MachineOwner\";\nimport Machine from \"../models/Machine\";\nimport Invoice from \"../models/Invoice\";"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:06:51 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\admin.owners.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:06:56 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.owners.tsx",
+  "old_string": "  if (intent === \"delete\") {\n    const id = formData.get(\"id\") as string;\n    await User.findByIdAndUpdate(id, { is_active: false, date_modified: new Date() });\n    await AuthCredential.findOneAndUpdate({ user_id: id }, { is_active: false });\n    return { success: true };\n  }\n\n  return { error: \"Unknown intent.\" };\n}",
+  "new_string": "  if (intent === \"delete\") {\n    const id = formData.get(\"id\") as string;\n    await User.findByIdAndUpdate(id, { is_active: false, date_modified: new Date() });\n    await AuthCredential.findOneAndUpdate({ user_id: id }, { is_active: false });\n    return { success: true };\n  }\n\n  if (intent === \"hard_delete\") {\n    const id = formData.get(\"id\") as string;\n    const invoiceCount = await Invoice.countDocuments({ owner_id: id });\n    if (invoiceCount > 0) {\n      return { error: `Cannot delete: this owner has ${invoiceCount} invoice(s). Remove or reassign them first.` };\n    }\n    await MachineOwner.deleteMany({ owner_id: id });\n    await AuthCredential.deleteOne({ user_id: id });\n    await User.findByIdAndDelete(id);\n    return { success: true };\n  }\n\n  return { error: \"Unknown intent.\" };\n}"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:06:57 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\admin.owners.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:07:04 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.owners.tsx",
+  "old_string": "  const [modalOpen, setModalOpen] = useState(false);\n  const [editItem, setEditItem] = useState<OwnerDoc | null>(null);\n\n  useEffect(() => {\n    if (actionData?.success) {\n      setModalOpen(false);\n      setEditItem(null);\n    }\n  }, [actionData]);",
+  "new_string": "  const [modalOpen, setModalOpen] = useState(false);\n  const [editItem, setEditItem] = useState<OwnerDoc | null>(null);\n  const [deleteTarget, setDeleteTarget] = useState<OwnerDoc | null>(null);\n\n  useEffect(() => {\n    if (actionData?.success) {\n      setModalOpen(false);\n      setEditItem(null);\n      setDeleteTarget(null);\n    }\n  }, [actionData]);"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:07:05 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\admin.owners.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:07:10 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.owners.tsx",
+  "old_string": "                        </button>\n                      </Form>\n                    )}\n                  </div>\n                </td>\n              </tr>\n            ))}\n          </tbody>\n        </table>\n        </div>\n      </div>\n\n      {totalPages > 1 && (",
+  "new_string": "                        </button>\n                      </Form>\n                    )}\n                    &nbsp;|&nbsp;\n                    <button\n                      onClick={() => setDeleteTarget(o as OwnerDoc)}\n                      className=\"text-red-700 hover:underline text-xs font-bold\"\n                    >\n                      Delete\n                    </button>\n                  </div>\n                </td>\n              </tr>\n            ))}\n          </tbody>\n        </table>\n        </div>\n      </div>\n\n      {totalPages > 1 && ("
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:07:11 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\admin.owners.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:07:16 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.owners.tsx",
+  "old_string": "            </Form>\n          </div>\n        </div>\n      )}\n    </div>\n  );\n}",
+  "new_string": "            </Form>\n          </div>\n        </div>\n      )}\n\n      <DeleteConfirmModal\n        isOpen={!!deleteTarget}\n        title={`Delete Owner ${deleteTarget?.first_name ?? \"\"} ${deleteTarget?.last_name ?? \"\"}`}\n        warningText={\n          <>\n            This will permanently delete this owner and their machine assignments. This cannot be\n            undone. Owners with existing invoices cannot be deleted.\n          </>\n        }\n        id={deleteTarget?._id ?? \"\"}\n        isSubmitting={isSubmitting}\n        error={deleteTarget ? actionData?.error : null}\n        onCancel={() => setDeleteTarget(null)}\n      />\n    </div>\n  );\n}"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:07:17 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\admin.owners.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:07:22 PM</sup>
+
+<details>
+<summary>Tool: <code>TodoWrite</code></summary>
+
+```json
+{
+  "todos": [
+    {
+      "content": "Create DeleteConfirmModal.tsx shared component",
+      "status": "completed",
+      "activeForm": "Creating DeleteConfirmModal.tsx shared component"
+    },
+    {
+      "content": "Add hard delete cascade to admin.machines.tsx",
+      "status": "completed",
+      "activeForm": "Adding hard delete cascade to admin.machines.tsx"
+    },
+    {
+      "content": "Add hard delete cascade to admin.owners.tsx (with invoice guard)",
+      "status": "completed",
+      "activeForm": "Adding hard delete cascade to admin.owners.tsx"
+    },
+    {
+      "content": "Add hard delete cascade to admin.suppliers.tsx",
+      "status": "in_progress",
+      "activeForm": "Adding hard delete cascade to admin.suppliers.tsx"
+    },
+    {
+      "content": "Add hard delete cascade to admin.users.tsx (role-aware)",
+      "status": "pending",
+      "activeForm": "Adding hard delete cascade to admin.users.tsx"
+    },
+    {
+      "content": "Add hard delete to admin.resources.tsx",
+      "status": "pending",
+      "activeForm": "Adding hard delete to admin.resources.tsx"
+    },
+    {
+      "content": "Add action + hard delete to admin.invoices.tsx",
+      "status": "pending",
+      "activeForm": "Adding action and hard delete to admin.invoices.tsx"
+    },
+    {
+      "content": "Verify with tsc",
+      "status": "pending",
+      "activeForm": "Verifying with tsc"
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:07:22 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Todos have been modified successfully. Ensure that you continue to use the todo list to track your progress. Please proceed with the current tasks if applicable
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:07:24 PM</sup>
+
+Now `admin.suppliers.tsx`. Let's view its render/table section for the actions cell (it uses `ActionsDropdown`).
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:07:25 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.suppliers.tsx",
+  "offset": 260,
+  "limit": 200
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:07:25 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+260	
+261	  return { error: "Unknown intent." };
+262	}
+263	
+264	const inputCls =
+265	  "w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm";
+266	
+267	export default function AdminSuppliers() {
+268	  const { suppliers, total, page, totalPages, search, availableMachines, supplierTypeId, adminEmail } =
+269	    useLoaderData<typeof loader>();
+270	  const actionData = useActionData<typeof action>();
+271	  const navigation = useNavigation();
+272	  const submit = useSubmit();
+273	  const isSubmitting = navigation.state === "submitting";
+274	
+275	  const [modalOpen, setModalOpen] = useState(false);
+276	  const [editItem, setEditItem] = useState<SupplierDoc | null>(null);
+277	  const [machineModalSupplier, setMachineModalSupplier] = useState<SupplierDoc | null>(null);
+278	  const [selectedMachineId, setSelectedMachineId] = useState("");
+279	
+280	  useEffect(() => {
+281	    if (actionData?.success) {
+282	      setModalOpen(false);
+283	     
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:07:28 PM</sup>
+
+Now edit `admin.suppliers.tsx` — imports, `hard_delete` action branch, and add a Delete item to the `ActionsDropdown`.
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:07:29 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.suppliers.tsx",
+  "old_string": "import { ActionsDropdown, type ActionItem } from \"../components/ActionsDropdown\";\nimport bcrypt from \"bcrypt\";",
+  "new_string": "import { ActionsDropdown, type ActionItem } from \"../components/ActionsDropdown\";\nimport { DeleteConfirmModal } from \"../components/DeleteConfirmModal\";\nimport bcrypt from \"bcrypt\";"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:07:30 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\admin.suppliers.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:07:38 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.suppliers.tsx",
+  "old_string": "  if (intent === \"delete\") {\n    const id = formData.get(\"id\") as string;\n    await User.findByIdAndUpdate(id, { is_active: false, date_modified: new Date() });\n    await AuthCredential.findOneAndUpdate({ user_id: id }, { is_active: false });\n    return { success: true };\n  }\n\n  if (intent === \"assign_machine\") {",
+  "new_string": "  if (intent === \"delete\") {\n    const id = formData.get(\"id\") as string;\n    await User.findByIdAndUpdate(id, { is_active: false, date_modified: new Date() });\n    await AuthCredential.findOneAndUpdate({ user_id: id }, { is_active: false });\n    return { success: true };\n  }\n\n  if (intent === \"hard_delete\") {\n    const id = formData.get(\"id\") as string;\n    await MachineSupplier.deleteMany({ supplier_id: id });\n    await SupplierResource.deleteMany({ supplier_id: id });\n    await AuthCredential.deleteOne({ user_id: id });\n    await User.findByIdAndDelete(id);\n    return { success: true };\n  }\n\n  if (intent === \"assign_machine\") {"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:07:39 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\admin.suppliers.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:07:45 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.suppliers.tsx",
+  "old_string": "  const [modalOpen, setModalOpen] = useState(false);\n  const [editItem, setEditItem] = useState<SupplierDoc | null>(null);\n  const [machineModalSupplier, setMachineModalSupplier] = useState<SupplierDoc | null>(null);\n  const [selectedMachineId, setSelectedMachineId] = useState(\"\");\n\n  useEffect(() => {\n    if (actionData?.success) {\n      setModalOpen(false);\n      setEditItem(null);\n      setMachineModalSupplier(null);\n      setSelectedMachineId(\"\");\n    }",
+  "new_string": "  const [modalOpen, setModalOpen] = useState(false);\n  const [editItem, setEditItem] = useState<SupplierDoc | null>(null);\n  const [machineModalSupplier, setMachineModalSupplier] = useState<SupplierDoc | null>(null);\n  const [selectedMachineId, setSelectedMachineId] = useState(\"\");\n  const [deleteTarget, setDeleteTarget] = useState<SupplierDoc | null>(null);\n\n  useEffect(() => {\n    if (actionData?.success) {\n      setModalOpen(false);\n      setEditItem(null);\n      setMachineModalSupplier(null);\n      setSelectedMachineId(\"\");\n      setDeleteTarget(null);\n    }"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:07:46 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\admin.suppliers.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:07:50 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.suppliers.tsx",
+  "old_string": "                      ),\n                    }] : []),\n                  ]} />\n                </td>\n              </tr>\n            ))}",
+  "new_string": "                      ),\n                    }] : []),\n                    { type: \"button\", label: \"Delete\", variant: \"danger\", onClick: () => setDeleteTarget(s as SupplierDoc) },\n                  ]} />\n                </td>\n              </tr>\n            ))}"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:07:51 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\admin.suppliers.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:07:54 PM</sup>
+
+Now find the end of the component to add the modal render.
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:07:54 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.suppliers.tsx",
+  "offset": 460,
+  "limit": 120
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:07:54 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+460	              {!editItem && <input type="hidden" name="supplier_type_id" value={supplierTypeId || ""} />}
+461	
+462	              {actionData?.error && modalOpen && (
+463	                <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded text-sm">
+464	                  {actionData.error}
+465	                </div>
+466	              )}
+467	
+468	              <div className="grid grid-cols-2 gap-4">
+469	                <div>
+470	                  <label className="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
+471	                  <input name="first_name" defaultValue={editItem?.first_name} required className={inputCls} />
+472	                </div>
+473	                <div>
+474	                  <label className="block text-sm font-medium text-gray-700 mb-1">Last Name *</label>
+475	                  <input name="last_name" defaultValue={editItem?.last_name} required className={inputCls} />
+476	                </div>
+477	                <div 
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:07:58 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.suppliers.tsx",
+  "offset": 580,
+  "limit": 40
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:07:58 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+580	                    >
+581	                      <option value="">Select a machine...</option>
+582	                      {(availableMachines as MachineOption[]).map((m) => (
+583	                        <option key={m._id} value={m._id}>
+584	                          {m.serial_number} — {m.model_name}
+585	                        </option>
+586	                      ))}
+587	                    </select>
+588	                    <button
+589	                      type="submit"
+590	                      disabled={!selectedMachineId || isSubmitting}
+591	                      className="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-800 text-sm font-medium disabled:opacity-50"
+592	                    >
+593	                      Assign
+594	                    </button>
+595	                  </Form>
+596	                )}
+597	              </div>
+598	            </div>
+599	          </div>
+600	        </div>
+601	      )}
+602	    </div>
+603	  );
+604	}
+605
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:08:03 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.suppliers.tsx",
+  "old_string": "          </div>\n        </div>\n      )}\n    </div>\n  );\n}",
+  "new_string": "          </div>\n        </div>\n      )}\n\n      <DeleteConfirmModal\n        isOpen={!!deleteTarget}\n        title={`Delete Supplier ${deleteTarget?.first_name ?? \"\"} ${deleteTarget?.last_name ?? \"\"}`}\n        warningText={\n          <>\n            This will permanently delete this supplier along with their machine assignments and\n            resource library. This cannot be undone.\n          </>\n        }\n        id={deleteTarget?._id ?? \"\"}\n        isSubmitting={isSubmitting}\n        error={deleteTarget ? actionData?.error : null}\n        onCancel={() => setDeleteTarget(null)}\n      />\n    </div>\n  );\n}"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:08:04 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\admin.suppliers.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:08:06 PM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:08:09 PM</sup>
+
+<details>
+<summary>Tool: <code>TodoWrite</code></summary>
+
+```json
+{
+  "todos": [
+    {
+      "content": "Create DeleteConfirmModal.tsx shared component",
+      "status": "completed",
+      "activeForm": "Creating DeleteConfirmModal.tsx shared component"
+    },
+    {
+      "content": "Add hard delete cascade to admin.machines.tsx",
+      "status": "completed",
+      "activeForm": "Adding hard delete cascade to admin.machines.tsx"
+    },
+    {
+      "content": "Add hard delete cascade to admin.owners.tsx (with invoice guard)",
+      "status": "completed",
+      "activeForm": "Adding hard delete cascade to admin.owners.tsx"
+    },
+    {
+      "content": "Add hard delete cascade to admin.suppliers.tsx",
+      "status": "completed",
+      "activeForm": "Adding hard delete cascade to admin.suppliers.tsx"
+    },
+    {
+      "content": "Add hard delete cascade to admin.users.tsx (role-aware)",
+      "status": "in_progress",
+      "activeForm": "Adding hard delete cascade to admin.users.tsx"
+    },
+    {
+      "content": "Add hard delete to admin.resources.tsx",
+      "status": "pending",
+      "activeForm": "Adding hard delete to admin.resources.tsx"
+    },
+    {
+      "content": "Add action + hard delete to admin.invoices.tsx",
+      "status": "pending",
+      "activeForm": "Adding action and hard delete to admin.invoices.tsx"
+    },
+    {
+      "content": "Verify with tsc",
+      "status": "pending",
+      "activeForm": "Verifying with tsc"
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:08:09 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Todos have been modified successfully. Ensure that you continue to use the todo list to track your progress. Please proceed with the current tasks if applicable
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:08:12 PM</sup>
+
+Now `admin.users.tsx`. Need role-aware cascade using `UserType`, `MachineOwner`, `MachineSupplier`, `SupplierResource`, `Invoice`.
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:08:15 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.users.tsx",
+  "old_string": "import { useLoaderData, useActionData, Form, useNavigation } from \"react-router\";\nimport { useState, useEffect } from \"react\";\nimport bcrypt from \"bcrypt\";\nimport { connectDB } from \"../lib/db\";\nimport User from \"../models/User\";\nimport UserType from \"../models/UserType\";\nimport AuthCredential from \"../models/AuthCredential\";",
+  "new_string": "import { useLoaderData, useActionData, Form, useNavigation } from \"react-router\";\nimport { useState, useEffect } from \"react\";\nimport bcrypt from \"bcrypt\";\nimport { connectDB } from \"../lib/db\";\nimport { DeleteConfirmModal } from \"../components/DeleteConfirmModal\";\nimport User from \"../models/User\";\nimport UserType from \"../models/UserType\";\nimport AuthCredential from \"../models/AuthCredential\";\nimport MachineOwner from \"../models/MachineOwner\";\nimport MachineSupplier from \"../models/MachineSupplier\";\nimport SupplierResource from \"../models/SupplierResource\";\nimport Invoice from \"../models/Invoice\";"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:08:16 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\admin.users.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:08:26 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.users.tsx",
+  "old_string": "  if (intent === \"restore\") {\n    const id = formData.get(\"id\") as string;\n    await User.findByIdAndUpdate(id, { is_active: true, date_modified: new Date() });\n    await AuthCredential.findOneAndUpdate({ user_id: id }, { is_active: true });\n    return { success: true };\n  }\n\n  return { error: \"Unknown intent.\" };\n}",
+  "new_string": "  if (intent === \"restore\") {\n    const id = formData.get(\"id\") as string;\n    await User.findByIdAndUpdate(id, { is_active: true, date_modified: new Date() });\n    await AuthCredential.findOneAndUpdate({ user_id: id }, { is_active: true });\n    return { success: true };\n  }\n\n  if (intent === \"hard_delete\") {\n    const id = formData.get(\"id\") as string;\n    const user = await User.findById(id).populate(\"user_type_id\", \"name\").lean() as any;\n    if (!user) return { error: \"User not found.\" };\n    const roleName = user.user_type_id?.name;\n\n    if (roleName === \"Owner\") {\n      const invoiceCount = await Invoice.countDocuments({ owner_id: id });\n      if (invoiceCount > 0) {\n        return { error: `Cannot delete: this owner has ${invoiceCount} invoice(s). Remove or reassign them first.` };\n      }\n      await MachineOwner.deleteMany({ owner_id: id });\n    } else if (roleName === \"Supplier\") {\n      await MachineSupplier.deleteMany({ supplier_id: id });\n      await SupplierResource.deleteMany({ supplier_id: id });\n    }\n\n    await AuthCredential.deleteOne({ user_id: id });\n    await User.findByIdAndDelete(id);\n    return { success: true };\n  }\n\n  return { error: \"Unknown intent.\" };\n}"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:08:27 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\admin.users.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:08:29 PM</sup>
+
+Now the UI part.
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:08:32 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.users.tsx",
+  "old_string": "  const [modalOpen, setModalOpen] = useState(false);\n  const [editItem, setEditItem] = useState<UserDoc | null>(null);\n\n  useEffect(() => {\n    if (actionData?.success) {\n      setModalOpen(false);\n      setEditItem(null);\n    }\n  }, [actionData]);",
+  "new_string": "  const [modalOpen, setModalOpen] = useState(false);\n  const [editItem, setEditItem] = useState<UserDoc | null>(null);\n  const [deleteTarget, setDeleteTarget] = useState<UserDoc | null>(null);\n\n  useEffect(() => {\n    if (actionData?.success) {\n      setModalOpen(false);\n      setEditItem(null);\n      setDeleteTarget(null);\n    }\n  }, [actionData]);"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:08:33 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\admin.users.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:08:37 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.users.tsx",
+  "old_string": "                          {u.is_active ? \"Deactivate\" : \"Restore\"}\n                          </button>\n                        </Form>\n                    </div>\n                  </td>\n                </tr>\n              \n              );\n            })}",
+  "new_string": "                          {u.is_active ? \"Deactivate\" : \"Restore\"}\n                          </button>\n                        </Form>\n                      &nbsp;|&nbsp;\n                      <button\n                        onClick={() => setDeleteTarget(u as UserDoc)}\n                        className=\"text-red-700 hover:underline text-xs font-bold\"\n                      >\n                        Delete\n                      </button>\n                    </div>\n                  </td>\n                </tr>\n\n              );\n            })}"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:08:38 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\admin.users.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:08:42 PM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:08:44 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.users.tsx",
+  "old_string": "            </Form>\n          </div>\n        </div>\n      )}\n    </div>\n  );\n}",
+  "new_string": "            </Form>\n          </div>\n        </div>\n      )}\n\n      <DeleteConfirmModal\n        isOpen={!!deleteTarget}\n        title={`Delete User ${deleteTarget?.first_name ?? \"\"} ${deleteTarget?.last_name ?? \"\"}`}\n        warningText={\n          <>\n            This will permanently delete this user and their login credentials, plus any machine\n            assignments / resource library if they are an Owner or Supplier. This cannot be undone.\n            Owners with existing invoices cannot be deleted.\n          </>\n        }\n        id={deleteTarget?._id ?? \"\"}\n        isSubmitting={isSubmitting}\n        error={deleteTarget ? actionData?.error : null}\n        onCancel={() => setDeleteTarget(null)}\n      />\n    </div>\n  );\n}"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:08:46 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\admin.users.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:08:54 PM</sup>
+
+<details>
+<summary>Tool: <code>TodoWrite</code></summary>
+
+```json
+{
+  "todos": [
+    {
+      "content": "Create DeleteConfirmModal.tsx shared component",
+      "status": "completed",
+      "activeForm": "Creating DeleteConfirmModal.tsx shared component"
+    },
+    {
+      "content": "Add hard delete cascade to admin.machines.tsx",
+      "status": "completed",
+      "activeForm": "Adding hard delete cascade to admin.machines.tsx"
+    },
+    {
+      "content": "Add hard delete cascade to admin.owners.tsx (with invoice guard)",
+      "status": "completed",
+      "activeForm": "Adding hard delete cascade to admin.owners.tsx"
+    },
+    {
+      "content": "Add hard delete cascade to admin.suppliers.tsx",
+      "status": "completed",
+      "activeForm": "Adding hard delete cascade to admin.suppliers.tsx"
+    },
+    {
+      "content": "Add hard delete cascade to admin.users.tsx (role-aware)",
+      "status": "completed",
+      "activeForm": "Adding hard delete cascade to admin.users.tsx"
+    },
+    {
+      "content": "Add hard delete to admin.resources.tsx",
+      "status": "in_progress",
+      "activeForm": "Adding hard delete to admin.resources.tsx"
+    },
+    {
+      "content": "Add action + hard delete to admin.invoices.tsx",
+      "status": "pending",
+      "activeForm": "Adding action and hard delete to admin.invoices.tsx"
+    },
+    {
+      "content": "Verify with tsc",
+      "status": "pending",
+      "activeForm": "Verifying with tsc"
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:08:54 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Todos have been modified successfully. Ensure that you continue to use the todo list to track your progress. Please proceed with the current tasks if applicable
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:08:57 PM</sup>
+
+Now `admin.resources.tsx`. Let's view its full render section.
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:08:57 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.resources.tsx",
+  "offset": 108,
+  "limit": 250
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:08:57 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+108	  "w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm";
+109	
+110	export default function AdminResources() {
+111	  const { resources, total, page, totalPages } = useLoaderData<typeof loader>();
+112	  const actionData = useActionData<typeof action>();
+113	  const navigation = useNavigation();
+114	  const isSubmitting = navigation.state === "submitting";
+115	
+116	  const [modalOpen, setModalOpen] = useState(false);
+117	  const [editItem, setEditItem] = useState<ResourceDoc | null>(null);
+118	  const [titleValue, setTitleValue] = useState("");
+119	
+120	  useEffect(() => {
+121	    if (actionData?.success) {
+122	      setModalOpen(false);
+123	      setEditItem(null);
+124	      setTitleValue("");
+125	    }
+126	  }, [actionData]);
+127	
+128	  const openCreate = () => {
+129	    setEditItem(null);
+130	    setTitleValue("");
+131	    setModalOpen(true);
+132	  };
+133	  const openEdit = (r: ResourceDoc) => {
+134	    setEditItem(r);
+135	    
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:09:03 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.resources.tsx",
+  "old_string": "import { useLoaderData, useActionData, Form, useNavigation } from \"react-router\";\nimport { useState, useEffect } from \"react\";\nimport { connectDB } from \"../lib/db\";\nimport Resource from \"../models/Resource\";",
+  "new_string": "import { useLoaderData, useActionData, Form, useNavigation } from \"react-router\";\nimport { useState, useEffect } from \"react\";\nimport { connectDB } from \"../lib/db\";\nimport { DeleteConfirmModal } from \"../components/DeleteConfirmModal\";\nimport Resource from \"../models/Resource\";"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:09:04 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\admin.resources.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:09:08 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.resources.tsx",
+  "old_string": "  if (intent === \"restore\") {\n    await Resource.findByIdAndUpdate(formData.get(\"id\"), { is_active: true });\n    return { success: true };\n  }\n\n  return { error: \"Unknown intent.\" };\n}",
+  "new_string": "  if (intent === \"restore\") {\n    await Resource.findByIdAndUpdate(formData.get(\"id\"), { is_active: true });\n    return { success: true };\n  }\n\n  if (intent === \"hard_delete\") {\n    await Resource.findByIdAndDelete(formData.get(\"id\"));\n    return { success: true };\n  }\n\n  return { error: \"Unknown intent.\" };\n}"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:09:09 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\admin.resources.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:09:14 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.resources.tsx",
+  "old_string": "  const [modalOpen, setModalOpen] = useState(false);\n  const [editItem, setEditItem] = useState<ResourceDoc | null>(null);\n  const [titleValue, setTitleValue] = useState(\"\");\n\n  useEffect(() => {\n    if (actionData?.success) {\n      setModalOpen(false);\n      setEditItem(null);\n      setTitleValue(\"\");\n    }\n  }, [actionData]);",
+  "new_string": "  const [modalOpen, setModalOpen] = useState(false);\n  const [editItem, setEditItem] = useState<ResourceDoc | null>(null);\n  const [titleValue, setTitleValue] = useState(\"\");\n  const [deleteTarget, setDeleteTarget] = useState<ResourceDoc | null>(null);\n\n  useEffect(() => {\n    if (actionData?.success) {\n      setModalOpen(false);\n      setEditItem(null);\n      setTitleValue(\"\");\n      setDeleteTarget(null);\n    }\n  }, [actionData]);"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:09:15 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\admin.resources.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:09:19 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.resources.tsx",
+  "old_string": "                        </button>\n                      </Form>\n                    )}\n                  </div>\n                </td>\n              </tr>\n            ))}",
+  "new_string": "                        </button>\n                      </Form>\n                    )}\n                    &nbsp;|&nbsp;\n                    <button\n                      onClick={() => setDeleteTarget(r as ResourceDoc)}\n                      className=\"text-red-700 hover:underline text-xs font-bold\"\n                    >\n                      Delete\n                    </button>\n                  </div>\n                </td>\n              </tr>\n            ))}"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:09:20 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\admin.resources.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:09:25 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.resources.tsx",
+  "old_string": "            </Form>\n          </div>\n        </div>\n      )}\n    </div>\n  );\n}",
+  "new_string": "            </Form>\n          </div>\n        </div>\n      )}\n\n      <DeleteConfirmModal\n        isOpen={!!deleteTarget}\n        title={`Delete Resource \"${deleteTarget?.title ?? \"\"}\"`}\n        warningText={<>This resource has no linked records. This cannot be undone.</>}\n        id={deleteTarget?._id ?? \"\"}\n        isSubmitting={isSubmitting}\n        error={deleteTarget ? actionData?.error : null}\n        onCancel={() => setDeleteTarget(null)}\n      />\n    </div>\n  );\n}"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:09:26 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\admin.resources.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:09:29 PM</sup>
+
+Now `admin.invoices.tsx` — needs a whole new `action()` plus Form/delete wiring.
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:09:32 PM</sup>
+
+<details>
+<summary>Tool: <code>TodoWrite</code></summary>
+
+```json
+{
+  "todos": [
+    {
+      "content": "Create DeleteConfirmModal.tsx shared component",
+      "status": "completed",
+      "activeForm": "Creating DeleteConfirmModal.tsx shared component"
+    },
+    {
+      "content": "Add hard delete cascade to admin.machines.tsx",
+      "status": "completed",
+      "activeForm": "Adding hard delete cascade to admin.machines.tsx"
+    },
+    {
+      "content": "Add hard delete cascade to admin.owners.tsx (with invoice guard)",
+      "status": "completed",
+      "activeForm": "Adding hard delete cascade to admin.owners.tsx"
+    },
+    {
+      "content": "Add hard delete cascade to admin.suppliers.tsx",
+      "status": "completed",
+      "activeForm": "Adding hard delete cascade to admin.suppliers.tsx"
+    },
+    {
+      "content": "Add hard delete cascade to admin.users.tsx (role-aware)",
+      "status": "completed",
+      "activeForm": "Adding hard delete cascade to admin.users.tsx"
+    },
+    {
+      "content": "Add hard delete to admin.resources.tsx",
+      "status": "completed",
+      "activeForm": "Adding hard delete to admin.resources.tsx"
+    },
+    {
+      "content": "Add action + hard delete to admin.invoices.tsx",
+      "status": "in_progress",
+      "activeForm": "Adding action and hard delete to admin.invoices.tsx"
+    },
+    {
+      "content": "Verify with tsc",
+      "status": "pending",
+      "activeForm": "Verifying with tsc"
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:09:32 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Todos have been modified successfully. Ensure that you continue to use the todo list to track your progress. Please proceed with the current tasks if applicable
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:09:35 PM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:09:46 PM</sup>
+
+<details>
+<summary>Tool: <code>Write</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.invoices.tsx",
+  "content": "import { useLoaderData, useActionData, Form, useNavigation } from \"react-router\";\nimport { useState, useEffect } from \"react\";\nimport { connectDB } from \"../lib/db\";\nimport { DeleteConfirmModal } from \"../components/DeleteConfirmModal\";\nimport Invoice from \"../models/Invoice\";\n\ntype InvoiceDoc = {\n  _id: string;\n  invoice_number: string;\n  invoice_type: string;\n  total_amount: number;\n  balance: number;\n  status: string;\n};\n\nexport async function loader() {\n  await connectDB();\n  const invoices = await Invoice.find({}).populate('owner_id machine_id').lean();\n  return { invoices };\n}\n\nexport async function action({ request }: { request: Request }) {\n  await connectDB();\n  const formData = await request.formData();\n  const intent = formData.get(\"intent\") as string;\n\n  if (intent === \"hard_delete\") {\n    const id = formData.get(\"id\") as string;\n    await Invoice.findByIdAndDelete(id);\n    return { success: true };\n  }\n\n  return { error: \"Unknown intent.\" };\n}\n\nexport default function AdminInvoices() {\n  const { invoices } = useLoaderData<typeof loader>();\n  const actionData = useActionData<typeof action>();\n  const navigation = useNavigation();\n  const isSubmitting = navigation.state === \"submitting\";\n\n  const [deleteTarget, setDeleteTarget] = useState<InvoiceDoc | null>(null);\n\n  useEffect(() => {\n    if (actionData?.success) {\n      setDeleteTarget(null);\n    }\n  }, [actionData]);\n\n  return (\n    <div>\n      <div className=\"flex justify-between items-center mb-6\">\n         <h1 className=\"text-3xl font-bold text-gray-800\">Invoices & Billing</h1>\n         <button className=\"bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700\">Create Invoice</button>\n      </div>\n      <div className=\"bg-white rounded-lg shadow overflow-hidden\">\n        <div className=\"o
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:09:47 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\admin.invoices.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:09:51 PM</sup>
+
+Now verify everything with `tsc`.
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:09:53 PM</sup>
+
+<details>
+<summary>Tool: <code>TodoWrite</code></summary>
+
+```json
+{
+  "todos": [
+    {
+      "content": "Create DeleteConfirmModal.tsx shared component",
+      "status": "completed",
+      "activeForm": "Creating DeleteConfirmModal.tsx shared component"
+    },
+    {
+      "content": "Add hard delete cascade to admin.machines.tsx",
+      "status": "completed",
+      "activeForm": "Adding hard delete cascade to admin.machines.tsx"
+    },
+    {
+      "content": "Add hard delete cascade to admin.owners.tsx (with invoice guard)",
+      "status": "completed",
+      "activeForm": "Adding hard delete cascade to admin.owners.tsx"
+    },
+    {
+      "content": "Add hard delete cascade to admin.suppliers.tsx",
+      "status": "completed",
+      "activeForm": "Adding hard delete cascade to admin.suppliers.tsx"
+    },
+    {
+      "content": "Add hard delete cascade to admin.users.tsx (role-aware)",
+      "status": "completed",
+      "activeForm": "Adding hard delete cascade to admin.users.tsx"
+    },
+    {
+      "content": "Add hard delete to admin.resources.tsx",
+      "status": "completed",
+      "activeForm": "Adding hard delete to admin.resources.tsx"
+    },
+    {
+      "content": "Add action + hard delete to admin.invoices.tsx",
+      "status": "completed",
+      "activeForm": "Adding action and hard delete to admin.invoices.tsx"
+    },
+    {
+      "content": "Verify with tsc",
+      "status": "in_progress",
+      "activeForm": "Verifying with tsc"
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:09:53 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Todos have been modified successfully. Ensure that you continue to use the todo list to track your progress. Please proceed with the current tasks if applicable
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:09:57 PM</sup>
+
+<details>
+<summary>Tool: <code>Bash</code></summary>
+
+```json
+{
+  "command": "cd \"d:/projects/production-hydro-colon-therapy/backend\" && cat package.json | grep -A3 '\"scripts\"'",
+  "description": "Check backend package.json scripts"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:09:57 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+"scripts": {
+    "build": "react-router build",
+    "dev": "react-router dev",
+    "start": "react-router-serve ./build/server/index.js",
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:10:00 PM</sup>
+
+<details>
+<summary>Tool: <code>Bash</code></summary>
+
+```json
+{
+  "command": "cd \"d:/projects/production-hydro-colon-therapy/backend\" && npx tsc --noEmit 2>&1 | head -150; echo \"EXIT:$?\"",
+  "description": "Type-check backend",
+  "timeout": 120000
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:10:15 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+app/routes/api/auth.login.ts(34,36): error TS2339: Property 'userId' does not exist on type 'string | JwtPayload'.
+  Property 'userId' does not exist on type 'string'.
+app/routes/api/auth.login.ts(36,77): error TS2339: Property 'userId' does not exist on type 'string | JwtPayload'.
+  Property 'userId' does not exist on type 'string'.
+EXIT:0
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:10:17 PM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:10:18 PM</sup>
+
+<details>
+<summary>Tool: <code>Bash</code></summary>
+
+```json
+{
+  "command": "cd \"d:/projects/production-hydro-colon-therapy/backend\" && npx tsc --noEmit 2>&1 | grep -i \"admin\\.\\|DeleteConfirmModal\"",
+  "description": "Filter tsc output for edited admin files",
+  "timeout": 120000
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:10:31 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+(Bash completed with no output)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:10:35 PM</sup>
+
+No errors in any of the files I touched — the only pre-existing error is unrelated (`auth.login.ts`, not part of this change).
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:10:38 PM</sup>
+
+<details>
+<summary>Tool: <code>TodoWrite</code></summary>
+
+```json
+{
+  "todos": [
+    {
+      "content": "Create DeleteConfirmModal.tsx shared component",
+      "status": "completed",
+      "activeForm": "Creating DeleteConfirmModal.tsx shared component"
+    },
+    {
+      "content": "Add hard delete cascade to admin.machines.tsx",
+      "status": "completed",
+      "activeForm": "Adding hard delete cascade to admin.machines.tsx"
+    },
+    {
+      "content": "Add hard delete cascade to admin.owners.tsx (with invoice guard)",
+      "status": "completed",
+      "activeForm": "Adding hard delete cascade to admin.owners.tsx"
+    },
+    {
+      "content": "Add hard delete cascade to admin.suppliers.tsx",
+      "status": "completed",
+      "activeForm": "Adding hard delete cascade to admin.suppliers.tsx"
+    },
+    {
+      "content": "Add hard delete cascade to admin.users.tsx (role-aware)",
+      "status": "completed",
+      "activeForm": "Adding hard delete cascade to admin.users.tsx"
+    },
+    {
+      "content": "Add hard delete to admin.resources.tsx",
+      "status": "completed",
+      "activeForm": "Adding hard delete to admin.resources.tsx"
+    },
+    {
+      "content": "Add action + hard delete to admin.invoices.tsx",
+      "status": "completed",
+      "activeForm": "Adding action and hard delete to admin.invoices.tsx"
+    },
+    {
+      "content": "Verify with tsc",
+      "status": "completed",
+      "activeForm": "Verifying with tsc"
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:10:38 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Todos have been modified successfully. Ensure that you continue to use the todo list to track your progress. Please proceed with the current tasks if applicable
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:10:49 PM</sup>
+
+Done. Summary of what changed across the admin panel:
+
+- **New**: `backend/app/components/DeleteConfirmModal.tsx` — shared modal requiring the admin to type `DELETE` before the "Delete Permanently" button becomes enabled; submits `intent="hard_delete"` + `id`.
+- **`admin.machines.tsx`**: hard delete restricted to demo-mode machines (matching the existing supplier-side safety rule), cascading `MachineOwner`, `MachineSupplier`, `Session`, `Patient`, `Therapist`, `Invoice`, `Settings` before deleting the machine.
+- **`admin.owners.tsx`**: cascades `MachineOwner`, `AuthCredential`; blocks deletion with a clear error if the owner has any invoices.
+- **`admin.suppliers.tsx`**: added a "Delete" item to the existing `ActionsDropdown`, cascading `MachineSupplier`, `SupplierResource`, `AuthCredential`.
+- **`admin.users.tsx`**: role-aware — looks up the user's `UserType`, applies the same Owner (invoice-blocked) or Supplier cascade as above, else just deletes the user + credentials.
+- **`admin.resources.tsx`**: simple hard delete (no dependents exist).
+- **`admin.invoices.tsx`**: previously had no `action()` at all — added one with just the hard-delete intent, plus the Form/modal plumbing that was missing.
+
+All existing soft-delete (Deactivate/Restore) behavior is untouched — hard Delete is a new, additional destructive action on every listing page. `npx tsc --noEmit` in `backend/` shows zero errors introduced by these changes (the one remaining error is pre-existing and unrelated, in `auth.login.ts`).
+
+This needs a real run against the dev DB to verify end-to-end — worth logging into `/admin` and testing each Delete flow (especially the demo-mode machine restriction and the owner invoice-block) before considering this fully verified.
 
 
 ---

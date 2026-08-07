@@ -1,6 +1,7 @@
 import { useLoaderData, useActionData, Form, useNavigation, useSubmit } from "react-router";
 import { useState, useEffect } from "react";
 import { ActionsDropdown, type ActionItem } from "../components/ActionsDropdown";
+import { DeleteConfirmModal } from "../components/DeleteConfirmModal";
 import bcrypt from "bcrypt";
 import { requireAdmin, signToken } from "../lib/auth.server";
 import { connectDB } from "../lib/db";
@@ -218,6 +219,15 @@ export async function action({ request }: { request: Request }) {
     return { success: true };
   }
 
+  if (intent === "hard_delete") {
+    const id = formData.get("id") as string;
+    await MachineSupplier.deleteMany({ supplier_id: id });
+    await SupplierResource.deleteMany({ supplier_id: id });
+    await AuthCredential.deleteOne({ user_id: id });
+    await User.findByIdAndDelete(id);
+    return { success: true };
+  }
+
   if (intent === "assign_machine") {
     const supplier_id = formData.get("supplier_id") as string;
     const machine_id = formData.get("machine_id") as string;
@@ -276,6 +286,7 @@ export default function AdminSuppliers() {
   const [editItem, setEditItem] = useState<SupplierDoc | null>(null);
   const [machineModalSupplier, setMachineModalSupplier] = useState<SupplierDoc | null>(null);
   const [selectedMachineId, setSelectedMachineId] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<SupplierDoc | null>(null);
 
   useEffect(() => {
     if (actionData?.success) {
@@ -283,6 +294,7 @@ export default function AdminSuppliers() {
       setEditItem(null);
       setMachineModalSupplier(null);
       setSelectedMachineId("");
+      setDeleteTarget(null);
     }
     if (actionData?.impersonateUrl) {
       window.open(actionData.impersonateUrl, "_blank");
@@ -404,6 +416,7 @@ export default function AdminSuppliers() {
                         </Form>
                       ),
                     }] : []),
+                    { type: "button", label: "Delete", variant: "danger", onClick: () => setDeleteTarget(s as SupplierDoc) },
                   ]} />
                 </td>
               </tr>
@@ -586,6 +599,21 @@ export default function AdminSuppliers() {
           </div>
         </div>
       )}
+
+      <DeleteConfirmModal
+        isOpen={!!deleteTarget}
+        title={`Delete Supplier ${deleteTarget?.first_name ?? ""} ${deleteTarget?.last_name ?? ""}`}
+        warningText={
+          <>
+            This will permanently delete this supplier along with their machine assignments and
+            resource library. This cannot be undone.
+          </>
+        }
+        id={deleteTarget?._id ?? ""}
+        isSubmitting={isSubmitting}
+        error={deleteTarget ? actionData?.error : null}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

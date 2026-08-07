@@ -2,11 +2,13 @@ import { useLoaderData, useActionData, Form, useNavigation, useSubmit } from "re
 import { useState, useEffect } from "react";
 import bcrypt from "bcrypt";
 import { connectDB } from "../lib/db";
+import { DeleteConfirmModal } from "../components/DeleteConfirmModal";
 import User from "../models/User";
 import UserType from "../models/UserType";
 import AuthCredential from "../models/AuthCredential";
 import MachineOwner from "../models/MachineOwner";
 import Machine from "../models/Machine";
+import Invoice from "../models/Invoice";
 
 const LIMIT = 50;
 
@@ -204,6 +206,18 @@ export async function action({ request }: { request: Request }) {
     return { success: true };
   }
 
+  if (intent === "hard_delete") {
+    const id = formData.get("id") as string;
+    const invoiceCount = await Invoice.countDocuments({ owner_id: id });
+    if (invoiceCount > 0) {
+      return { error: `Cannot delete: this owner has ${invoiceCount} invoice(s). Remove or reassign them first.` };
+    }
+    await MachineOwner.deleteMany({ owner_id: id });
+    await AuthCredential.deleteOne({ user_id: id });
+    await User.findByIdAndDelete(id);
+    return { success: true };
+  }
+
   return { error: "Unknown intent." };
 }
 
@@ -220,11 +234,13 @@ export default function AdminOwners() {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editItem, setEditItem] = useState<OwnerDoc | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<OwnerDoc | null>(null);
 
   useEffect(() => {
     if (actionData?.success) {
       setModalOpen(false);
       setEditItem(null);
+      setDeleteTarget(null);
     }
   }, [actionData]);
 
@@ -356,6 +372,13 @@ export default function AdminOwners() {
                         </button>
                       </Form>
                     )}
+                    &nbsp;|&nbsp;
+                    <button
+                      onClick={() => setDeleteTarget(o as OwnerDoc)}
+                      className="text-red-700 hover:underline text-xs font-bold"
+                    >
+                      Delete
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -490,6 +513,21 @@ export default function AdminOwners() {
           </div>
         </div>
       )}
+
+      <DeleteConfirmModal
+        isOpen={!!deleteTarget}
+        title={`Delete Owner ${deleteTarget?.first_name ?? ""} ${deleteTarget?.last_name ?? ""}`}
+        warningText={
+          <>
+            This will permanently delete this owner and their machine assignments. This cannot be
+            undone. Owners with existing invoices cannot be deleted.
+          </>
+        }
+        id={deleteTarget?._id ?? ""}
+        isSubmitting={isSubmitting}
+        error={deleteTarget ? actionData?.error : null}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

@@ -2,9 +2,14 @@ import { useLoaderData, useActionData, Form, useNavigation } from "react-router"
 import { useState, useEffect } from "react";
 import bcrypt from "bcrypt";
 import { connectDB } from "../lib/db";
+import { DeleteConfirmModal } from "../components/DeleteConfirmModal";
 import User from "../models/User";
 import UserType from "../models/UserType";
 import AuthCredential from "../models/AuthCredential";
+import MachineOwner from "../models/MachineOwner";
+import MachineSupplier from "../models/MachineSupplier";
+import SupplierResource from "../models/SupplierResource";
+import Invoice from "../models/Invoice";
 
 const LIMIT = 50;
 
@@ -166,6 +171,28 @@ export async function action({ request }: { request: Request }) {
     return { success: true };
   }
 
+  if (intent === "hard_delete") {
+    const id = formData.get("id") as string;
+    const user = await User.findById(id).populate("user_type_id", "name").lean() as any;
+    if (!user) return { error: "User not found." };
+    const roleName = user.user_type_id?.name;
+
+    if (roleName === "Owner") {
+      const invoiceCount = await Invoice.countDocuments({ owner_id: id });
+      if (invoiceCount > 0) {
+        return { error: `Cannot delete: this owner has ${invoiceCount} invoice(s). Remove or reassign them first.` };
+      }
+      await MachineOwner.deleteMany({ owner_id: id });
+    } else if (roleName === "Supplier") {
+      await MachineSupplier.deleteMany({ supplier_id: id });
+      await SupplierResource.deleteMany({ supplier_id: id });
+    }
+
+    await AuthCredential.deleteOne({ user_id: id });
+    await User.findByIdAndDelete(id);
+    return { success: true };
+  }
+
   return { error: "Unknown intent." };
 }
 
@@ -189,11 +216,13 @@ export default function AdminUsers() {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editItem, setEditItem] = useState<UserDoc | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<UserDoc | null>(null);
 
   useEffect(() => {
     if (actionData?.success) {
       setModalOpen(false);
       setEditItem(null);
+      setDeleteTarget(null);
     }
   }, [actionData]);
 
@@ -304,10 +333,17 @@ export default function AdminUsers() {
                             {u.is_active ? "Deactivate" : "Restore"}
                           </button>
                         </Form>
+                      &nbsp;|&nbsp;
+                      <button
+                        onClick={() => setDeleteTarget(u as UserDoc)}
+                        className="text-red-700 hover:underline text-xs font-bold"
+                      >
+                        Delete
+                      </button>
                     </div>
                   </td>
                 </tr>
-              
+
               );
             })}
           </tbody>
@@ -444,6 +480,22 @@ export default function AdminUsers() {
           </div>
         </div>
       )}
+
+      <DeleteConfirmModal
+        isOpen={!!deleteTarget}
+        title={`Delete User ${deleteTarget?.first_name ?? ""} ${deleteTarget?.last_name ?? ""}`}
+        warningText={
+          <>
+            This will permanently delete this user and their login credentials, plus any machine
+            assignments / resource library if they are an Owner or Supplier. This cannot be undone.
+            Owners with existing invoices cannot be deleted.
+          </>
+        }
+        id={deleteTarget?._id ?? ""}
+        isSubmitting={isSubmitting}
+        error={deleteTarget ? actionData?.error : null}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

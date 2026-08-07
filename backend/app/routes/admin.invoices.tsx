@@ -1,6 +1,17 @@
-import { useLoaderData } from "react-router";
+import { useLoaderData, useActionData, Form, useNavigation } from "react-router";
+import { useState, useEffect } from "react";
 import { connectDB } from "../lib/db";
+import { DeleteConfirmModal } from "../components/DeleteConfirmModal";
 import Invoice from "../models/Invoice";
+
+type InvoiceDoc = {
+  _id: string;
+  invoice_number: string;
+  invoice_type: string;
+  total_amount: number;
+  balance: number;
+  status: string;
+};
 
 export async function loader() {
   await connectDB();
@@ -8,8 +19,33 @@ export async function loader() {
   return { invoices };
 }
 
+export async function action({ request }: { request: Request }) {
+  await connectDB();
+  const formData = await request.formData();
+  const intent = formData.get("intent") as string;
+
+  if (intent === "hard_delete") {
+    const id = formData.get("id") as string;
+    await Invoice.findByIdAndDelete(id);
+    return { success: true };
+  }
+
+  return { error: "Unknown intent." };
+}
+
 export default function AdminInvoices() {
   const { invoices } = useLoaderData<typeof loader>();
+  const actionData = useActionData<typeof action>();
+  const navigation = useNavigation();
+  const isSubmitting = navigation.state === "submitting";
+
+  const [deleteTarget, setDeleteTarget] = useState<InvoiceDoc | null>(null);
+
+  useEffect(() => {
+    if (actionData?.success) {
+      setDeleteTarget(null);
+    }
+  }, [actionData]);
 
   return (
     <div>
@@ -42,6 +78,13 @@ export default function AdminInvoices() {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   <span className="text-indigo-600 hover:text-indigo-900 cursor-pointer">View</span>
+                  &nbsp;|&nbsp;
+                  <span
+                    onClick={() => setDeleteTarget(inv as InvoiceDoc)}
+                    className="text-red-700 hover:underline cursor-pointer font-bold"
+                  >
+                    Delete
+                  </span>
                 </td>
               </tr>
             ))}
@@ -49,6 +92,16 @@ export default function AdminInvoices() {
         </table>
         </div>
       </div>
+
+      <DeleteConfirmModal
+        isOpen={!!deleteTarget}
+        title={`Delete Invoice ${deleteTarget?.invoice_number ?? ""}`}
+        warningText={<>This invoice has no linked records. This cannot be undone.</>}
+        id={deleteTarget?._id ?? ""}
+        isSubmitting={isSubmitting}
+        error={deleteTarget ? actionData?.error : null}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

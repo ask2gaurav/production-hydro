@@ -1,6 +1,7 @@
 import { useLoaderData, useActionData, Form, useNavigation } from "react-router";
 import { useState, useEffect } from "react";
 import { connectDB } from "../lib/db";
+import { DeleteConfirmModal } from "../components/DeleteConfirmModal";
 import Resource from "../models/Resource";
 
 const LIMIT = 50;
@@ -101,6 +102,11 @@ export async function action({ request }: { request: Request }) {
     return { success: true };
   }
 
+  if (intent === "hard_delete") {
+    await Resource.findByIdAndDelete(formData.get("id"));
+    return { success: true };
+  }
+
   return { error: "Unknown intent." };
 }
 
@@ -116,12 +122,14 @@ export default function AdminResources() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editItem, setEditItem] = useState<ResourceDoc | null>(null);
   const [titleValue, setTitleValue] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<ResourceDoc | null>(null);
 
   useEffect(() => {
     if (actionData?.success) {
       setModalOpen(false);
       setEditItem(null);
       setTitleValue("");
+      setDeleteTarget(null);
     }
   }, [actionData]);
 
@@ -227,6 +235,13 @@ export default function AdminResources() {
                         </button>
                       </Form>
                     )}
+                    &nbsp;|&nbsp;
+                    <button
+                      onClick={() => setDeleteTarget(r as ResourceDoc)}
+                      className="text-red-700 hover:underline text-xs font-bold"
+                    >
+                      Delete
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -351,6 +366,16 @@ export default function AdminResources() {
           </div>
         </div>
       )}
+
+      <DeleteConfirmModal
+        isOpen={!!deleteTarget}
+        title={`Delete Resource "${deleteTarget?.title ?? ""}"`}
+        warningText={<>This resource has no linked records. This cannot be undone.</>}
+        id={deleteTarget?._id ?? ""}
+        isSubmitting={isSubmitting}
+        error={deleteTarget ? actionData?.error : null}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }
