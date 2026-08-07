@@ -8,6 +8,7 @@ import UserType from "../models/UserType";
 import AuthCredential from "../models/AuthCredential";
 import MachineOwner from "../models/MachineOwner";
 import Machine from "../models/Machine";
+import MachineSupplier from "../models/MachineSupplier";
 import Invoice from "../models/Invoice";
 
 const LIMIT = 50;
@@ -50,10 +51,20 @@ export async function loader({ request }: { request: Request }) {
     ];
   }
 
+  // Machines eligible for assignment to an owner: must already belong to a supplier's
+  // inventory, and must not already be assigned to any other owner.
+  const [suppliedMachineIds, ownedMachineIds] = await Promise.all([
+    MachineSupplier.distinct("machine_id"),
+    MachineOwner.distinct("machine_id"),
+  ]);
+
   const [users, total, machines] = await Promise.all([
     User.find(filter).sort({ date_created: -1 }).skip(skip).limit(LIMIT).lean(),
     User.countDocuments(filter),
-    Machine.find({ machine_status: { $ne: "Inactive" } })
+    Machine.find({
+      _id: { $in: suppliedMachineIds, $nin: ownedMachineIds },
+      machine_status: { $ne: "Inactive" },
+    })
       .select("serial_number model_name")
       .lean(),
   ]);
@@ -121,6 +132,14 @@ export async function action({ request }: { request: Request }) {
       if (usernameTaken) return { error: "This username is already taken." };
     }
 
+    // If a machine is selected, the owner's supplier follows that machine's supplier.
+    const machine_id = (formData.get("machine_id") as string)?.trim();
+    let supplier_id: string | undefined;
+    if (machine_id) {
+      const machineSupplier = await MachineSupplier.findOne({ machine_id });
+      supplier_id = machineSupplier?.supplier_id?.toString();
+    }
+
     let user;
     try {
       user = await User.create({
@@ -132,6 +151,7 @@ export async function action({ request }: { request: Request }) {
         address: (formData.get("address") as string)?.trim() || undefined,
         billing_address: (formData.get("billing_address") as string)?.trim() || undefined,
         user_type_id: ownerTypeId,
+        supplier_id,
         is_active: true,
         date_created: new Date(),
         date_modified: new Date(),
@@ -148,12 +168,11 @@ export async function action({ request }: { request: Request }) {
       return { error: "Failed to set up credentials. Owner was not created." };
     }
 
-    // Assign machine if provided
-    const machine_id = (formData.get("machine_id") as string)?.trim();
     if (machine_id) {
       await MachineOwner.create({
         machine_id,
         owner_id: user._id,
+        supplier_id,
         sale_date: new Date(),
       });
     }
@@ -180,6 +199,14 @@ export async function action({ request }: { request: Request }) {
       if (usernameConflict) return { error: "This username is already taken." };
     }
 
+    // If a machine is selected, the owner's supplier follows that machine's supplier.
+    const machine_id = (formData.get("machine_id") as string)?.trim();
+    let supplier_id: string | undefined;
+    if (machine_id) {
+      const machineSupplier = await MachineSupplier.findOne({ machine_id });
+      supplier_id = machineSupplier?.supplier_id?.toString();
+    }
+
     await User.findByIdAndUpdate(id, {
       first_name,
       last_name,
@@ -188,6 +215,7 @@ export async function action({ request }: { request: Request }) {
       phone: (formData.get("phone") as string)?.trim() || undefined,
       address: (formData.get("address") as string)?.trim() || undefined,
       billing_address: (formData.get("billing_address") as string)?.trim() || undefined,
+      ...(machine_id ? { supplier_id } : {}),
       date_modified: new Date(),
     });
 
@@ -201,13 +229,12 @@ export async function action({ request }: { request: Request }) {
     }
 
     // Update machine assignment: replace existing if a new one is provided
-    const machine_id = (formData.get("machine_id") as string)?.trim();
     if (machine_id) {
       const existing = await MachineOwner.findOne({ owner_id: id });
       if (existing) {
-        await MachineOwner.findByIdAndUpdate(existing._id, { machine_id });
+        await MachineOwner.findByIdAndUpdate(existing._id, { machine_id, supplier_id });
       } else {
-        await MachineOwner.create({ machine_id, owner_id: id, sale_date: new Date() });
+        await MachineOwner.create({ machine_id, owner_id: id, supplier_id, sale_date: new Date() });
       }
     }
 
@@ -276,6 +303,21 @@ export default function AdminOwners() {
 
   const firstAssignedMachineId = (o: OwnerDoc) =>
     o.assignedMachines?.[0]?._id.toString() || "";
+
+  // Dropdown options: unassigned+supplier-linked machines, plus this owner's own
+  // already-assigned machine(s) so editing doesn't hide their current selection.
+  const machineSelectOptions: MachineOption[] = (() => {
+    const options = [...(machines as MachineOption[])];
+    const seen = new Set(options.map((m) => m._id?.toString()));
+    for (const m of editItem?.assignedMachines ?? []) {
+      const id = m._id?.toString();
+      if (id && !seen.has(id)) {
+        options.push(m);
+        seen.add(id);
+      }
+    }
+    return options;
+  })();
 
   return (
     <div>
@@ -483,12 +525,15 @@ export default function AdminOwners() {
                     className={inputCls}
                   >
                     <option value="">None</option>
-                    {(machines as MachineOption[]).map((m) => (
+                    {machineSelectOptions.map((m) => (
                       <option key={m._id?.toString()} value={m._id?.toString()}>
                         {m.serial_number} — {m.model_name}
                       </option>
                     ))}
                   </select>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Only machines already assigned to a supplier and not yet assigned to another owner are shown.
+                  </p>
                 </div>
                 <div className="col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>

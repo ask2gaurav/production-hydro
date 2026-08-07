@@ -62,14 +62,14 @@ export default function SupplierLogin() {
         <Form method="post" className="flex flex-col gap-4">
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-              Email
+              Email or Username
             </label>
             <input
               id="email"
               name="email"
-              type="email"
+              type="text"
               required
-              autoComplete="email"
+              autoComplete="username"
               className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-teal-500"
               placeholder="supplier@example.com"
             />
