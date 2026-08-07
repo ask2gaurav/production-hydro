@@ -6,8 +6,8 @@
 | **Session ID** | `5529d2b3-4ebf-4965-aa06-df984f081bd8` |
 | **Working Dir** | `d:\projects\production-hydro-colon-therapy` |
 | **Started** | 8/6/2026, 11:50:49 AM |
-| **Last Updated** | 8/7/2026, 12:36:28 PM |
-| **Messages** | 594 |
+| **Last Updated** | 8/7/2026, 12:49:20 PM |
+| **Messages** | 690 |
 
 ---
 
@@ -9993,6 +9993,1777 @@ Done. Summary:
 `npx tsc --noEmit` in `backend/` shows no new errors (the one remaining error is pre-existing and unrelated, in `auth.login.ts`).
 
 This needs a real run against the dev DB to verify — worth logging into `/admin/transfer-supplier`, picking a From supplier with actual owners/machines, and confirming the preview and post-move state match what's shown on `/admin/suppliers` and `/admin/owners`.
+
+
+---
+
+## User <sup>8/7/2026, 12:40:06 PM</sup>
+
+<ide_opened_file>The user opened the file d:\projects\production-hydro-colon-therapy\backend\app\routes.ts in the IDE. This may or may not be related to the current task.</ide_opened_file>
+
+@backend/app/routes/admin.users.tsx we need to add username along with email. So owner would be login through username also.
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:40:10 PM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:40:18 PM</sup>
+
+<details>
+<summary>Tool: <code>Agent</code></summary>
+
+```json
+{
+  "description": "Explore auth/login and User/AuthCredential models",
+  "subagent_type": "Explore",
+  "prompt": "In this React Router v7 backend app at d:\\projects\\production-hydro-colon-therapy\\backend, I'm planning to add a \"username\" field for users (specifically so Owners can log in via username instead of/in addition to email), alongside the existing email-based login.\n\nPlease investigate and report back (under 400 words):\n\n1. Read `backend/app/models/AuthCredential.ts` in full — what fields exist (email, password_hash, user_id, is_active, anything else)? Is there any uniqueness index on email?\n\n2. Read `backend/app/routes/api/auth.login.ts` in full — how does login currently work? Does it accept email+password only? What does the query look like (AuthCredential.findOne)? Is this the login used by the Owner-facing frontend (Ionic tablet app) or something else?\n\n3. Search for any other login routes: `backend/app/routes/admin.login.tsx`, `backend/app/routes/supplier.login.tsx`, and any Owner-specific login route. For each, read the action() and note exactly how the credential lookup works (query field(s) used, e.g. `AuthCredential.findOne({ email })`).\n\n4. Read `backend/app/models/User.ts` in full again to confirm current fields (I know it has email, first_name, last_name, supplier_id, etc. — confirm no username field exists yet).\n\n5. Check `backend/app/routes/admin.owners.tsx` and `backend/app/routes/supplier.owners.tsx` (owner create/update forms) to see the exact shape of the create/update actions — this is where a username field would need to be added to the form and to User.create/User.findByIdAndUpdate calls.\n\n6. Search the whole repo (`backend/app` and `frontend/src`) for the literal string \"username\" to see if any username concept already exists anywhere (e.g. partial prior work, or the mobile app's local login).\n\nReport exact file paths, line numbers, and relevant code snippets for all of the above so a plan can be written withou
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:40:18 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Async agent launched successfully. (This tool result is internal metadata — never quote or paste any part of it, including the agentId below, into a user-facing reply.)
+agentId: a113be1bc02bc46dd (internal ID - do not mention to user. Use SendMessage with to: 'a113be1bc02bc46dd', summary: '<5-10 word recap>' to continue this agent.)
+The agent is working in the background. You will be notified automatically when it completes. You know nothing about its results until that notification arrives — do not report, assume, or predict them; continue other work or respond to the user in the meantime.
+Do not duplicate this agent's work — avoid working with the same files or topics it is using.
+output_file: C:\Users\Gaurav\AppData\Local\Temp\claude\d--projects-production-hydro-colon-therapy\5529d2b3-4ebf-4965-aa06-df984f081bd8\tasks\a113be1bc02bc46dd.output
+Do NOT Read or tail this file via the shell tool — it is the full subagent JSONL transcript and reading it will overflow your context. If the 
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:40:21 PM</sup>
+
+This is a new, unrelated task (adding username-based login for owners), so I'm researching the auth/login flow and User/AuthCredential models before drafting a plan.
+
+
+---
+
+## User <sup>8/7/2026, 12:40:47 PM</sup>
+
+<task-notification>
+<task-id>a113be1bc02bc46dd</task-id>
+<tool-use-id>toolu_01VyXMWqYg7pcj1i3UxohU61</tool-use-id>
+<output-file>C:\Users\Gaurav\AppData\Local\Temp\claude\d--projects-production-hydro-colon-therapy\5529d2b3-4ebf-4965-aa06-df984f081bd8\tasks\a113be1bc02bc46dd.output</output-file>
+<status>completed</status>
+<summary>Agent "Explore auth/login and User/AuthCredential models" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>## Findings
+
+**1. `backend/app/models/AuthCredential.ts` (full file, 12 lines)**
+Fields: `user_id` (ObjectId ref User, required, **unique**), `email` (String, required, **unique**), `password_hash` (required), `last_login` (Date), `is_active` (Boolean, default true). No username field. Uniqueness index exists only on `email` (and `user_id`).
+
+**2. `backend/app/routes/api/auth.login.ts`** — This is the Owner-facing API used by the Ionic tablet app (checks `MachineOwner`/`Machine` assignment, login-limit logic, sets HttpOnly cookie). Action (lines 13-85) requires `body.email` + `body.password` (line 20), calls `authenticateUser(body.email, body.password)` (line 24), then validates machine assignment/status/login limits before issuing token+cookie.
+
+**3. Other login routes, all delegate to the same `authenticateUser(email, password)` in `backend/app/lib/auth.server.ts`:**
+- `backend/app/routes/admin.login.tsx` (lines 18-43): form fields `email`/`password`, requires `decoded.type === 'Admin'`.
+- `backend/app/routes/supplier.login.tsx` (lines 18-43): same pattern, requires `decoded.type === 'Supplier'`.
+- No separate Owner-specific login route exists besides `api/auth.login.ts`.
+- Core lookup: `backend/app/lib/auth.server.ts` line 26: `AuthCredential.findOne({ email, is_active: true })` inside `authenticateUser()` (lines 24-44). This single function is shared by all three routes — the "type" (Admin/Supplier/Owner) is differentiated only via `User.user_type_id` after credential lookup, not by route-specific credential queries.
+
+**4. `backend/app/models/User.ts` (full file, 19 lines)** — Confirmed fields: `user_type_id`, `first_name`, `last_name`, `email` (unique), `phone`, `address`, `billing_address`, `date_created`, `date_modified`, `is_active`, `machine_id` (String), `supplier_id` (ref User). **No username field.**
+
+**5. Owner create/update actions:**
+- `backend/app/routes/admin.owners.tsx` action (lines 97-222): `create` intent (102-154) builds `User.create({...})` (119-130) then `AuthCredential.create({ user_id, email, password_hash, is_active: true })` (137). `update` intent (156-200) calls `User.findByIdAndUpdate(id, {...})` (169) then `AuthCredential.findOneAndUpdate({ user_id: id }, { email })` (179).
+- `backend/app/routes/supplier.owners.tsx` action (lines 87-189): identical shape — `create` (95-138) at `User.create` (112-124)/`AuthCredential.create` (131); `update` (140-177) at `User.findByIdAndUpdate` (157)/`AuthCredential.findOneAndUpdate` (167). Both forms currently only collect first_name/last_name/email/phone/address/billing_address/password — no username field present in either form's action or JSX (not fully read but grep confirms no "username" string).
+
+**6. Repo-wide search for "username"** (case-insensitive) — no hits in `backend/app` or `frontend/src`. Only matches in `.cc-history/*.md` (chat logs), `backend/seed.ts`, and `docker-compose.yml` (likely Mongo root username env var, unrelated). **No prior username work exists.**</result>
+<usage><subagent_tokens>33095</subagent_tokens><tool_uses>12</tool_uses><duration_ms>29341</duration_ms></usage>
+</task-notification>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:40:51 PM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:40:51 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\lib\\auth.server.ts"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:40:51 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+1	import jwt from 'jsonwebtoken';
+2	import bcrypt from 'bcrypt';
+3	import AuthCredential from '../models/AuthCredential';
+4	import User from '../models/User';
+5	import UserType from '../models/UserType';
+6	import { connectDB } from './db';
+7	import { corsHeaders } from './cors.server';
+8	
+9	const JWT_SECRET = process.env.JWT_SECRET || 'your-256-bit-secret';
+10	const JWT_EXPIRY = process.env.JWT_EXPIRY || '8h';
+11	
+12	export function signToken(payload: object, expiresIn?: string) {
+13	  return jwt.sign(payload, JWT_SECRET, { expiresIn: (expiresIn ?? JWT_EXPIRY) as any });
+14	}
+15	
+16	export function verifyToken(token: string) {
+17	  try {
+18	    return jwt.verify(token, JWT_SECRET);
+19	  } catch (e) {
+20	    return null;
+21	  }
+22	}
+23	
+24	export async function authenticateUser(email: string, password_raw: string) {
+25	  await connectDB();
+26	  const credential = await AuthCredential.findOne({ email, is_active: true });
+27	  if (!credential) return null;
+28	
+29	  const valid = await bcr
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:41:20 PM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:41:26 PM</sup>
+
+<details>
+<summary>Tool: <code>AskUserQuestion</code></summary>
+
+```json
+{
+  "questions": [
+    {
+      "question": "Should the new `username` field be required for every user, or optional (nullable — admin can leave it blank, and that user just keeps logging in via email only)?",
+      "header": "Required?",
+      "options": [
+        {
+          "label": "Optional (Recommended)",
+          "description": "Existing users have no username until an admin sets one. New/edited users can add a username, or leave it blank and keep using email login."
+        },
+        {
+          "label": "Required for all users",
+          "description": "Every user must have a username going forward. Would need a migration/backfill strategy for existing users who don't have one yet."
+        }
+      ]
+    },
+    {
+      "question": "Owners can also be created from `admin.owners.tsx` and `supplier.owners.tsx` (separate pages from the general Users list you pointed me to). Should the username field be added there too, or only on `admin.users.tsx` as you specified?",
+      "header": "Scope",
+      "options": [
+        {
+          "label": "Only admin.users.tsx (as requested)",
+          "description": "Username field added only to the general Users page's create/edit form, matching exactly what you asked for."
+        },
+        {
+          "label": "Also add to admin.owners.tsx and supplier.owners.tsx",
+          "description": "Since those are the more common places owners actually get created, add the username field there too for consistency."
+        }
+      ]
+    },
+    {
+      "question": "The login credential check is shared code used by Admin login, Supplier login, and the Owner-facing tablet app login. Making username-login work will naturally enable it for all of those, not just Owners. Is that acceptable?",
+      "header": "Universal login",
+      "options": [
+        {
+          "label": "Yes, that's fine (Recommended)",
+          "description": "Username login works for any role (Admin/Supplier/Owner/etc.) since they all share the same credential
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:44:58 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Your questions have been answered: "Should the new `username` field be required for every user, or optional (nullable — admin can leave it blank, and that user just keeps logging in via email only)?"="Optional (Recommended)", "Owners can also be created from `admin.owners.tsx` and `supplier.owners.tsx` (separate pages from the general Users list you pointed me to). Should the username field be added there too, or only on `admin.users.tsx` as you specified?"="Also add to admin.owners.tsx and supplier.owners.tsx", "The login credential check is shared code used by Admin login, Supplier login, and the Owner-facing tablet app login. Making username-login work will naturally enable it for all of those, not just Owners. Is that acceptable?"="Yes, that's fine (Recommended)". You can now continue with these answers in mind.
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:45:02 PM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:45:03 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\supplier.owners.tsx",
+  "offset": 85,
+  "limit": 100
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:45:03 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+85	}
+86	
+87	export async function action({ request }: { request: Request }) {
+88	  const decoded: any = await requireSupplier(request);
+89	  const supplierId = decoded.userId;
+90	  await connectDB();
+91	
+92	  const formData = await request.formData();
+93	  const intent = formData.get("intent") as string;
+94	
+95	  if (intent === "create") {
+96	    const first_name = (formData.get("first_name") as string)?.trim();
+97	    const last_name = (formData.get("last_name") as string)?.trim();
+98	    const email = (formData.get("email") as string)?.trim().toLowerCase();
+99	    const password = formData.get("password") as string;
+100	    const ownerTypeId = formData.get("owner_type_id") as string;
+101	
+102	    if (!first_name || !last_name || !email || !password || !ownerTypeId) {
+103	      return { error: "First name, last name, email, and password are required." };
+104	    }
+105	    if (password.length < 6) return { error: "Password must be at least 6 characters." };
+106	
+107	    const existing 
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:45:07 PM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:45:28 PM</sup>
+
+<details>
+<summary>Tool: <code>Write</code></summary>
+
+```json
+{
+  "file_path": "C:\\Users\\Gaurav\\.claude\\plans\\frontend-src-pages-nexttherapynotificat-glittery-beacon.md",
+  "content": "# Add optional username field + username-based login\n\n## Context\nCurrently every login (Admin, Supplier, and the Owner-facing Ionic tablet app) authenticates purely by `email` + `password`, via a single shared `authenticateUser(email, password)` in `backend/app/lib/auth.server.ts:24`, which does `AuthCredential.findOne({ email, is_active: true })` (line 26). The user wants an optional `username` added to users (starting with the general Users admin page, and also the dedicated Owner-creation pages) so owners — and anyone else — can log in with a username instead of email. Confirmed via exploration: `User` (`backend/app/models/User.ts`) and `AuthCredential` (`backend/app/models/AuthCredential.ts`) have no username concept today, and no prior work exists anywhere in the repo.\n\nPer the user's answers: the field is **optional** (nullable, no backfill needed for existing users), it should be added to **three** create/edit forms — `admin.users.tsx`, `admin.owners.tsx`, `supplier.owners.tsx` — and login-by-username should work **universally** across all roles since it's implemented once in the shared `authenticateUser` function (simplest, no role-gating needed).\n\n## Data model changes\n- **`backend/app/models/User.ts`**: add `username: { type: String, unique: true, sparse: true, lowercase: true, trim: true }`. `sparse: true` is required so multiple users with no username (`undefined`/absent field) don't collide on the unique index.\n- **`backend/app/models/AuthCredential.ts`**: add the same `username: { type: String, unique: true, sparse: true, lowercase: true, trim: true }`. This mirrors how `email` is already duplicated between `User` (profile) and `AuthCredential` (login lookup) — the credential lookup needs its own copy for `authenticateUser` to query against directly, same as `email` today.\n\n## Shared auth logic — `backend/app/lib/au
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:45:29 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file C:\Users\Gaurav\.claude\plans\frontend-src-pages-nexttherapynotificat-glittery-beacon.md has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:45:31 PM</sup>
+
+<details>
+<summary>Tool: <code>ExitPlanMode</code></summary>
+
+```json
+{
+  "plan": "# Add optional username field + username-based login\n\n## Context\nCurrently every login (Admin, Supplier, and the Owner-facing Ionic tablet app) authenticates purely by `email` + `password`, via a single shared `authenticateUser(email, password)` in `backend/app/lib/auth.server.ts:24`, which does `AuthCredential.findOne({ email, is_active: true })` (line 26). The user wants an optional `username` added to users (starting with the general Users admin page, and also the dedicated Owner-creation pages) so owners — and anyone else — can log in with a username instead of email. Confirmed via exploration: `User` (`backend/app/models/User.ts`) and `AuthCredential` (`backend/app/models/AuthCredential.ts`) have no username concept today, and no prior work exists anywhere in the repo.\n\nPer the user's answers: the field is **optional** (nullable, no backfill needed for existing users), it should be added to **three** create/edit forms — `admin.users.tsx`, `admin.owners.tsx`, `supplier.owners.tsx` — and login-by-username should work **universally** across all roles since it's implemented once in the shared `authenticateUser` function (simplest, no role-gating needed).\n\n## Data model changes\n- **`backend/app/models/User.ts`**: add `username: { type: String, unique: true, sparse: true, lowercase: true, trim: true }`. `sparse: true` is required so multiple users with no username (`undefined`/absent field) don't collide on the unique index.\n- **`backend/app/models/AuthCredential.ts`**: add the same `username: { type: String, unique: true, sparse: true, lowercase: true, trim: true }`. This mirrors how `email` is already duplicated between `User` (profile) and `AuthCredential` (login lookup) — the credential lookup needs its own copy for `authenticateUser` to query against directly, same as `email` today.\n\n## Shared auth logic — `backend/app/lib/auth.server.ts`\nChange `authenticateUser(email: string, password_raw: string)` to `authenticateUser(identifier: stri
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:45:47 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+User has approved your plan. You can now start coding. Start with updating your todo list if applicable
+
+Your plan has been saved to: C:\Users\Gaurav\.claude\plans\frontend-src-pages-nexttherapynotificat-glittery-beacon.md
+You can refer back to it if needed during implementation.
+
+## Approved Plan:
+# Add optional username field + username-based login
+
+## Context
+Currently every login (Admin, Supplier, and the Owner-facing Ionic tablet app) authenticates purely by `email` + `password`, via a single shared `authenticateUser(email, password)` in `backend/app/lib/auth.server.ts:24`, which does `AuthCredential.findOne({ email, is_active: true })` (line 26). The user wants an optional `username` added to users (starting with the general Users admin page, and also the dedicated Owner-creation pages) so owners — and anyone else — can log in with a username instead of email. Confirmed via exploration: `User` (`backend/app/models/User.ts`) and `AuthCredential` (`backend/app/models/AuthCredential
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:45:54 PM</sup>
+
+<details>
+<summary>Tool: <code>TodoWrite</code></summary>
+
+```json
+{
+  "todos": [
+    {
+      "content": "Add username field to User and AuthCredential models",
+      "status": "in_progress",
+      "activeForm": "Adding username field to models"
+    },
+    {
+      "content": "Update authenticateUser to look up by email or username",
+      "status": "pending",
+      "activeForm": "Updating authenticateUser lookup"
+    },
+    {
+      "content": "Add username to admin.users.tsx form + action",
+      "status": "pending",
+      "activeForm": "Adding username to admin.users.tsx"
+    },
+    {
+      "content": "Add username to admin.owners.tsx form + action",
+      "status": "pending",
+      "activeForm": "Adding username to admin.owners.tsx"
+    },
+    {
+      "content": "Add username to supplier.owners.tsx form + action",
+      "status": "pending",
+      "activeForm": "Adding username to supplier.owners.tsx"
+    },
+    {
+      "content": "Verify with tsc",
+      "status": "pending",
+      "activeForm": "Verifying with tsc"
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:45:54 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Todos have been modified successfully. Ensure that you continue to use the todo list to track your progress. Please proceed with the current tasks if applicable
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:46:05 PM</sup>
+
+Starting with the model changes.
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:46:05 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\models\\AuthCredential.ts"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:46:05 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+1	import mongoose from 'mongoose';
+2	
+3	const AuthCredentialSchema = new mongoose.Schema({
+4	  user_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
+5	  email: { type: String, required: true, unique: true },
+6	  password_hash: { type: String, required: true },
+7	  last_login: { type: Date },
+8	  is_active: { type: Boolean, default: true }
+9	});
+10	
+11	export default mongoose.models.AuthCredential || mongoose.model('AuthCredential', AuthCredentialSchema);
+12
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:46:09 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\models\\AuthCredential.ts",
+  "old_string": "  user_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true },\n  email: { type: String, required: true, unique: true },\n  password_hash: { type: String, required: true },",
+  "new_string": "  user_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true },\n  email: { type: String, required: true, unique: true },\n  username: { type: String, unique: true, sparse: true, lowercase: true, trim: true },\n  password_hash: { type: String, required: true },"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:46:10 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\models\AuthCredential.ts has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:46:14 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\models\\User.ts",
+  "old_string": "  email: { type: String, required: true, unique: true },\n  phone: { type: String },",
+  "new_string": "  email: { type: String, required: true, unique: true },\n  username: { type: String, unique: true, sparse: true, lowercase: true, trim: true },\n  phone: { type: String },"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:46:15 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\models\User.ts has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:46:19 PM</sup>
+
+Now update `authenticateUser` in `auth.server.ts`.
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:46:21 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\lib\\auth.server.ts",
+  "old_string": "export async function authenticateUser(email: string, password_raw: string) {\n  await connectDB();\n  const credential = await AuthCredential.findOne({ email, is_active: true });\n  if (!credential) return null;",
+  "new_string": "export async function authenticateUser(identifier: string, password_raw: string) {\n  await connectDB();\n  const normalized = identifier?.toLowerCase().trim();\n  const credential = await AuthCredential.findOne({\n    is_active: true,\n    $or: [{ email: normalized }, { username: normalized }],\n  });\n  if (!credential) return null;"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:46:22 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\lib\auth.server.ts has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:46:27 PM</sup>
+
+<details>
+<summary>Tool: <code>TodoWrite</code></summary>
+
+```json
+{
+  "todos": [
+    {
+      "content": "Add username field to User and AuthCredential models",
+      "status": "completed",
+      "activeForm": "Adding username field to models"
+    },
+    {
+      "content": "Update authenticateUser to look up by email or username",
+      "status": "completed",
+      "activeForm": "Updating authenticateUser lookup"
+    },
+    {
+      "content": "Add username to admin.users.tsx form + action",
+      "status": "in_progress",
+      "activeForm": "Adding username to admin.users.tsx"
+    },
+    {
+      "content": "Add username to admin.owners.tsx form + action",
+      "status": "pending",
+      "activeForm": "Adding username to admin.owners.tsx"
+    },
+    {
+      "content": "Add username to supplier.owners.tsx form + action",
+      "status": "pending",
+      "activeForm": "Adding username to supplier.owners.tsx"
+    },
+    {
+      "content": "Verify with tsc",
+      "status": "pending",
+      "activeForm": "Verifying with tsc"
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:46:27 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Todos have been modified successfully. Ensure that you continue to use the todo list to track your progress. Please proceed with the current tasks if applicable
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:46:32 PM</sup>
+
+Now `admin.users.tsx`.
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:46:33 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.users.tsx",
+  "old_string": "type UserDoc = {\n  _id: string;\n  first_name: string;\n  last_name: string;\n  email: string;\n  phone?: string;",
+  "new_string": "type UserDoc = {\n  _id: string;\n  first_name: string;\n  last_name: string;\n  email: string;\n  username?: string;\n  phone?: string;"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:46:34 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\admin.users.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:46:44 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.users.tsx",
+  "old_string": "    const email = (formData.get(\"email\") as string)?.trim().toLowerCase();\n    const phone = (formData.get(\"phone\") as string)?.trim();\n    const password = formData.get(\"password\") as string;\n    const user_type_id = formData.get(\"user_type_id\") as string;\n\n    if (!first_name || !last_name || !phone || !email || !password || !user_type_id) {\n      return { error: \"First name, last name, phone, email, password, and role are required.\" };\n    }\n    if (password.length < 6) {\n      return { error: \"Password must be at least 6 characters.\" };\n    }\n\n    const existing = await User.findOne({ email });\n    if (existing) return { error: \"A user with this email already exists.\" };\n\n    let user;\n    try {\n      user = await User.create({\n        first_name,\n        last_name,\n        email,\n        phone: (formData.get(\"phone\") as string)?.trim() || undefined,\n        address: (formData.get(\"address\") as string)?.trim() || undefined,\n        billing_address: (formData.get(\"billing_address\") as string)?.trim() || undefined,\n        user_type_id,\n        is_active: true,\n        date_created: new Date(),\n        date_modified: new Date(),\n      });\n    } catch {\n      return { error: \"Failed to create user.\" };\n    }\n\n    try {\n      const password_hash = await bcrypt.hash(password, 10);\n      await AuthCredential.create({\n        user_id: user._id,\n        email,\n        password_hash,\n        is_active: true,\n      });\n    } catch {",
+  "new_string": "    const email = (formData.get(\"email\") as string)?.trim().toLowerCase();\n    const username = (formData.get(\"username\") as string)?.trim().toLowerCase() || undefined;\n    const phone = (formData.get(\"phone\") as string)?.trim();\n    const password = formData.get(\"password\") as string;\n    const user_type_id 
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:46:45 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\admin.users.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:46:48 PM</sup>
+
+Now the `update` intent.
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:46:54 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.users.tsx",
+  "old_string": "    const phone = (formData.get(\"phone\") as string)?.trim();\n    const email = (formData.get(\"email\") as string)?.trim().toLowerCase();\n    const user_type_id = formData.get(\"user_type_id\") as string;\n\n    if (!first_name || !last_name || !phone || !email || !user_type_id) {\n      return { error: \"First name, last name, phone, email, and role are required.\" };\n    }\n\n    const conflict = await User.findOne({ email, _id: { $ne: id } });\n    if (conflict) return { error: \"Another user with this email already exists.\" };\n\n    await User.findByIdAndUpdate(id, {\n      first_name,\n      last_name,\n      email,\n      phone: (formData.get(\"phone\") as string)?.trim() || undefined,\n      address: (formData.get(\"address\") as string)?.trim() || undefined,\n      billing_address: (formData.get(\"billing_address\") as string)?.trim() || undefined,\n      user_type_id,\n      date_modified: new Date(),\n    });\n\n    // Update email in AuthCredential if changed\n    await AuthCredential.findOneAndUpdate({ user_id: id }, { email });",
+  "new_string": "    const phone = (formData.get(\"phone\") as string)?.trim();\n    const email = (formData.get(\"email\") as string)?.trim().toLowerCase();\n    const username = (formData.get(\"username\") as string)?.trim().toLowerCase() || undefined;\n    const user_type_id = formData.get(\"user_type_id\") as string;\n\n    if (!first_name || !last_name || !phone || !email || !user_type_id) {\n      return { error: \"First name, last name, phone, email, and role are required.\" };\n    }\n\n    const conflict = await User.findOne({ email, _id: { $ne: id } });\n    if (conflict) return { error: \"Another user with this email already exists.\" };\n\n    if (username) {\n      const usernameConflict = await User.findOne({ username, _id: { $ne: id } });\n      if (usernameConfli
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:46:55 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\admin.users.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:47:05 PM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:47:05 PM</sup>
+
+Now `admin.owners.tsx`.
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:47:06 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.owners.tsx",
+  "offset": 13,
+  "limit": 10
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:47:06 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+13	const LIMIT = 50;
+14	
+15	type OwnerDoc = {
+16	  _id: string;
+17	  first_name: string;
+18	  last_name: string;
+19	  email: string;
+20	  phone?: string;
+21	  address?: string;
+22	  billing_address?: string;
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:47:10 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.owners.tsx",
+  "old_string": "type OwnerDoc = {\n  _id: string;\n  first_name: string;\n  last_name: string;\n  email: string;\n  phone?: string;\n  address?: string;\n  billing_address?: string;",
+  "new_string": "type OwnerDoc = {\n  _id: string;\n  first_name: string;\n  last_name: string;\n  email: string;\n  username?: string;\n  phone?: string;\n  address?: string;\n  billing_address?: string;"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:47:11 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\admin.owners.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:47:14 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.owners.tsx",
+  "offset": 96,
+  "limit": 65
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:47:14 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+96	}
+97	
+98	export async function action({ request }: { request: Request }) {
+99	  await connectDB();
+100	  const formData = await request.formData();
+101	  const intent = formData.get("intent") as string;
+102	
+103	  if (intent === "create") {
+104	    const first_name = (formData.get("first_name") as string)?.trim();
+105	    const last_name = (formData.get("last_name") as string)?.trim();
+106	    const email = (formData.get("email") as string)?.trim().toLowerCase();
+107	    const password = formData.get("password") as string;
+108	    const ownerTypeId = formData.get("owner_type_id") as string;
+109	
+110	    if (!first_name || !last_name || !email || !password || !ownerTypeId) {
+111	      return { error: "First name, last name, email, and password are required." };
+112	    }
+113	    if (password.length < 6) return { error: "Password must be at least 6 characters." };
+114	
+115	    const existing = await User.findOne({ email });
+116	    if (existing) return { error: "A user with this email
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:47:26 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.owners.tsx",
+  "old_string": "    const email = (formData.get(\"email\") as string)?.trim().toLowerCase();\n    const password = formData.get(\"password\") as string;\n    const ownerTypeId = formData.get(\"owner_type_id\") as string;\n\n    if (!first_name || !last_name || !email || !password || !ownerTypeId) {\n      return { error: \"First name, last name, email, and password are required.\" };\n    }\n    if (password.length < 6) return { error: \"Password must be at least 6 characters.\" };\n\n    const existing = await User.findOne({ email });\n    if (existing) return { error: \"A user with this email already exists.\" };\n\n    let user;\n    try {\n      user = await User.create({\n        first_name,\n        last_name,\n        email,\n        phone: (formData.get(\"phone\") as string)?.trim() || undefined,\n        address: (formData.get(\"address\") as string)?.trim() || undefined,\n        billing_address: (formData.get(\"billing_address\") as string)?.trim() || undefined,\n        user_type_id: ownerTypeId,\n        is_active: true,\n        date_created: new Date(),\n        date_modified: new Date(),\n      });\n    } catch {\n      return { error: \"Failed to create owner.\" };\n    }\n\n    try {\n      const password_hash = await bcrypt.hash(password, 10);\n      await AuthCredential.create({ user_id: user._id, email, password_hash, is_active: true });\n    } catch {",
+  "new_string": "    const email = (formData.get(\"email\") as string)?.trim().toLowerCase();\n    const username = (formData.get(\"username\") as string)?.trim().toLowerCase() || undefined;\n    const password = formData.get(\"password\") as string;\n    const ownerTypeId = formData.get(\"owner_type_id\") as string;\n\n    if (!first_name || !last_name || !email || !password || !ownerTypeId) {\n      return { error: \"First name, last name, email, and password are re
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:47:27 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\admin.owners.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:47:30 PM</sup>
+
+Now the `update` intent in `admin.owners.tsx`.
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:47:30 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.owners.tsx",
+  "offset": 160,
+  "limit": 50
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:47:30 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+160	
+161	    return { success: true };
+162	  }
+163	
+164	  if (intent === "update") {
+165	    const id = formData.get("id") as string;
+166	    const first_name = (formData.get("first_name") as string)?.trim();
+167	    const last_name = (formData.get("last_name") as string)?.trim();
+168	    const email = (formData.get("email") as string)?.trim().toLowerCase();
+169	
+170	    if (!first_name || !last_name || !email) {
+171	      return { error: "First name, last name, and email are required." };
+172	    }
+173	
+174	    const conflict = await User.findOne({ email, _id: { $ne: id } });
+175	    if (conflict) return { error: "Another user with this email already exists." };
+176	
+177	    await User.findByIdAndUpdate(id, {
+178	      first_name,
+179	      last_name,
+180	      email,
+181	      phone: (formData.get("phone") as string)?.trim() || undefined,
+182	      address: (formData.get("address") as string)?.trim() || undefined,
+183	      billing_address: (formData.get("billing_address") as string)
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:47:38 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.owners.tsx",
+  "old_string": "    const email = (formData.get(\"email\") as string)?.trim().toLowerCase();\n\n    if (!first_name || !last_name || !email) {\n      return { error: \"First name, last name, and email are required.\" };\n    }\n\n    const conflict = await User.findOne({ email, _id: { $ne: id } });\n    if (conflict) return { error: \"Another user with this email already exists.\" };\n\n    await User.findByIdAndUpdate(id, {\n      first_name,\n      last_name,\n      email,\n      phone: (formData.get(\"phone\") as string)?.trim() || undefined,\n      address: (formData.get(\"address\") as string)?.trim() || undefined,\n      billing_address: (formData.get(\"billing_address\") as string)?.trim() || undefined,\n      date_modified: new Date(),\n    });\n\n    await AuthCredential.findOneAndUpdate({ user_id: id }, { email });",
+  "new_string": "    const email = (formData.get(\"email\") as string)?.trim().toLowerCase();\n    const username = (formData.get(\"username\") as string)?.trim().toLowerCase() || undefined;\n\n    if (!first_name || !last_name || !email) {\n      return { error: \"First name, last name, and email are required.\" };\n    }\n\n    const conflict = await User.findOne({ email, _id: { $ne: id } });\n    if (conflict) return { error: \"Another user with this email already exists.\" };\n\n    if (username) {\n      const usernameConflict = await User.findOne({ username, _id: { $ne: id } });\n      if (usernameConflict) return { error: \"This username is already taken.\" };\n    }\n\n    await User.findByIdAndUpdate(id, {\n      first_name,\n      last_name,\n      email,\n      username,\n      phone: (formData.get(\"phone\") as string)?.trim() || undefined,\n      address: (formData.get(\"address\") as string)?.trim() || undefined,\n      billing_address: (formData.get(\"billing_address\") as string)?.trim() || undefined
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:47:39 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\admin.owners.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:47:41 PM</sup>
+
+Now the JSX form for `admin.owners.tsx` — add a Username input next to Email.
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:47:42 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.owners.tsx",
+  "offset": 425,
+  "limit": 40
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:47:42 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+425	            </span>
+426	          </a>
+427	        </div>
+428	      )}
+429	
+430	      {modalOpen && (
+431	        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+432	          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+433	            <div className="flex items-center justify-between p-6 border-b">
+434	              <h2 className="text-lg font-semibold text-gray-800">
+435	                {editItem ? "Edit Owner" : "Add Owner"}
+436	              </h2>
+437	              <button
+438	                onClick={() => setModalOpen(false)}
+439	                className="text-gray-400 hover:text-gray-600 text-xl leading-none"
+440	              >
+441	                ✕
+442	              </button>
+443	            </div>
+444	
+445	            <Form method="post" className="p-6 flex flex-col gap-4">
+446	              <input type="hidden" name="intent" value={editItem ? "update" : "create"} />
+447	              
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:47:44 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.owners.tsx",
+  "offset": 464,
+  "limit": 20
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:47:44 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+464	                </div>
+465	                <div className="col-span-2">
+466	                  <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+467	                  <input name="email" type="email" defaultValue={editItem?.email} required className={inputCls} />
+468	                </div>
+469	                <div>
+470	                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+471	                  <input name="phone" defaultValue={editItem?.phone} className={inputCls} />
+472	                </div>
+473	                <div>
+474	                  <label className="block text-sm font-medium text-gray-700 mb-1">Assign Machine</label>
+475	                  <select
+476	                    name="machine_id"
+477	                    defaultValue={editItem ? firstAssignedMachineId(editItem) : ""}
+478	                    className={inputCls}
+479	                  >
+480	                    <option value="">None</option>
+481	   
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:47:55 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.owners.tsx",
+  "old_string": "                <div className=\"col-span-2\">\n                  <label className=\"block text-sm font-medium text-gray-700 mb-1\">Email *</label>\n                  <input name=\"email\" type=\"email\" defaultValue={editItem?.email} required className={inputCls} />\n                </div>\n                <div>\n                  <label className=\"block text-sm font-medium text-gray-700 mb-1\">Phone</label>\n                  <input name=\"phone\" defaultValue={editItem?.phone} className={inputCls} />\n                </div>",
+  "new_string": "                <div className=\"col-span-2\">\n                  <label className=\"block text-sm font-medium text-gray-700 mb-1\">Email *</label>\n                  <input name=\"email\" type=\"email\" defaultValue={editItem?.email} required className={inputCls} />\n                </div>\n                <div className=\"col-span-2\">\n                  <label className=\"block text-sm font-medium text-gray-700 mb-1\">Username</label>\n                  <input name=\"username\" defaultValue={editItem?.username} className={inputCls} />\n                  <p className=\"text-xs text-gray-400 mt-1\">Optional — lets this owner log in with a username instead of email.</p>\n                </div>\n                <div>\n                  <label className=\"block text-sm font-medium text-gray-700 mb-1\">Phone</label>\n                  <input name=\"phone\" defaultValue={editItem?.phone} className={inputCls} />\n                </div>"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:47:56 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\admin.owners.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:47:59 PM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:48:01 PM</sup>
+
+<details>
+<summary>Tool: <code>TodoWrite</code></summary>
+
+```json
+{
+  "todos": [
+    {
+      "content": "Add username field to User and AuthCredential models",
+      "status": "completed",
+      "activeForm": "Adding username field to models"
+    },
+    {
+      "content": "Update authenticateUser to look up by email or username",
+      "status": "completed",
+      "activeForm": "Updating authenticateUser lookup"
+    },
+    {
+      "content": "Add username to admin.users.tsx form + action",
+      "status": "in_progress",
+      "activeForm": "Adding username to admin.users.tsx"
+    },
+    {
+      "content": "Add username to admin.owners.tsx form + action",
+      "status": "completed",
+      "activeForm": "Adding username to admin.owners.tsx"
+    },
+    {
+      "content": "Add username to supplier.owners.tsx form + action",
+      "status": "pending",
+      "activeForm": "Adding username to supplier.owners.tsx"
+    },
+    {
+      "content": "Verify with tsc",
+      "status": "pending",
+      "activeForm": "Verifying with tsc"
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:48:01 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Todos have been modified successfully. Ensure that you continue to use the todo list to track your progress. Please proceed with the current tasks if applicable
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:48:03 PM</sup>
+
+Now the JSX form in `admin.users.tsx`.
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:48:07 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.users.tsx",
+  "old_string": "                <div className=\"col-span-2\">\n                  <label className=\"block text-sm font-medium text-gray-700 mb-1\">Email *</label>\n                  <input name=\"email\" type=\"email\" defaultValue={editItem?.email} required className={inputCls} />\n                </div>\n                <div>\n                  <label className=\"block text-sm font-medium text-gray-700 mb-1\">Phone</label>\n                  <input name=\"phone\" defaultValue={editItem?.phone} required className={inputCls} />\n                </div>",
+  "new_string": "                <div className=\"col-span-2\">\n                  <label className=\"block text-sm font-medium text-gray-700 mb-1\">Email *</label>\n                  <input name=\"email\" type=\"email\" defaultValue={editItem?.email} required className={inputCls} />\n                </div>\n                <div className=\"col-span-2\">\n                  <label className=\"block text-sm font-medium text-gray-700 mb-1\">Username</label>\n                  <input name=\"username\" defaultValue={editItem?.username} className={inputCls} />\n                  <p className=\"text-xs text-gray-400 mt-1\">Optional — lets this user log in with a username instead of email.</p>\n                </div>\n                <div>\n                  <label className=\"block text-sm font-medium text-gray-700 mb-1\">Phone</label>\n                  <input name=\"phone\" defaultValue={editItem?.phone} required className={inputCls} />\n                </div>"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:48:08 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\admin.users.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:48:12 PM</sup>
+
+<details>
+<summary>Tool: <code>TodoWrite</code></summary>
+
+```json
+{
+  "todos": [
+    {
+      "content": "Add username field to User and AuthCredential models",
+      "status": "completed",
+      "activeForm": "Adding username field to models"
+    },
+    {
+      "content": "Update authenticateUser to look up by email or username",
+      "status": "completed",
+      "activeForm": "Updating authenticateUser lookup"
+    },
+    {
+      "content": "Add username to admin.users.tsx form + action",
+      "status": "completed",
+      "activeForm": "Adding username to admin.users.tsx"
+    },
+    {
+      "content": "Add username to admin.owners.tsx form + action",
+      "status": "completed",
+      "activeForm": "Adding username to admin.owners.tsx"
+    },
+    {
+      "content": "Add username to supplier.owners.tsx form + action",
+      "status": "in_progress",
+      "activeForm": "Adding username to supplier.owners.tsx"
+    },
+    {
+      "content": "Verify with tsc",
+      "status": "pending",
+      "activeForm": "Verifying with tsc"
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:48:12 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Todos have been modified successfully. Ensure that you continue to use the todo list to track your progress. Please proceed with the current tasks if applicable
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:48:15 PM</sup>
+
+Now `supplier.owners.tsx`. Let's view its type def and JSX form section.
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:48:16 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\supplier.owners.tsx",
+  "offset": 1,
+  "limit": 25
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:48:16 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+1	import { useLoaderData, useActionData, Form, useNavigation, useSubmit } from "react-router";
+2	import { useState, useEffect } from "react";
+3	import bcrypt from "bcrypt";
+4	import { requireSupplier } from "../lib/auth.server";
+5	import { connectDB } from "../lib/db";
+6	import User from "../models/User";
+7	import UserType from "../models/UserType";
+8	import AuthCredential from "../models/AuthCredential";
+9	import MachineOwner from "../models/MachineOwner";
+10	
+11	const LIMIT = 50;
+12	
+13	type OwnerDoc = {
+14	  _id: string;
+15	  first_name: string;
+16	  last_name: string;
+17	  email: string;
+18	  phone?: string;
+19	  address?: string;
+20	  billing_address?: string;
+21	  is_active: boolean;
+22	  assignedMachine?: { _id: string; serial_number: string; model_name: string } | null;
+23	};
+24	
+25	export async function loader({ request }: { request: Request }) {
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:48:21 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\supplier.owners.tsx",
+  "old_string": "type OwnerDoc = {\n  _id: string;\n  first_name: string;\n  last_name: string;\n  email: string;\n  phone?: string;",
+  "new_string": "type OwnerDoc = {\n  _id: string;\n  first_name: string;\n  last_name: string;\n  email: string;\n  username?: string;\n  phone?: string;"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:48:22 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\supplier.owners.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:48:24 PM</sup>
+
+Now the `create`/`update` actions (already read earlier at lines 95-177).
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:48:31 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\supplier.owners.tsx",
+  "old_string": "    const email = (formData.get(\"email\") as string)?.trim().toLowerCase();\n    const password = formData.get(\"password\") as string;\n    const ownerTypeId = formData.get(\"owner_type_id\") as string;\n\n    if (!first_name || !last_name || !email || !password || !ownerTypeId) {\n      return { error: \"First name, last name, email, and password are required.\" };\n    }\n    if (password.length < 6) return { error: \"Password must be at least 6 characters.\" };\n\n    const existing = await User.findOne({ email });\n    if (existing) return { error: \"A user with this email already exists.\" };\n\n    let user;\n    try {\n      user = await User.create({\n        first_name,\n        last_name,\n        email,\n        phone: (formData.get(\"phone\") as string)?.trim() || undefined,\n        address: (formData.get(\"address\") as string)?.trim() || undefined,\n        billing_address: (formData.get(\"billing_address\") as string)?.trim() || undefined,\n        user_type_id: ownerTypeId,\n        supplier_id: supplierId,\n        is_active: true,\n        date_created: new Date(),\n        date_modified: new Date(),\n      });\n    } catch {\n      return { error: \"Failed to create owner.\" };\n    }\n\n    try {\n      const password_hash = await bcrypt.hash(password, 10);\n      await AuthCredential.create({ user_id: user._id, email, password_hash, is_active: true });\n    } catch {",
+  "new_string": "    const email = (formData.get(\"email\") as string)?.trim().toLowerCase();\n    const username = (formData.get(\"username\") as string)?.trim().toLowerCase() || undefined;\n    const password = formData.get(\"password\") as string;\n    const ownerTypeId = formData.get(\"owner_type_id\") as string;\n\n    if (!first_name || !last_name || !email || !password || !ownerTypeId) {\n      return { error: \"First name, 
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:48:32 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\supplier.owners.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:48:39 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\supplier.owners.tsx",
+  "old_string": "    const email = (formData.get(\"email\") as string)?.trim().toLowerCase();\n\n    if (!first_name || !last_name || !email) {\n      return { error: \"First name, last name, and email are required.\" };\n    }\n\n    const conflict = await User.findOne({ email, _id: { $ne: id } });\n    if (conflict) return { error: \"Another user with this email already exists.\" };\n\n    await User.findByIdAndUpdate(id, {\n      first_name,\n      last_name,\n      email,\n      phone: (formData.get(\"phone\") as string)?.trim() || undefined,\n      address: (formData.get(\"address\") as string)?.trim() || undefined,\n      billing_address: (formData.get(\"billing_address\") as string)?.trim() || undefined,\n      date_modified: new Date(),\n    });\n\n    await AuthCredential.findOneAndUpdate({ user_id: id }, { email });",
+  "new_string": "    const email = (formData.get(\"email\") as string)?.trim().toLowerCase();\n    const username = (formData.get(\"username\") as string)?.trim().toLowerCase() || undefined;\n\n    if (!first_name || !last_name || !email) {\n      return { error: \"First name, last name, and email are required.\" };\n    }\n\n    const conflict = await User.findOne({ email, _id: { $ne: id } });\n    if (conflict) return { error: \"Another user with this email already exists.\" };\n\n    if (username) {\n      const usernameConflict = await User.findOne({ username, _id: { $ne: id } });\n      if (usernameConflict) return { error: \"This username is already taken.\" };\n    }\n\n    await User.findByIdAndUpdate(id, {\n      first_name,\n      last_name,\n      email,\n      username,\n      phone: (formData.get(\"phone\") as string)?.trim() || undefined,\n      address: (formData.get(\"address\") as string)?.trim() || undefined,\n      billing_address: (formData.get(\"billing_address\") as string)?.trim() || undefi
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:48:41 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\supplier.owners.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:48:44 PM</sup>
+
+Now the JSX form section for `supplier.owners.tsx`.
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:48:45 PM</sup>
+
+<details>
+<summary>Tool: <code>Grep</code></summary>
+
+```json
+{
+  "pattern": "name=\"email\"",
+  "path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\supplier.owners.tsx",
+  "output_mode": "content",
+  "-n": true,
+  "-C": 4
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:48:45 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+390-                  <input name="last_name" defaultValue={editItem?.last_name} required className={inputCls} />
+391-                </div>
+392-                <div className="col-span-2">
+393-                  <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+394:                  <input name="email" type="email" defaultValue={editItem?.email} required className={inputCls} />
+395-                </div>
+396-                <div>
+397-                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+398-                  <input name="phone" defaultValue={editItem?.phone} className={inputCls} />
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:48:51 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\supplier.owners.tsx",
+  "old_string": "                <div className=\"col-span-2\">\n                  <label className=\"block text-sm font-medium text-gray-700 mb-1\">Email *</label>\n                  <input name=\"email\" type=\"email\" defaultValue={editItem?.email} required className={inputCls} />\n                </div>\n                <div>\n                  <label className=\"block text-sm font-medium text-gray-700 mb-1\">Phone</label>\n                  <input name=\"phone\" defaultValue={editItem?.phone} className={inputCls} />\n                </div>",
+  "new_string": "                <div className=\"col-span-2\">\n                  <label className=\"block text-sm font-medium text-gray-700 mb-1\">Email *</label>\n                  <input name=\"email\" type=\"email\" defaultValue={editItem?.email} required className={inputCls} />\n                </div>\n                <div className=\"col-span-2\">\n                  <label className=\"block text-sm font-medium text-gray-700 mb-1\">Username</label>\n                  <input name=\"username\" defaultValue={editItem?.username} className={inputCls} />\n                  <p className=\"text-xs text-gray-400 mt-1\">Optional — lets this owner log in with a username instead of email.</p>\n                </div>\n                <div>\n                  <label className=\"block text-sm font-medium text-gray-700 mb-1\">Phone</label>\n                  <input name=\"phone\" defaultValue={editItem?.phone} className={inputCls} />\n                </div>"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:48:52 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\supplier.owners.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:48:55 PM</sup>
+
+Now verify with `tsc`.
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:48:56 PM</sup>
+
+<details>
+<summary>Tool: <code>TodoWrite</code></summary>
+
+```json
+{
+  "todos": [
+    {
+      "content": "Add username field to User and AuthCredential models",
+      "status": "completed",
+      "activeForm": "Adding username field to models"
+    },
+    {
+      "content": "Update authenticateUser to look up by email or username",
+      "status": "completed",
+      "activeForm": "Updating authenticateUser lookup"
+    },
+    {
+      "content": "Add username to admin.users.tsx form + action",
+      "status": "completed",
+      "activeForm": "Adding username to admin.users.tsx"
+    },
+    {
+      "content": "Add username to admin.owners.tsx form + action",
+      "status": "completed",
+      "activeForm": "Adding username to admin.owners.tsx"
+    },
+    {
+      "content": "Add username to supplier.owners.tsx form + action",
+      "status": "completed",
+      "activeForm": "Adding username to supplier.owners.tsx"
+    },
+    {
+      "content": "Verify with tsc",
+      "status": "in_progress",
+      "activeForm": "Verifying with tsc"
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:48:56 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Todos have been modified successfully. Ensure that you continue to use the todo list to track your progress. Please proceed with the current tasks if applicable
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:48:59 PM</sup>
+
+<details>
+<summary>Tool: <code>Bash</code></summary>
+
+```json
+{
+  "command": "cd \"d:/projects/production-hydro-colon-therapy/backend\" && npx tsc --noEmit 2>&1",
+  "description": "Type-check backend after username feature changes",
+  "timeout": 120000
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:49:10 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Exit code 2
+app/routes/api/auth.login.ts(34,36): error TS2339: Property 'userId' does not exist on type 'string | JwtPayload'.
+  Property 'userId' does not exist on type 'string'.
+app/routes/api/auth.login.ts(36,77): error TS2339: Property 'userId' does not exist on type 'string | JwtPayload'.
+  Property 'userId' does not exist on type 'string'.
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:49:13 PM</sup>
+
+Only the same pre-existing, unrelated error remains — nothing new from these changes.
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:49:14 PM</sup>
+
+<details>
+<summary>Tool: <code>TodoWrite</code></summary>
+
+```json
+{
+  "todos": [
+    {
+      "content": "Add username field to User and AuthCredential models",
+      "status": "completed",
+      "activeForm": "Adding username field to models"
+    },
+    {
+      "content": "Update authenticateUser to look up by email or username",
+      "status": "completed",
+      "activeForm": "Updating authenticateUser lookup"
+    },
+    {
+      "content": "Add username to admin.users.tsx form + action",
+      "status": "completed",
+      "activeForm": "Adding username to admin.users.tsx"
+    },
+    {
+      "content": "Add username to admin.owners.tsx form + action",
+      "status": "completed",
+      "activeForm": "Adding username to admin.owners.tsx"
+    },
+    {
+      "content": "Add username to supplier.owners.tsx form + action",
+      "status": "completed",
+      "activeForm": "Adding username to supplier.owners.tsx"
+    },
+    {
+      "content": "Verify with tsc",
+      "status": "completed",
+      "activeForm": "Verifying with tsc"
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:49:14 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Todos have been modified successfully. Ensure that you continue to use the todo list to track your progress. Please proceed with the current tasks if applicable
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:49:20 PM</sup>
+
+Done. Summary:
+
+- **`User.ts` / `AuthCredential.ts`**: added an optional `username` field (`unique: true, sparse: true, lowercase, trim`) so multiple users can go without one.
+- **`auth.server.ts`**: `authenticateUser` now looks up credentials by `email` OR `username`, so login works with either — this propagates automatically to Admin login, Supplier login, and the Owner-facing tablet app login since they all funnel through this one function with no per-route changes needed.
+- **`admin.users.tsx`, `admin.owners.tsx`, `supplier.owners.tsx`**: each now has a "Username" input (optional, next to Email) in the create/edit form, with duplicate-username validation matching the existing email-conflict checks, and the value is saved to both `User` and `AuthCredential` on create/update.
+
+`npx tsc --noEmit` shows no new errors (the one remaining error is pre-existing and unrelated, in `auth.login.ts`).
+
+Worth a real run to verify: create an owner with a username on each of the three forms, confirm duplicate-username rejection works, then log in via username on the admin login, supplier login, and the tablet app's login screen.
 
 
 ---

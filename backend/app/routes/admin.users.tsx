@@ -18,6 +18,7 @@ type UserDoc = {
   first_name: string;
   last_name: string;
   email: string;
+  username?: string;
   phone?: string;
   address?: string;
   billing_address?: string;
@@ -70,6 +71,7 @@ export async function action({ request }: { request: Request }) {
     const first_name = (formData.get("first_name") as string)?.trim();
     const last_name = (formData.get("last_name") as string)?.trim();
     const email = (formData.get("email") as string)?.trim().toLowerCase();
+    const username = (formData.get("username") as string)?.trim().toLowerCase() || undefined;
     const phone = (formData.get("phone") as string)?.trim();
     const password = formData.get("password") as string;
     const user_type_id = formData.get("user_type_id") as string;
@@ -84,12 +86,18 @@ export async function action({ request }: { request: Request }) {
     const existing = await User.findOne({ email });
     if (existing) return { error: "A user with this email already exists." };
 
+    if (username) {
+      const usernameTaken = await User.findOne({ username });
+      if (usernameTaken) return { error: "This username is already taken." };
+    }
+
     let user;
     try {
       user = await User.create({
         first_name,
         last_name,
         email,
+        username,
         phone: (formData.get("phone") as string)?.trim() || undefined,
         address: (formData.get("address") as string)?.trim() || undefined,
         billing_address: (formData.get("billing_address") as string)?.trim() || undefined,
@@ -107,6 +115,7 @@ export async function action({ request }: { request: Request }) {
       await AuthCredential.create({
         user_id: user._id,
         email,
+        username,
         password_hash,
         is_active: true,
       });
@@ -124,6 +133,7 @@ export async function action({ request }: { request: Request }) {
     const last_name = (formData.get("last_name") as string)?.trim();
     const phone = (formData.get("phone") as string)?.trim();
     const email = (formData.get("email") as string)?.trim().toLowerCase();
+    const username = (formData.get("username") as string)?.trim().toLowerCase() || undefined;
     const user_type_id = formData.get("user_type_id") as string;
 
     if (!first_name || !last_name || !phone || !email || !user_type_id) {
@@ -133,10 +143,16 @@ export async function action({ request }: { request: Request }) {
     const conflict = await User.findOne({ email, _id: { $ne: id } });
     if (conflict) return { error: "Another user with this email already exists." };
 
+    if (username) {
+      const usernameConflict = await User.findOne({ username, _id: { $ne: id } });
+      if (usernameConflict) return { error: "This username is already taken." };
+    }
+
     await User.findByIdAndUpdate(id, {
       first_name,
       last_name,
       email,
+      username,
       phone: (formData.get("phone") as string)?.trim() || undefined,
       address: (formData.get("address") as string)?.trim() || undefined,
       billing_address: (formData.get("billing_address") as string)?.trim() || undefined,
@@ -144,8 +160,8 @@ export async function action({ request }: { request: Request }) {
       date_modified: new Date(),
     });
 
-    // Update email in AuthCredential if changed
-    await AuthCredential.findOneAndUpdate({ user_id: id }, { email });
+    // Update email/username in AuthCredential if changed
+    await AuthCredential.findOneAndUpdate({ user_id: id }, { email, username });
 
     // Optional password reset
     const newPassword = (formData.get("password") as string)?.trim();
@@ -412,6 +428,11 @@ export default function AdminUsers() {
                 <div className="col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
                   <input name="email" type="email" defaultValue={editItem?.email} required className={inputCls} />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                  <input name="username" defaultValue={editItem?.username} className={inputCls} />
+                  <p className="text-xs text-gray-400 mt-1">Optional — lets this user log in with a username instead of email.</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>

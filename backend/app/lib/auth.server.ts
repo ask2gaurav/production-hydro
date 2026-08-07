@@ -21,9 +21,13 @@ export function verifyToken(token: string) {
   }
 }
 
-export async function authenticateUser(email: string, password_raw: string) {
+export async function authenticateUser(identifier: string, password_raw: string) {
   await connectDB();
-  const credential = await AuthCredential.findOne({ email, is_active: true });
+  const normalized = identifier?.toLowerCase().trim();
+  const credential = await AuthCredential.findOne({
+    is_active: true,
+    $or: [{ email: normalized }, { username: normalized }],
+  });
   if (!credential) return null;
 
   const valid = await bcrypt.compare(password_raw, credential.password_hash);
