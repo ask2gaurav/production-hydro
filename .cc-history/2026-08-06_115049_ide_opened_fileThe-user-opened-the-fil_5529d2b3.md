@@ -6,8 +6,8 @@
 | **Session ID** | `5529d2b3-4ebf-4965-aa06-df984f081bd8` |
 | **Working Dir** | `d:\projects\production-hydro-colon-therapy` |
 | **Started** | 8/6/2026, 11:50:49 AM |
-| **Last Updated** | 8/7/2026, 7:02:42 PM |
-| **Messages** | 830 |
+| **Last Updated** | 8/7/2026, 7:09:38 PM |
+| **Messages** | 879 |
 
 ---
 
@@ -13767,6 +13767,708 @@ I found the exact pattern to mirror — there's already an analogous "low temper
 5. **Two new modals**: JSX blocks styled identically to the existing low-temp/temp-restored modals — one saying the session was auto-paused because temperature exceeded the max threshold, one saying it's now safe to resume.
 
 Does this match what you want, or should the pause also apply outside `ACTIVE` state (e.g. during PREPARING/IDLE too)?
+
+
+---
+
+## User <sup>8/7/2026, 7:05:20 PM</sup>
+
+Yes in ACTIVE, if in PREPARING state if it reach to max thresold it should remain in PREPAREING state and header should be off so off heater request will be sent to ESP32. Understood? ReConfirm before implementation.
+
+
+---
+
+## Assistant <sup>8/7/2026, 7:05:30 PM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 7:05:32 PM</sup>
+
+<details>
+<summary>Tool: <code>Grep</code></summary>
+
+```json
+{
+  "pattern": "heater_switch|heaterSwitch|HardwareControls|sendPrepareParams\\(|handleHeaterToggle|heater",
+  "path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Therapy.tsx",
+  "output_mode": "content",
+  "-n": true,
+  "-i": true
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 7:05:32 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+429:            await sendPrepareParams({ ...params, start_session: 1, prepare_session: 1, pause_session: 1 });
+449:            await sendPrepareParams({ ...params, start_session: 1, prepare_session: 1, pause_session: 1 });
+535:      buildAllParams().then((params) => sendPrepareParams({ ...params, end_session: 1 }).catch(() => {}));
+554:            await sendPrepareParams({ ...params, start_session: 1, prepare_session: 1, pause_session: 1 });
+579:      const updated = await sendPrepareParams({ ...params, start_session: 1 });
+616:      const updated = await sendPrepareParams({ ...params, start_session: 1, prepare_session: 1, pause_session: isPausing ? 1 : 0 });
+631:      if (!current || current.temp < params.default_temperature) params.heater = 1;
+634:      const updated = await sendPrepareParams(params);
+644:      const updated = await sendPrepareParams({ ...params, end_session: 1 });
+656:      const updated = await sendPrepareParams({ ...params, flush_button_hit: 1 });
+667:      const
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 7:05:36 PM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 7:05:37 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Therapy.tsx",
+  "offset": 595,
+  "limit": 50
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 7:05:37 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+595	      patient_id: String(selectedPatientId),
+596	      therapist_server_id: therapist?.server_id,
+597	      patient_server_id: patient?.server_id,
+598	      start_time: now,
+599	      duration_minutes: 0,
+600	      water_temp_log: [],
+601	      water_level_log: [],
+602	      session_note: sessionNotes.trim(),
+603	      status: 'active',
+604	      synced: 0,
+605	      created_at: now,
+606	    });
+607	
+608	    activeSessionLocalId.current = localId as number;
+609	    setState('ACTIVE');
+610	  };
+611	
+612	  const handlePauseResume = async () => {
+613	    const isPausing = state === 'ACTIVE';
+614	    try {
+615	      const params = await buildAllParams();
+616	      const updated = await sendPrepareParams({ ...params, start_session: 1, prepare_session: 1, pause_session: isPausing ? 1 : 0 });
+617	      setMachineInfo(updated);
+618	    } catch {
+619	      presentAlert({ header: 'Command Failed', message: `Could not ${isPausing ? 'pause' : 'resume'} session on the machine. Check the connect
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 7:05:54 PM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 7:05:58 PM</sup>
+
+Understood — two distinct behaviors:
+
+1. **ACTIVE state**: if temp exceeds max threshold → auto-pause (send `pause_session: 1` to ESP32), disable Resume until temp drops back to/below the threshold, show a "paused — too hot" modal, then a "safe to resume" modal once it recovers. (This matches what we agreed last turn.)
+
+2. **PREPARING state**: if temp reaches/exceeds max threshold → stay in PREPARING (don't let it advance to IDLE even if other conditions would normally allow it), and send an explicit **heater-off** command to the ESP32 (`heater: 0` via `sendPrepareParams`, mirroring how `handlePrepare` currently sends `heater: 1`) so the machine stops heating further. I'll guard this so the command is sent once when the threshold is first crossed (not every poll cycle), and if temp drops back below the threshold while still in PREPARING, re-enable the heater (`heater: 1`) if temp is still below `default_temperature`, so normal preparation can resume and reach IDLE.
+
+Confirm this is right and I'll implement both.
+
+
+---
+
+## User <sup>8/7/2026, 7:07:46 PM</sup>
+
+go
+
+
+---
+
+## Assistant <sup>8/7/2026, 7:07:51 PM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 7:07:52 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Therapy.tsx",
+  "offset": 250,
+  "limit": 30
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 7:07:52 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+250	  const [epSaving, setEpSaving] = useState(false);
+251	  const [epError, setEpError] = useState('');
+252	  // Session stats
+253	  const [sessionStats, setSessionStats] = useState<StatMap>({});
+254	
+255	  const isLocked = state === 'INIT' || state === 'ACTIVE' || state === 'PAUSED';
+256	  const [defaultTemp, setDefaultTemp] = useState(37);
+257	  const [therapyMinTemp, setTherapyMinTemp] = useState(0);
+258	  const [showMachineAlert, setShowMachineAlert] = useState(false);
+259	  const [showDisconnectPauseModal, setShowDisconnectPauseModal] = useState(false);
+260	  const [showLowTempModal, setShowLowTempModal] = useState(false);
+261	  const [showTempRecoveredModal, setShowTempRecoveredModal] = useState(false);
+262	  const [blowerAuto, setBlowerAuto] = useState(false);
+263	  const [flushAuto, setFlushAuto] = useState(false);
+264	  const [blowerMode, setBlowerMode] = useState<'continuous' | 'interval'>('continuous');
+265	  const [blowerInterval, setBlowerInterval] = useState(30);
+266	  c
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 7:07:57 PM</sup>
+
+Now adding the new state and refs.
+
+
+---
+
+## Assistant <sup>8/7/2026, 7:08:00 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Therapy.tsx",
+  "old_string": "  const [defaultTemp, setDefaultTemp] = useState(37);\n  const [therapyMinTemp, setTherapyMinTemp] = useState(0);\n  const [showMachineAlert, setShowMachineAlert] = useState(false);\n  const [showDisconnectPauseModal, setShowDisconnectPauseModal] = useState(false);\n  const [showLowTempModal, setShowLowTempModal] = useState(false);\n  const [showTempRecoveredModal, setShowTempRecoveredModal] = useState(false);",
+  "new_string": "  const [defaultTemp, setDefaultTemp] = useState(37);\n  const [therapyMinTemp, setTherapyMinTemp] = useState(0);\n  const [maxTemp, setMaxTemp] = useState(40);\n  const [showMachineAlert, setShowMachineAlert] = useState(false);\n  const [showDisconnectPauseModal, setShowDisconnectPauseModal] = useState(false);\n  const [showLowTempModal, setShowLowTempModal] = useState(false);\n  const [showTempRecoveredModal, setShowTempRecoveredModal] = useState(false);\n  const [showHighTempModal, setShowHighTempModal] = useState(false);\n  const [showTempSafeModal, setShowTempSafeModal] = useState(false);"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 7:08:01 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\Therapy.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 7:08:04 PM</sup>
+
+Expected — continuing to wire these up. Adding the refs next.
+
+
+---
+
+## Assistant <sup>8/7/2026, 7:08:06 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Therapy.tsx",
+  "old_string": "  const lowWaterPaused = useRef(false);\n  const lowTempPaused = useRef(false);\n  const bgPaused = useRef(false);\n  const hardwarePaused = useRef(false);",
+  "new_string": "  const lowWaterPaused = useRef(false);\n  const lowTempPaused = useRef(false);\n  const highTempPaused = useRef(false);\n  const heaterForcedOff = useRef(false);\n  const bgPaused = useRef(false);\n  const hardwarePaused = useRef(false);"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 7:08:07 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\Therapy.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 7:08:11 PM</sup>
+
+Now load `maxTemp` from settings alongside `therapyMinTemp` in `useIonViewDidEnter`.
+
+
+---
+
+## Assistant <sup>8/7/2026, 7:08:12 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Therapy.tsx",
+  "old_string": "      if (s?.default_temperature) setDefaultTemp(s.default_temperature);\n      setTherapyMinTemp(s?.therapy_min_temp ?? 0);",
+  "new_string": "      if (s?.default_temperature) setDefaultTemp(s.default_temperature);\n      setTherapyMinTemp(s?.therapy_min_temp ?? 0);\n      setMaxTemp(s?.max_temperature ?? 40);"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 7:08:14 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\Therapy.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 7:08:25 PM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 7:08:30 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Therapy.tsx",
+  "old_string": "        // Auto-advance: water high level reached AND temperature met\n        if (state === 'PREPARING' && info.water_hl === 1 && info.temp >= defaultTemp) {\n          setState('IDLE');\n        }\n        // Degrade: conditions drop while IDLE (System Ready) → back to PREPARING\n        if (state === 'IDLE' && (info.temp < defaultTemp || info.water_hl !== 1)) {\n          setState('PREPARING');\n        }",
+  "new_string": "        // Auto-advance: water high level reached AND temperature met (but not over the max threshold)\n        if (state === 'PREPARING' && info.water_hl === 1 && info.temp >= defaultTemp && info.temp < maxTemp) {\n          setState('IDLE');\n        }\n        // Degrade: conditions drop while IDLE (System Ready) → back to PREPARING\n        if (state === 'IDLE' && (info.temp < defaultTemp || info.water_hl !== 1)) {\n          setState('PREPARING');\n        }\n\n        // Safety: while PREPARING, if temp reaches the max threshold, stay in PREPARING\n        // and force the heater off so it doesn't keep climbing.\n        if (state === 'PREPARING' && info.temp >= maxTemp && !heaterForcedOff.current) {\n          heaterForcedOff.current = true;\n          try {\n            const params = await buildAllParams();\n            const updated = await sendPrepareParams({ ...params, prepare_session: 1, heater: 0 });\n            setMachineInfo(updated);\n          } catch {\n            // Polling will retry; keep the forced-off flag so we don't spam commands\n          }\n        }\n        // Recovery: temp dropped back below max threshold while PREPARING — re-enable heater if still below target\n        if (state === 'PREPARING' && heaterForcedOff.current && info.temp < maxTemp) {\n          heaterForcedOff.current = false;\n          if (info.temp < defaultTemp) {\n            try {\n              const
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 7:08:31 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\Therapy.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 7:08:35 PM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 7:08:35 PM</sup>
+
+Now adding the ACTIVE-state high-temp pause/recovery, right after the existing low-temp block.
+
+
+---
+
+## Assistant <sup>8/7/2026, 7:08:36 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Therapy.tsx",
+  "offset": 460,
+  "limit": 40
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 7:08:36 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+460	            const params = await buildAllParams();
+461	            await sendPrepareParams({ ...params, start_session: 1, prepare_session: 1, pause_session: 1 });
+462	          } catch {
+463	            // Stay paused locally even if command fails
+464	          }
+465	        }
+466	        // Auto-recover: water level restored while paused due to low water
+467	        if (state === 'PAUSED' && lowWaterPaused.current && info.water_ll === 1) {
+468	          lowWaterPaused.current = false;
+469	          setShowLowWaterModal(false);
+470	          setShowWaterRecoveredModal(true);
+471	        }
+472	
+473	        // Auto-pause: temp drops below therapy min during active session
+474	        const isMinTempValid = therapyMinTemp > 0 && therapyMinTemp < defaultTemp;
+475	        if (state === 'ACTIVE' && isMinTempValid && info.temp < therapyMinTemp) {
+476	          lowTempPaused.current = true;
+477	          setState('PAUSED');
+478	          setShowLowTempModal(true);
+479	          try {
+480	 
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 7:08:43 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Therapy.tsx",
+  "old_string": "        // Auto-recover: temp restored while paused due to low temp\n        if (state === 'PAUSED' && lowTempPaused.current && isMinTempValid && info.temp >= therapyMinTemp) {\n          lowTempPaused.current = false;\n          setShowLowTempModal(false);\n          setShowTempRecoveredModal(true);\n        }\n\n        // Hardware pause: ESP32 signals sessionP=1 → pause UI; sessionP=0 → resume",
+  "new_string": "        // Auto-recover: temp restored while paused due to low temp\n        if (state === 'PAUSED' && lowTempPaused.current && isMinTempValid && info.temp >= therapyMinTemp) {\n          lowTempPaused.current = false;\n          setShowLowTempModal(false);\n          setShowTempRecoveredModal(true);\n        }\n\n        // Auto-pause: temp exceeds max threshold during active session\n        if (state === 'ACTIVE' && info.temp > maxTemp) {\n          highTempPaused.current = true;\n          setState('PAUSED');\n          setShowHighTempModal(true);\n          try {\n            const params = await buildAllParams();\n            await sendPrepareParams({ ...params, start_session: 1, prepare_session: 1, pause_session: 1 });\n          } catch {\n            // Stay paused locally even if command fails\n          }\n        }\n        // Auto-recover: temp back within safe range while paused due to high temp\n        if (state === 'PAUSED' && highTempPaused.current && info.temp <= maxTemp) {\n          highTempPaused.current = false;\n          setShowHighTempModal(false);\n          setShowTempSafeModal(true);\n        }\n\n        // Hardware pause: ESP32 signals sessionP=1 → pause UI; sessionP=0 → resume"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 7:08:44 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\Therapy.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 7:08:47 PM</sup>
+
+Now update the `useEffect` dependency array to include `maxTemp`.
+
+
+---
+
+## Assistant <sup>8/7/2026, 7:08:48 PM</sup>
+
+<details>
+<summary>Tool: <code>Grep</code></summary>
+
+```json
+{
+  "pattern": "}, \\[state, defaultTemp, therapyMinTemp, setMachineConnected, setMachineInfo, buildAllParams\\]);",
+  "path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Therapy.tsx",
+  "output_mode": "content",
+  "-n": true
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 7:08:48 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Search failed — ripgrep rejected the pattern, glob, or file type without searching:
+rg: regex parse error:
+    (?:}, \[state, defaultTemp, therapyMinTemp, setMachineConnected, setMachineInfo, buildAllParams\]);)
+                                                                                                       ^
+error: unopened group
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 7:08:52 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Therapy.tsx",
+  "old_string": "  }, [state, defaultTemp, therapyMinTemp, setMachineConnected, setMachineInfo, buildAllParams]);",
+  "new_string": "  }, [state, defaultTemp, therapyMinTemp, maxTemp, setMachineConnected, setMachineInfo, buildAllParams]);"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 7:08:53 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\Therapy.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 7:08:55 PM</sup>
+
+Now update the Resume button's `disabled` condition.
+
+
+---
+
+## Assistant <sup>8/7/2026, 7:08:57 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Therapy.tsx",
+  "old_string": "                      disabled={\n                        (state === 'PAUSED' && machineInfo?.water_ll === 0) ||\n                        (state === 'PAUSED' && lowTempPaused.current && machineInfo != null && machineInfo.temp < therapyMinTemp)\n                      }",
+  "new_string": "                      disabled={\n                        (state === 'PAUSED' && machineInfo?.water_ll === 0) ||\n                        (state === 'PAUSED' && lowTempPaused.current && machineInfo != null && machineInfo.temp < therapyMinTemp) ||\n                        (state === 'PAUSED' && highTempPaused.current && machineInfo != null && machineInfo.temp > maxTemp)\n                      }"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 7:08:58 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\Therapy.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 7:09:01 PM</sup>
+
+Now add the two new modals, mirroring the low-temp/temp-recovered ones.
+
+
+---
+
+## Assistant <sup>8/7/2026, 7:09:13 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Therapy.tsx",
+  "old_string": "      {/* Water level restored modal */}\n      {showWaterRecoveredModal && (",
+  "new_string": "      {/* High temperature — session auto-paused modal */}\n      {showHighTempModal && (\n        <div style={{\n          position: 'fixed', inset: 0, zIndex: 10000,\n          backgroundColor: 'rgba(0,0,0,0.55)',\n          display: 'flex', alignItems: 'center', justifyContent: 'center',\n        }}>\n          <div style={{\n            backgroundColor: 'white', borderRadius: '14px',\n            padding: '2rem 2rem 1.5rem',\n            maxWidth: '460px', width: '90%',\n            boxShadow: '0 8px 32px rgba(0,0,0,0.28)',\n          }}>\n            <div style={{ fontSize: '2.8rem', marginBottom: '0.5rem', textAlign: 'center' }}>🔥</div>\n            <h2 style={{ margin: '0 0 0.5rem', fontSize: '1.3rem', color: '#b71c1c', fontWeight: 700, textAlign: 'center' }}>\n              Session Paused — Water Temperature Too High\n            </h2>\n            <p style={{ margin: '0 0 1rem', fontSize: '0.95rem', color: '#333', lineHeight: 1.6, textAlign: 'center' }}>\n              The water temperature has exceeded the maximum safe threshold ({maxTemp}°C).\n              The session has been automatically paused.\n            </p>\n            <div style={{ backgroundColor: '#fff3f3', border: '1px solid #f5c2c2', borderRadius: '10px', padding: '1rem 1.25rem', marginBottom: '1.25rem' }}>\n              <p style={{ fontWeight: 700, color: '#555', fontSize: '0.88rem', marginBottom: '0.5rem' }}>Please check the following:</p>\n              <ol style={{ margin: 0, paddingLeft: '1.2rem', color: '#444', fontSize: '0.88rem', lineHeight: '2' }}>\n                <li>Check the <strong>water heater</strong> — it may be stuck on or malfunctioning.</li>\n                <li>Ensure the <strong>heater switch</strong> is turned off in Hardware Contr
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 7:09:14 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\Therapy.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 7:09:17 PM</sup>
+
+Now let's verify with a type-check.
+
+
+---
+
+## Assistant <sup>8/7/2026, 7:09:17 PM</sup>
+
+<details>
+<summary>Tool: <code>Bash</code></summary>
+
+```json
+{
+  "command": "cd \"d:/projects/production-hydro-colon-therapy/frontend\" && npx tsc --noEmit -p . 2>&1",
+  "description": "Type-check frontend after max-temperature auto-pause feature",
+  "timeout": 120000
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 7:09:26 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+(Bash completed with no output)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 7:09:30 PM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 7:09:31 PM</sup>
+
+<details>
+<summary>Tool: <code>Grep</code></summary>
+
+```json
+{
+  "pattern": "heater",
+  "path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\services",
+  "output_mode": "content",
+  "-n": true,
+  "-i": true
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 7:09:31 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+src\services\esp32Service.ts:9:  heater: number;
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 7:09:38 PM</sup>
+
+Confirmed `heater: number` is already a valid field in the ESP32 params type, and `tsc --noEmit` passes clean with no errors. Summary of what was implemented in `Therapy.tsx`:
+
+- **ACTIVE state**: if `info.temp > maxTemp`, the session auto-pauses (sends `pause_session: 1` to the ESP32), shows a "Temperature Too High" modal, and the RESUME button stays disabled until temp drops back to/below `maxTemp` — mirroring the existing low-temp-pause pattern exactly. Recovery shows a "Temperature Back to Safe Range" modal.
+- **PREPARING state**: if `info.temp >= maxTemp`, it now stays in PREPARING (auto-advance to IDLE is guarded with `&& info.temp < maxTemp`) and sends a one-time `heater: 0` command to the ESP32 (tracked via `heaterForcedOff` ref so it isn't resent every poll). If temp drops back below `maxTemp` while still PREPARING and is still under `default_temperature`, it re-sends `heater: 1` to resume normal heating.
+- `maxTemp` is now loaded from `settings.max_temperature` (default 40) alongside the existing `therapyMinTemp`.
+
+Since this depends on live ESP32 hardware behavior, it's worth a real run to confirm the pause/resume-block/heater-off commands actually take effect on the machine as expected.
 
 
 ---

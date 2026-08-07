@@ -255,10 +255,13 @@ const Therapy: React.FC = () => {
   const isLocked = state === 'INIT' || state === 'ACTIVE' || state === 'PAUSED';
   const [defaultTemp, setDefaultTemp] = useState(37);
   const [therapyMinTemp, setTherapyMinTemp] = useState(0);
+  const [maxTemp, setMaxTemp] = useState(40);
   const [showMachineAlert, setShowMachineAlert] = useState(false);
   const [showDisconnectPauseModal, setShowDisconnectPauseModal] = useState(false);
   const [showLowTempModal, setShowLowTempModal] = useState(false);
   const [showTempRecoveredModal, setShowTempRecoveredModal] = useState(false);
+  const [showHighTempModal, setShowHighTempModal] = useState(false);
+  const [showTempSafeModal, setShowTempSafeModal] = useState(false);
   const [blowerAuto, setBlowerAuto] = useState(false);
   const [flushAuto, setFlushAuto] = useState(false);
   const [blowerMode, setBlowerMode] = useState<'continuous' | 'interval'>('continuous');
@@ -274,6 +277,8 @@ const Therapy: React.FC = () => {
   const [showWaterRecoveredModal, setShowWaterRecoveredModal] = useState(false);
   const lowWaterPaused = useRef(false);
   const lowTempPaused = useRef(false);
+  const highTempPaused = useRef(false);
+  const heaterForcedOff = useRef(false);
   const bgPaused = useRef(false);
   const hardwarePaused = useRef(false);
   const [showBgPauseModal, setShowBgPauseModal] = useState(false);
@@ -378,6 +383,7 @@ const Therapy: React.FC = () => {
       setTimeLeft(secs);
       if (s?.default_temperature) setDefaultTemp(s.default_temperature);
       setTherapyMinTemp(s?.therapy_min_temp ?? 0);
+      setMaxTemp(s?.max_temperature ?? 40);
       setBlowerAuto(s?.blower_auto ?? false);
       setFlushAuto(s?.auto_flush ?? false);
       setBlowerMode(s?.blower_frequency_mode ?? 'continuous');
@@ -411,13 +417,39 @@ const Therapy: React.FC = () => {
         if (state === 'INIT') {
           setState('READY');
         }
-        // Auto-advance: water high level reached AND temperature met
-        if (state === 'PREPARING' && info.water_hl === 1 && info.temp >= defaultTemp) {
+        // Auto-advance: water high level reached AND temperature met (but not over the max threshold)
+        if (state === 'PREPARING' && info.water_hl === 1 && info.temp >= defaultTemp && info.temp < maxTemp) {
           setState('IDLE');
         }
         // Degrade: conditions drop while IDLE (System Ready) → back to PREPARING
         if (state === 'IDLE' && (info.temp < defaultTemp || info.water_hl !== 1)) {
           setState('PREPARING');
+        }
+
+        // Safety: while PREPARING, if temp reaches the max threshold, stay in PREPARING
+        // and force the heater off so it doesn't keep climbing.
+        if (state === 'PREPARING' && info.temp >= maxTemp && !heaterForcedOff.current) {
+          heaterForcedOff.current = true;
+          try {
+            const params = await buildAllParams();
+            const updated = await sendPrepareParams({ ...params, prepare_session: 1, heater: 0 });
+            setMachineInfo(updated);
+          } catch {
+            // Polling will retry; keep the forced-off flag so we don't spam commands
+          }
+        }
+        // Recovery: temp dropped back below max threshold while PREPARING — re-enable heater if still below target
+        if (state === 'PREPARING' && heaterForcedOff.current && info.temp < maxTemp) {
+          heaterForcedOff.current = false;
+          if (info.temp < defaultTemp) {
+            try {
+              const params = await buildAllParams();
+              const updated = await sendPrepareParams({ ...params, prepare_session: 1, heater: 1 });
+              setMachineInfo(updated);
+            } catch {
+              // Stay as-is; next poll will retry via the normal PREPARING flow
+            }
+          }
         }
         // Auto-pause: water low level drops to 0 during active session
         if (state === 'ACTIVE' && info.water_ll === 0) {
@@ -458,6 +490,25 @@ const Therapy: React.FC = () => {
           setShowTempRecoveredModal(true);
         }
 
+        // Auto-pause: temp exceeds max threshold during active session
+        if (state === 'ACTIVE' && info.temp > maxTemp) {
+          highTempPaused.current = true;
+          setState('PAUSED');
+          setShowHighTempModal(true);
+          try {
+            const params = await buildAllParams();
+            await sendPrepareParams({ ...params, start_session: 1, prepare_session: 1, pause_session: 1 });
+          } catch {
+            // Stay paused locally even if command fails
+          }
+        }
+        // Auto-recover: temp back within safe range while paused due to high temp
+        if (state === 'PAUSED' && highTempPaused.current && info.temp <= maxTemp) {
+          highTempPaused.current = false;
+          setShowHighTempModal(false);
+          setShowTempSafeModal(true);
+        }
+
         // Hardware pause: ESP32 signals sessionP=1 → pause UI; sessionP=0 → resume
         if (state === 'ACTIVE' && info.sessionP === 1) {
           hardwarePaused.current = true;
@@ -490,7 +541,7 @@ const Therapy: React.FC = () => {
     poll();
     const id = setInterval(poll, interval);
     return () => clearInterval(id);
-  }, [state, defaultTemp, therapyMinTemp, setMachineConnected, setMachineInfo, buildAllParams]);
+  }, [state, defaultTemp, therapyMinTemp, maxTemp, setMachineConnected, setMachineInfo, buildAllParams]);
 
   // ---------- Session lifecycle ----------
 
@@ -1056,7 +1107,8 @@ const Therapy: React.FC = () => {
                       onClick={handlePauseResume}
                       disabled={
                         (state === 'PAUSED' && machineInfo?.water_ll === 0) ||
-                        (state === 'PAUSED' && lowTempPaused.current && machineInfo != null && machineInfo.temp < therapyMinTemp)
+                        (state === 'PAUSED' && lowTempPaused.current && machineInfo != null && machineInfo.temp < therapyMinTemp) ||
+                        (state === 'PAUSED' && highTempPaused.current && machineInfo != null && machineInfo.temp > maxTemp)
                       }
                     >
                       {state === 'ACTIVE' ? 'PAUSE' : 'RESUME'}
@@ -1811,6 +1863,90 @@ const Therapy: React.FC = () => {
             </p>
             <button
               onClick={() => setShowTempRecoveredModal(false)}
+              style={{
+                backgroundColor: '#2dd36f', color: 'white',
+                border: 'none', borderRadius: '8px',
+                padding: '0.65rem 2rem', fontSize: '1rem',
+                fontWeight: 600, cursor: 'pointer', width: '100%',
+              }}
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* High temperature — session auto-paused modal */}
+      {showHighTempModal && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 10000,
+          backgroundColor: 'rgba(0,0,0,0.55)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <div style={{
+            backgroundColor: 'white', borderRadius: '14px',
+            padding: '2rem 2rem 1.5rem',
+            maxWidth: '460px', width: '90%',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.28)',
+          }}>
+            <div style={{ fontSize: '2.8rem', marginBottom: '0.5rem', textAlign: 'center' }}>🔥</div>
+            <h2 style={{ margin: '0 0 0.5rem', fontSize: '1.3rem', color: '#b71c1c', fontWeight: 700, textAlign: 'center' }}>
+              Session Paused — Water Temperature Too High
+            </h2>
+            <p style={{ margin: '0 0 1rem', fontSize: '0.95rem', color: '#333', lineHeight: 1.6, textAlign: 'center' }}>
+              The water temperature has exceeded the maximum safe threshold ({maxTemp}°C).
+              The session has been automatically paused.
+            </p>
+            <div style={{ backgroundColor: '#fff3f3', border: '1px solid #f5c2c2', borderRadius: '10px', padding: '1rem 1.25rem', marginBottom: '1.25rem' }}>
+              <p style={{ fontWeight: 700, color: '#555', fontSize: '0.88rem', marginBottom: '0.5rem' }}>Please check the following:</p>
+              <ol style={{ margin: 0, paddingLeft: '1.2rem', color: '#444', fontSize: '0.88rem', lineHeight: '2' }}>
+                <li>Check the <strong>water heater</strong> — it may be stuck on or malfunctioning.</li>
+                <li>Ensure the <strong>heater switch</strong> is turned off in Hardware Controls if not needed.</li>
+                <li>Wait for the temperature to drop back to <strong>{maxTemp}°C</strong> or below before resuming.</li>
+              </ol>
+            </div>
+            <p style={{ margin: '0 0 1.25rem', fontSize: '0.85rem', color: '#888', textAlign: 'center', lineHeight: 1.5 }}>
+              The session will remain paused. This dialog will close automatically once the temperature is back to a safe range.
+            </p>
+            <button
+              onClick={() => setShowHighTempModal(false)}
+              style={{
+                backgroundColor: '#b71c1c', color: 'white',
+                border: 'none', borderRadius: '8px',
+                padding: '0.65rem 2rem', fontSize: '1rem',
+                fontWeight: 600, cursor: 'pointer', width: '100%',
+              }}
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Temperature back to safe range modal */}
+      {showTempSafeModal && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 10000,
+          backgroundColor: 'rgba(0,0,0,0.55)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <div style={{
+            backgroundColor: 'white', borderRadius: '14px',
+            padding: '2rem 2rem 1.5rem',
+            maxWidth: '420px', width: '90%',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.28)',
+            textAlign: 'center',
+          }}>
+            <div style={{ fontSize: '2.8rem', marginBottom: '0.5rem' }}>✅</div>
+            <h2 style={{ margin: '0 0 0.5rem', fontSize: '1.3rem', color: '#2dd36f', fontWeight: 700 }}>
+              Temperature Back to Safe Range
+            </h2>
+            <p style={{ margin: '0 0 1.5rem', fontSize: '0.95rem', color: '#333', lineHeight: 1.6 }}>
+              The water temperature is back within the safe threshold ({maxTemp}°C).
+              Press <strong>RESUME</strong> to continue the therapy session.
+            </p>
+            <button
+              onClick={() => setShowTempSafeModal(false)}
               style={{
                 backgroundColor: '#2dd36f', color: 'white',
                 border: 'none', borderRadius: '8px',
