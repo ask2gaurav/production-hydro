@@ -6,8 +6,8 @@
 | **Session ID** | `5529d2b3-4ebf-4965-aa06-df984f081bd8` |
 | **Working Dir** | `d:\projects\production-hydro-colon-therapy` |
 | **Started** | 8/6/2026, 11:50:49 AM |
-| **Last Updated** | 8/7/2026, 12:10:49 PM |
-| **Messages** | 474 |
+| **Last Updated** | 8/7/2026, 12:22:08 PM |
+| **Messages** | 525 |
 
 ---
 
@@ -8027,6 +8027,782 @@ Done. Summary of what changed across the admin panel:
 All existing soft-delete (Deactivate/Restore) behavior is untouched — hard Delete is a new, additional destructive action on every listing page. `npx tsc --noEmit` in `backend/` shows zero errors introduced by these changes (the one remaining error is pre-existing and unrelated, in `auth.login.ts`).
 
 This needs a real run against the dev DB to verify end-to-end — worth logging into `/admin` and testing each Delete flow (especially the demo-mode machine restriction and the owner invoice-block) before considering this fully verified.
+
+
+---
+
+## User <sup>8/7/2026, 12:16:34 PM</sup>
+
+@frontend/src/pages/SavedBackups.tsx  when click on view excel file giving this error: Activity not found: No activity found to handle Intent { act=android.intent.action.VIEW dat=content://com.advaitsolutions.hydrocolon.file.opener.provider/...  typ=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet flg=0x1 xflg=0x4 }
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:16:42 PM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:16:47 PM</sup>
+
+That error means the device simply has no app registered to open `.xlsx` files via `ACTION_VIEW` (no Excel/Sheets/WPS installed) — not a bug in the code, but the raw Android exception is leaking through as the error message. Let's show a friendlier message instead.
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:16:48 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\SavedBackups.tsx",
+  "old_string": "  const handleViewLocal = async (backup: LocalBackupFile) => {\n    try {\n      await viewLocalFile(backup.name);\n    } catch (err) {\n      showError(err instanceof Error ? err.message : 'Failed to open file. No app found to view this file type.');\n    }\n  };",
+  "new_string": "  const handleViewLocal = async (backup: LocalBackupFile) => {\n    try {\n      await viewLocalFile(backup.name);\n    } catch (err) {\n      const message = err instanceof Error ? err.message : '';\n      if (/activity not found/i.test(message)) {\n        showError('No app installed on this device can open Excel files. Install an app such as Google Sheets, Microsoft Excel, or WPS Office, or use Share instead to send the file to another device/app.');\n      } else {\n        showError(message || 'Failed to open file.');\n      }\n    }\n  };"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:16:49 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\SavedBackups.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:17:01 PM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:17:02 PM</sup>
+
+Fixed — the `handleViewLocal` catch block now detects the "Activity not found" case specifically and shows a clear, actionable message ("No app installed... install Sheets/Excel/WPS, or use Share instead") rather than the raw Android intent dump. This isn't a code bug — the emulator/device just has no `.xlsx`-capable viewer app installed — but now the user gets a useful explanation instead of a stack-trace-looking error.
+
+
+---
+
+## User <sup>8/7/2026, 12:18:17 PM</sup>
+
+Also can we add copy to Download folder Icon for both the log type?
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:18:23 PM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:18:24 PM</sup>
+
+<details>
+<summary>Tool: <code>Bash</code></summary>
+
+```json
+{
+  "command": "cd \"d:/projects/production-hydro-colon-therapy/frontend\" && find node_modules/@capacitor/filesystem/dist -iname \"*.d.ts\" | xargs grep -l \"enum Directory\" 2>/dev/null",
+  "description": "Find Filesystem Directory enum definition file"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:18:26 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+node_modules/@capacitor/filesystem/dist/esm/definitions.d.ts
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:18:30 PM</sup>
+
+<details>
+<summary>Tool: <code>Bash</code></summary>
+
+```json
+{
+  "command": "cd \"d:/projects/production-hydro-colon-therapy/frontend\" && grep -A 40 \"enum Directory\" node_modules/@capacitor/filesystem/dist/esm/definitions.d.ts",
+  "description": "Print Directory enum values with docs"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:18:30 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+export declare enum Directory {
+    /**
+     * The Documents directory.
+     * On iOS it's the app's documents directory.
+     * Use this directory to store user-generated content.
+     * On Android it's the Public Documents folder, so it's accessible from other apps.
+     * It's not accessible on Android 10 unless the app enables legacy External Storage
+     * by adding `android:requestLegacyExternalStorage="true"` in the `application` tag
+     * in the `AndroidManifest.xml`.
+     * On Android 11 or newer the app can only access the files/folders the app created.
+     *
+     * @since 1.0.0
+     */
+    Documents = "DOCUMENTS",
+    /**
+     * The Data directory.
+     * On iOS it will use the Documents directory.
+     * On Android it's the directory holding application files.
+     * Files will be deleted when the application is uninstalled.
+     *
+     * @since 1.0.0
+     */
+    Data = "DATA",
+    /**
+     * The Library directory.
+     * On iOS it will use the Library directory.
+     * O
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:18:33 PM</sup>
+
+<details>
+<summary>Tool: <code>Bash</code></summary>
+
+```json
+{
+  "command": "cd \"d:/projects/production-hydro-colon-therapy/frontend\" && grep -A 90 \"enum Directory\" node_modules/@capacitor/filesystem/dist/esm/definitions.d.ts | tail -55",
+  "description": "Print remaining Directory enum values"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:18:33 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+*
+     * @since 1.0.0
+     */
+    Cache = "CACHE",
+    /**
+     * The external directory.
+     * On iOS it will use the Documents directory.
+     * On Android it's the directory on the primary shared/external
+     * storage device where the application can place persistent files it owns.
+     * These files are internal to the applications, and not typically visible
+     * to the user as media.
+     * Files will be deleted when the application is uninstalled.
+     *
+     * @since 1.0.0
+     */
+    External = "EXTERNAL",
+    /**
+     * The external storage directory.
+     * On iOS it will use the Documents directory.
+     * On Android it's the primary shared/external storage directory.
+     * It's not accessible on Android 10 unless the app enables legacy External Storage
+     * by adding `android:requestLegacyExternalStorage="true"` in the `application` tag
+     * in the `AndroidManifest.xml`.
+     * It's not accessible on Android 11 or newer.
+     *
+     * @since 1.0.0
+     */
+   
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:18:44 PM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:18:46 PM</sup>
+
+<details>
+<summary>Tool: <code>Bash</code></summary>
+
+```json
+{
+  "command": "cd /tmp && rm -rf fs-check && mkdir fs-check && cd fs-check && npm pack @capacitor/filesystem@8.1.2 --silent 2>&1 && tar -xzf capacitor-filesystem-8.1.2.tgz && find package/android -iname \"*.java\" -o -iname \"*.kt\" | head -20",
+  "description": "Inspect Capacitor Filesystem Android native source",
+  "timeout": 60000
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:18:53 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+capacitor-filesystem-8.1.2.tgz
+package/android/src/main/kotlin/com/capacitorjs/plugins/filesystem/FilesystemErrors.kt
+package/android/src/main/kotlin/com/capacitorjs/plugins/filesystem/FilesystemMethodOptions.kt
+package/android/src/main/kotlin/com/capacitorjs/plugins/filesystem/FilesystemMethodResults.kt
+package/android/src/main/kotlin/com/capacitorjs/plugins/filesystem/FilesystemPlugin.kt
+package/android/src/main/kotlin/com/capacitorjs/plugins/filesystem/LegacyFilesystemImplementation.kt
+package/android/src/main/kotlin/com/capacitorjs/plugins/filesystem/PluginResultExtensions.kt
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:18:57 PM</sup>
+
+<details>
+<summary>Tool: <code>Bash</code></summary>
+
+```json
+{
+  "command": "cd /tmp/fs-check && grep -n \"DOCUMENTS\\|getDirectory\\|MediaStore\\|Environment\\.\" package/android/src/main/kotlin/com/capacitorjs/plugins/filesystem/FilesystemPlugin.kt | head -50",
+  "description": "Search for Directory resolution and MediaStore usage"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:18:59 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+249:            val directory = call.getString("directory", Environment.DIRECTORY_DOWNLOADS)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:19:02 PM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:19:03 PM</sup>
+
+<details>
+<summary>Tool: <code>Bash</code></summary>
+
+```json
+{
+  "command": "cd /tmp/fs-check && sed -n '1,60p' package/android/src/main/kotlin/com/capacitorjs/plugins/filesystem/FilesystemPlugin.kt",
+  "description": "Print top of FilesystemPlugin.kt"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:19:05 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+package com.capacitorjs.plugins.filesystem
+
+import android.Manifest
+import android.media.MediaScannerConnection
+import android.os.Build
+import android.os.Environment
+import android.util.Log
+import com.getcapacitor.JSObject
+import com.getcapacitor.Logger
+import com.getcapacitor.PermissionState
+import com.getcapacitor.Plugin
+import com.getcapacitor.PluginCall
+import com.getcapacitor.PluginMethod
+import com.getcapacitor.annotation.CapacitorPlugin
+import com.getcapacitor.annotation.Permission
+import com.getcapacitor.annotation.PermissionCallback
+import com.getcapacitor.plugin.util.HttpRequestHandler.ProgressEmitter
+import io.ionic.libs.ionfilesystemlib.IONFILEController
+import io.ionic.libs.ionfilesystemlib.model.IONFILECreateOptions
+import io.ionic.libs.ionfilesystemlib.model.IONFILEDeleteOptions
+import io.ionic.libs.ionfilesystemlib.model.IONFILEUri
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.fl
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:19:19 PM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:19:20 PM</sup>
+
+<details>
+<summary>Tool: <code>Bash</code></summary>
+
+```json
+{
+  "command": "cd \"d:/projects/production-hydro-colon-therapy/frontend/android\" && grep -n \"minSdkVersion\\|targetSdkVersion\\|compileSdkVersion\" variables.gradle 2>/dev/null; grep -n \"requestLegacyExternalStorage\" app/src/main/AndroidManifest.xml",
+  "description": "Check Android SDK versions and legacy storage flag"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:19:21 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+2:    minSdkVersion = 24
+3:    compileSdkVersion = 36
+4:    targetSdkVersion = 36
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:19:39 PM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:19:42 PM</sup>
+
+<details>
+<summary>Tool: <code>AskUserQuestion</code></summary>
+
+```json
+{
+  "questions": [
+    {
+      "question": "The installed Capacitor Filesystem plugin doesn't expose a literal \"Downloads\" folder constant — only a public \"Documents\" folder (visible to other apps/file managers) is available without extra native work. How should \"Copy to Downloads\" behave?",
+      "header": "Target folder",
+      "options": [
+        {
+          "label": "Copy to public Documents folder (Recommended)",
+          "description": "Uses Directory.Documents — works reliably on Android 7–15 with this plugin, file is visible in the Files app / other apps. Button labeled \"Copy to Downloads\" but technically lands in Documents."
+        },
+        {
+          "label": "Add a native tweak to target the real Downloads folder",
+          "description": "Requires a small custom native addition (MediaStore Downloads collection write) since no existing plugin exposes it — more native code, more testing, but the file actually lands in the real Downloads folder."
+        }
+      ]
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:20:57 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Your questions have been answered: "The installed Capacitor Filesystem plugin doesn't expose a literal "Downloads" folder constant — only a public "Documents" folder (visible to other apps/file managers) is available without extra native work. How should "Copy to Downloads" behave?"="Copy to public Documents folder (Recommended)". You can now continue with these answers in mind.
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:21:05 PM</sup>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:21:06 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\services\\backupService.ts"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:21:06 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+1	import { Filesystem, Directory } from '@capacitor/filesystem';
+2	import { Share } from '@capacitor/share';
+3	import { FileOpener } from '@capacitor-community/file-opener';
+4	import JSZip from 'jszip';
+5	import * as XLSX from 'xlsx';
+6	import { localDB } from '../db/localDB';
+7	
+8	const BACKUP_SCHEMA_VERSION = 1;
+9	const BACKUPS_DIR = 'backups';
+10	
+11	const MIME_TYPES: Record<string, string> = {
+12	  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+13	  zip: 'application/zip',
+14	};
+15	
+16	function mimeTypeFor(name: string): string {
+17	  const ext = name.split('.').pop()?.toLowerCase() ?? '';
+18	  return MIME_TYPES[ext] ?? 'application/octet-stream';
+19	}
+20	
+21	const TABLE_NAMES = ['sessions', 'therapists', 'patients', 'settings', 'resources'] as const;
+22	type TableName = typeof TABLE_NAMES[number];
+23	
+24	// Resources are excluded from exports (Excel and backup zip) but still supported on import
+25	// so older backups that include a resources.json can st
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:21:09 PM</sup>
+
+Adding a `copyToPublicFolder` function using `Directory.Documents`.
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:21:13 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\services\\backupService.ts",
+  "old_string": "export async function shareLocalFile(name: string): Promise<void> {\n  const { uri } = await Filesystem.getUri({ path: `${BACKUPS_DIR}/${name}`, directory: Directory.Data });\n  await Share.share({\n    title: name,\n    url: uri,\n    dialogTitle: 'Save or share backup file',\n  });\n}",
+  "new_string": "export async function shareLocalFile(name: string): Promise<void> {\n  const { uri } = await Filesystem.getUri({ path: `${BACKUPS_DIR}/${name}`, directory: Directory.Data });\n  await Share.share({\n    title: name,\n    url: uri,\n    dialogTitle: 'Save or share backup file',\n  });\n}\n\n// Capacitor's Filesystem plugin has no dedicated \"Downloads\" directory constant; Directory.Documents\n// is the closest available public, cross-app-visible location on Android without extra native work.\nexport async function copyLocalFileToDownloads(name: string): Promise<void> {\n  const read = await Filesystem.readFile({ path: `${BACKUPS_DIR}/${name}`, directory: Directory.Data });\n  await Filesystem.writeFile({\n    path: name,\n    data: read.data,\n    directory: Directory.Documents,\n    recursive: true,\n  });\n}"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:21:14 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\services\backupService.ts has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:21:17 PM</sup>
+
+Now update `SavedBackups.tsx` to add the icon for both tables.
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:21:20 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\SavedBackups.tsx",
+  "old_string": "import {\n  arrowBack, refreshOutline, trashOutline, cloudUploadOutline,\n  chevronBackOutline, chevronForwardOutline, eyeOutline, shareSocialOutline,\n} from 'ionicons/icons';\nimport { useHistory } from 'react-router';\nimport {\n  listLocalBackups, deleteLocalBackup, restoreFromLocalBackup, viewLocalFile, shareLocalFile,\n  type ImportMode, type LocalBackupFile,\n} from '../services/backupService';",
+  "new_string": "import {\n  arrowBack, refreshOutline, trashOutline, cloudUploadOutline,\n  chevronBackOutline, chevronForwardOutline, eyeOutline, shareSocialOutline, downloadOutline,\n} from 'ionicons/icons';\nimport { useHistory } from 'react-router';\nimport {\n  listLocalBackups, deleteLocalBackup, restoreFromLocalBackup, viewLocalFile, shareLocalFile,\n  copyLocalFileToDownloads, type ImportMode, type LocalBackupFile,\n} from '../services/backupService';"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:21:21 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\SavedBackups.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:21:26 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\SavedBackups.tsx",
+  "old_string": "  onRestore?: (backup: LocalBackupFile) => void;\n  onView?: (backup: LocalBackupFile) => void;\n  onShare: (backup: LocalBackupFile) => void;\n  onDelete: (backup: LocalBackupFile) => void;\n}\n\nconst BackupTable: React.FC<BackupTableProps> = ({ title, items, showRestore, showView, onRestore, onView, onShare, onDelete }) => {",
+  "new_string": "  onRestore?: (backup: LocalBackupFile) => void;\n  onView?: (backup: LocalBackupFile) => void;\n  onShare: (backup: LocalBackupFile) => void;\n  onDownload: (backup: LocalBackupFile) => void;\n  onDelete: (backup: LocalBackupFile) => void;\n}\n\nconst BackupTable: React.FC<BackupTableProps> = ({ title, items, showRestore, showView, onRestore, onView, onShare, onDownload, onDelete }) => {"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:21:27 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\SavedBackups.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:21:33 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\SavedBackups.tsx",
+  "old_string": "                  <IonIcon\n                    icon={shareSocialOutline}\n                    title=\"Share\"\n                    style={{ color: '#0a5c99', cursor: 'pointer', fontSize: '1.2rem', marginRight: '0.75rem' }}\n                    onClick={() => onShare(backup)}\n                  />\n                  <IonIcon\n                    icon={trashOutline}",
+  "new_string": "                  <IonIcon\n                    icon={shareSocialOutline}\n                    title=\"Share\"\n                    style={{ color: '#0a5c99', cursor: 'pointer', fontSize: '1.2rem', marginRight: '0.75rem' }}\n                    onClick={() => onShare(backup)}\n                  />\n                  <IonIcon\n                    icon={downloadOutline}\n                    title=\"Copy to Downloads\"\n                    style={{ color: '#0a5c99', cursor: 'pointer', fontSize: '1.2rem', marginRight: '0.75rem' }}\n                    onClick={() => onDownload(backup)}\n                  />\n                  <IonIcon\n                    icon={trashOutline}"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:21:34 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\SavedBackups.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:21:37 PM</sup>
+
+Now add the `handleDownloadLocal` handler and wire it into both `BackupTable` usages.
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:21:39 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\SavedBackups.tsx",
+  "old_string": "  const handleShareLocal = async (backup: LocalBackupFile) => {\n    try {\n      await shareLocalFile(backup.name);\n    } catch (err) {\n      showError(err instanceof Error ? err.message : 'Failed to share file.');\n    }\n  };",
+  "new_string": "  const handleShareLocal = async (backup: LocalBackupFile) => {\n    try {\n      await shareLocalFile(backup.name);\n    } catch (err) {\n      showError(err instanceof Error ? err.message : 'Failed to share file.');\n    }\n  };\n\n  const handleDownloadLocal = async (backup: LocalBackupFile) => {\n    try {\n      await copyLocalFileToDownloads(backup.name);\n      presentToast({ message: `\"${backup.name}\" copied to Downloads.`, duration: 2500, color: 'success' });\n    } catch (err) {\n      showError(err instanceof Error ? err.message : 'Failed to copy file to Downloads.');\n    }\n  };"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:21:40 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\SavedBackups.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:21:48 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\SavedBackups.tsx",
+  "old_string": "        <BackupTable\n          title=\"Zip Backups\"\n          items={zipBackups}\n          showRestore\n          showView={false}\n          onRestore={handleRestoreLocal}\n          onShare={handleShareLocal}\n          onDelete={handleDeleteLocal}\n        />\n\n        <BackupTable\n          title=\"Excel Exports\"\n          items={excelBackups}\n          showRestore={false}\n          showView\n          onView={handleViewLocal}\n          onShare={handleShareLocal}\n          onDelete={handleDeleteLocal}\n        />",
+  "new_string": "        <BackupTable\n          title=\"Zip Backups\"\n          items={zipBackups}\n          showRestore\n          showView={false}\n          onRestore={handleRestoreLocal}\n          onShare={handleShareLocal}\n          onDownload={handleDownloadLocal}\n          onDelete={handleDeleteLocal}\n        />\n\n        <BackupTable\n          title=\"Excel Exports\"\n          items={excelBackups}\n          showRestore={false}\n          showView\n          onView={handleViewLocal}\n          onShare={handleShareLocal}\n          onDownload={handleDownloadLocal}\n          onDelete={handleDeleteLocal}\n        />"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:21:49 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\SavedBackups.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:21:52 PM</sup>
+
+Now type-check.
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:21:53 PM</sup>
+
+<details>
+<summary>Tool: <code>Bash</code></summary>
+
+```json
+{
+  "command": "cd \"d:/projects/production-hydro-colon-therapy/frontend\" && npx tsc --noEmit -p . ; echo \"EXIT:$?\"",
+  "description": "Type-check frontend after adding download-to-Documents feature",
+  "timeout": 120000
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/7/2026, 12:22:01 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+EXIT:0
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/7/2026, 12:22:08 PM</sup>
+
+Type-check passes clean.
+
+**Added**: a new download icon on both Zip Backups and Excel Exports rows in `SavedBackups.tsx` that copies the file into the device's public Documents folder — the closest thing to "Downloads" the installed `@capacitor/filesystem` plugin exposes without extra native work (per your choice). Backed by `copyLocalFileToDownloads()` in `backupService.ts` (reads from `Directory.Data/backups/`, writes to `Directory.Documents`), with a success/error toast in the UI.
+
+Since this touches native storage, it's worth a real-device check that the copied file actually shows up and is openable from a file manager or other app.
 
 
 ---

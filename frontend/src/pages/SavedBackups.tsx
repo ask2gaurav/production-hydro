@@ -5,12 +5,12 @@ import {
 } from '@ionic/react';
 import {
   arrowBack, refreshOutline, trashOutline, cloudUploadOutline,
-  chevronBackOutline, chevronForwardOutline, eyeOutline, shareSocialOutline,
+  chevronBackOutline, chevronForwardOutline, eyeOutline, shareSocialOutline, downloadOutline,
 } from 'ionicons/icons';
 import { useHistory } from 'react-router';
 import {
   listLocalBackups, deleteLocalBackup, restoreFromLocalBackup, viewLocalFile, shareLocalFile,
-  type ImportMode, type LocalBackupFile,
+  copyLocalFileToDownloads, type ImportMode, type LocalBackupFile,
 } from '../services/backupService';
 
 const PAGE_SIZE = 20;
@@ -49,10 +49,11 @@ interface BackupTableProps {
   onRestore?: (backup: LocalBackupFile) => void;
   onView?: (backup: LocalBackupFile) => void;
   onShare: (backup: LocalBackupFile) => void;
+  onDownload: (backup: LocalBackupFile) => void;
   onDelete: (backup: LocalBackupFile) => void;
 }
 
-const BackupTable: React.FC<BackupTableProps> = ({ title, items, showRestore, showView, onRestore, onView, onShare, onDelete }) => {
+const BackupTable: React.FC<BackupTableProps> = ({ title, items, showRestore, showView, onRestore, onView, onShare, onDownload, onDelete }) => {
   const [page, setPage] = useState(1);
   const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
   const clampedPage = Math.min(page, totalPages);
@@ -111,6 +112,12 @@ const BackupTable: React.FC<BackupTableProps> = ({ title, items, showRestore, sh
                     title="Share"
                     style={{ color: '#0a5c99', cursor: 'pointer', fontSize: '1.2rem', marginRight: '0.75rem' }}
                     onClick={() => onShare(backup)}
+                  />
+                  <IonIcon
+                    icon={downloadOutline}
+                    title="Copy to Downloads"
+                    style={{ color: '#0a5c99', cursor: 'pointer', fontSize: '1.2rem', marginRight: '0.75rem' }}
+                    onClick={() => onDownload(backup)}
                   />
                   <IonIcon
                     icon={trashOutline}
@@ -202,7 +209,12 @@ const SavedBackups: React.FC = () => {
     try {
       await viewLocalFile(backup.name);
     } catch (err) {
-      showError(err instanceof Error ? err.message : 'Failed to open file. No app found to view this file type.');
+      const message = err instanceof Error ? err.message : '';
+      if (/activity not found/i.test(message)) {
+        showError('No app installed on this device can open Excel files. Install an app such as Google Sheets, Microsoft Excel, or WPS Office, or use Share instead to send the file to another device/app.');
+      } else {
+        showError(message || 'Failed to open file.');
+      }
     }
   };
 
@@ -211,6 +223,15 @@ const SavedBackups: React.FC = () => {
       await shareLocalFile(backup.name);
     } catch (err) {
       showError(err instanceof Error ? err.message : 'Failed to share file.');
+    }
+  };
+
+  const handleDownloadLocal = async (backup: LocalBackupFile) => {
+    try {
+      await copyLocalFileToDownloads(backup.name);
+      presentToast({ message: `"${backup.name}" copied to Downloads.`, duration: 2500, color: 'success' });
+    } catch (err) {
+      showError(err instanceof Error ? err.message : 'Failed to copy file to Downloads.');
     }
   };
 
@@ -263,6 +284,7 @@ const SavedBackups: React.FC = () => {
           showView={false}
           onRestore={handleRestoreLocal}
           onShare={handleShareLocal}
+          onDownload={handleDownloadLocal}
           onDelete={handleDeleteLocal}
         />
 
@@ -273,6 +295,7 @@ const SavedBackups: React.FC = () => {
           showView
           onView={handleViewLocal}
           onShare={handleShareLocal}
+          onDownload={handleDownloadLocal}
           onDelete={handleDeleteLocal}
         />
 

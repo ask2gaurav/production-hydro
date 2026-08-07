@@ -162,6 +162,18 @@ export async function shareLocalFile(name: string): Promise<void> {
   });
 }
 
+// Capacitor's Filesystem plugin has no dedicated "Downloads" directory constant; Directory.Documents
+// is the closest available public, cross-app-visible location on Android without extra native work.
+export async function copyLocalFileToDownloads(name: string): Promise<void> {
+  const read = await Filesystem.readFile({ path: `${BACKUPS_DIR}/${name}`, directory: Directory.Data });
+  await Filesystem.writeFile({
+    path: name,
+    data: read.data,
+    directory: Directory.Documents,
+    recursive: true,
+  });
+}
+
 async function restoreFromZip(zip: JSZip, mode: ImportMode): Promise<ImportResult> {
   const manifestEntry = zip.file('manifest.json');
   if (!manifestEntry) {
