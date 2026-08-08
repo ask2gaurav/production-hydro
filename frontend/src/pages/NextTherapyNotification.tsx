@@ -551,6 +551,14 @@ const NextTherapyNotification: React.FC = () => {
                           {entry.status ? <IonBadge color={statusColor(entry.status)}>{entry.status}</IonBadge> : '—'}
                         </td>
                         <td style={tdStyle}>
+                          {entry.log.message && (
+                            <IonIcon
+                              icon={eyeOutline}
+                              title="View full message"
+                              style={{ color: '#0a5c99', cursor: 'pointer', fontSize: '1.2rem', marginRight: '0.75rem' }}
+                              onClick={() => setViewMessageEntry({ patientName: `${entry.patient.first_name} ${entry.patient.last_name}`, message: entry.log.message! })}
+                            />
+                          )}
                           <IonIcon
                             icon={alarmOutline}
                             title="Set custom reminder days for this patient"
