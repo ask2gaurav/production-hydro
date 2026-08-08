@@ -6,8 +6,8 @@
 | **Session ID** | `5529d2b3-4ebf-4965-aa06-df984f081bd8` |
 | **Working Dir** | `d:\projects\production-hydro-colon-therapy` |
 | **Started** | 8/6/2026, 11:50:49 AM |
-| **Last Updated** | 8/8/2026, 3:02:23 PM |
-| **Messages** | 1013 |
+| **Last Updated** | 8/8/2026, 3:42:11 PM |
+| **Messages** | 1123 |
 
 ---
 
@@ -16627,6 +16627,1443 @@ Understood. I'll:
 3. Add the same inline expandable editor row (Remind-after / Alert-lead inputs + Save / Use Global Default / Cancel) beneath a Reminded-tab row when it's being edited, mirroring the Due List tab's existing pattern (adjusting `colSpan` to 7 to match that table's column count).
 
 Confirm and I'll implement.
+
+
+---
+
+## User <sup>8/8/2026, 3:07:13 PM</sup>
+
+go
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:07:17 PM</sup>
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:07:19 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\NextTherapyNotification.tsx",
+  "old_string": "  const openOverrideEditor = (entry: DueEntry) => {\n    setEditingPatientId(entry.patient.id!);\n    setReminderDaysDraft(String(entry.reminderDays));\n    setLeadDaysDraft(String(entry.leadDays));\n  };",
+  "new_string": "  const openOverrideEditor = (patient: LocalPatient, reminderDays: number, leadDays: number) => {\n    setEditingPatientId(patient.id!);\n    setReminderDaysDraft(String(reminderDays));\n    setLeadDaysDraft(String(leadDays));\n  };"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 3:07:21 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\NextTherapyNotification.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:07:25 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\NextTherapyNotification.tsx",
+  "old_string": "                            onClick={() => openOverrideEditor(entry)}",
+  "new_string": "                            onClick={() => openOverrideEditor(entry.patient, entry.reminderDays, entry.leadDays)}"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 3:07:26 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\NextTherapyNotification.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:07:28 PM</sup>
+
+Now include `reminderDays`/`leadDays` in the `remindedEntries` computation.
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:07:33 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\NextTherapyNotification.tsx",
+  "old_string": "  const remindedEntries = useMemo(() => {\n    return reminderLogs\n      .map((log) => {\n        const patient = log.patient_id ? patientsById[log.patient_id] : undefined;\n        if (!patient) return null;\n        const lastSession = patient.server_id ? lastSessionByPatientId[patient.server_id] : undefined;\n        const dueInfo = lastSession ? computeDueStatus(patient, lastSession, globalReminderDays, globalLeadDays) : undefined;\n        return { log, patient, lastSession, status: dueInfo?.status };\n      })\n      .filter((e): e is { log: LocalReminderLog; patient: LocalPatient; lastSession: Date | undefined; status: DueStatus | undefined } => e !== null);\n  }, [reminderLogs, patientsById, lastSessionByPatientId, globalReminderDays, globalLeadDays]);",
+  "new_string": "  const remindedEntries = useMemo(() => {\n    return reminderLogs\n      .map((log) => {\n        const patient = log.patient_id ? patientsById[log.patient_id] : undefined;\n        if (!patient) return null;\n        const lastSession = patient.server_id ? lastSessionByPatientId[patient.server_id] : undefined;\n        const dueInfo = lastSession ? computeDueStatus(patient, lastSession, globalReminderDays, globalLeadDays) : undefined;\n        const reminderDays = dueInfo?.reminderDays ?? patient.reminder_days_override ?? globalReminderDays;\n        const leadDays = dueInfo?.leadDays ?? patient.alert_lead_days_override ?? globalLeadDays;\n        return { log, patient, lastSession, status: dueInfo?.status, reminderDays, leadDays };\n      })\n      .filter((e): e is { log: LocalReminderLog; patient: LocalPatient; lastSession: Date | undefined; status: DueStatus | undefined; reminderDays: number; leadDays: number } => e !== null);\n  }, [reminderLogs, patientsById, lastSessionByPatientId, globalReminderDays, globalLeadDays]);"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 3:07:34 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\NextTherapyNotification.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:07:38 PM</sup>
+
+Now add the alarm icon and inline editor row to the Reminded tab table.
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:07:50 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\NextTherapyNotification.tsx",
+  "old_string": "                  {filteredRemindedEntries.map((entry) => (\n                    <tr key={entry.log.id}>\n                      <td style={tdStyle}>{entry.patient.first_name} {entry.patient.last_name}</td>\n                      <td style={tdStyle}>{entry.patient.phone}</td>\n                      <td style={tdStyle}>{METHOD_LABEL[entry.log.method]}</td>\n                      <td style={{ ...tdStyle, maxWidth: '220px', overflow: 'hidden', textOverflow: 'ellipsis' }} title={entry.log.message || ''}>\n                        {entry.log.message ? (entry.log.message.length > 40 ? `${entry.log.message.slice(0, 40)}…` : entry.log.message) : '—'}\n                      </td>\n                      <td style={tdStyle}>{formatDate(new Date(entry.log.sent_at))}</td>\n                      <td style={tdStyle}>\n                        {entry.status ? <IonBadge color={statusColor(entry.status)}>{entry.status}</IonBadge> : '—'}\n                      </td>\n                      <td style={tdStyle}>\n                        {entry.status ? (\n                          <IonIcon\n                            icon={paperPlaneOutline}\n                            title=\"Resend reminder\"\n                            style={{ color: '#0a5c99', cursor: 'pointer', fontSize: '1.2rem' }}\n                            onClick={() => openSendModal(entry.patient, entry.log.language, entry.log.message)}\n                          />\n                        ) : '—'}\n                      </td>\n                    </tr>\n                  ))}",
+  "new_string": "                  {filteredRemindedEntries.map((entry) => (\n                    <React.Fragment key={entry.log.id}>\n                      <tr>\n                        <td style={tdStyle}>{entry.patient.first_name} {entry.patient.last_name}</td>\n                        <td sty
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 3:07:51 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\NextTherapyNotification.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:07:54 PM</sup>
+
+Now type-check.
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:07:55 PM</sup>
+
+<details>
+<summary>Tool: <code>Bash</code></summary>
+
+```json
+{
+  "command": "cd \"d:/projects/production-hydro-colon-therapy/frontend\" && npx tsc --noEmit -p . 2>&1",
+  "description": "Type-check frontend after adding reminder-days editor to Reminded tab",
+  "timeout": 120000
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 3:08:18 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+(Bash completed with no output)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:08:23 PM</sup>
+
+Clean. Done. Summary:
+
+- **`openOverrideEditor`** now takes `(patient, reminderDays, leadDays)` directly instead of a `DueEntry`, so both tabs can call it.
+- **`remindedEntries`** now also computes each entry's `reminderDays`/`leadDays` (from the patient's overrides or global defaults, same logic already used for `status`).
+- **Reminded tab**: added the alarm icon ("Set custom reminder days for this patient") next to the Resend icon, and the same inline Remind-after/Alert-lead editor row (Save / Use Global Default / Cancel) that the Due List tab already has, now spanning that table's 7 columns.
+
+`npx tsc --noEmit` passes clean.
+
+
+---
+
+## User <sup>8/8/2026, 3:10:08 PM</sup>
+
+@frontend/src/pages/NextTherapyNotification.tsx when we send reminder are we storing the message sent, method used to send like message, whatsapp, email or call, date etc somewhere? Just check don't edit any file before confirming.
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:10:14 PM</sup>
+
+Yes — in `sendVia` (line 268-276), every send is recorded to `localDB.reminder_logs`:
+
+```js
+await localDB.reminder_logs.add({
+  machine_id: machineId,
+  patient_id: patient.id,
+  patient_server_id: patient.server_id,
+  method,                                  // 'sms' | 'whatsapp' | 'email' | 'call'
+  language: selectedLang,                  // which template was used
+  message: method === 'call' ? undefined : draftMessage,  // the actual message sent (omitted for calls)
+  sent_at: new Date().toISOString(),       // date/time
+});
+```
+
+This is a local IndexedDB table (`LocalReminderLog`, defined in `db/localDB.ts`) — stored on-device only, not synced to the backend. It's loaded back in via `loadData()` (line 152) and displayed in the **Reminded** tab, which shows Name, Mobile, Method, Message, Sent On, and current Status for each log entry — so yes, method/message/date are all captured and visible there.
+
+
+---
+
+## User <sup>8/8/2026, 3:11:51 PM</sup>
+
+Is it included in export import of @frontend/src/pages/DataExportImport.tsx ? just check, don't edit any file.
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:11:54 PM</sup>
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:11:56 PM</sup>
+
+<details>
+<summary>Tool: <code>Grep</code></summary>
+
+```json
+{
+  "pattern": "reminder_logs|TABLE_NAMES|EXPORT_TABLE_NAMES",
+  "path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\services\\backupService.ts",
+  "output_mode": "content",
+  "-n": true
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 3:11:56 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+21:const TABLE_NAMES = ['sessions', 'therapists', 'patients', 'settings', 'resources'] as const;
+22:type TableName = typeof TABLE_NAMES[number];
+26:const EXPORT_TABLE_NAMES = TABLE_NAMES.filter((t) => t !== 'resources');
+85:  for (const table of EXPORT_TABLE_NAMES) {
+101:  for (const table of EXPORT_TABLE_NAMES) {
+117:  for (const table of EXPORT_TABLE_NAMES) {
+188:  for (const table of TABLE_NAMES) {
+196:    for (const table of TABLE_NAMES) {
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:12:00 PM</sup>
+
+No — `reminder_logs` is **not** included. `backupService.ts`'s `TABLE_NAMES` only covers `sessions`, `therapists`, `patients`, `settings`, `resources`. So the reminder log data (message/method/date sent) isn't part of either the Excel export, the zip backup export, or the import/restore flow — it would be lost on restore/migration to another tablet.
+
+
+---
+
+## User <sup>8/8/2026, 3:13:49 PM</sup>
+
+@frontend/src/pages/DataExportImport.tsx add reminder_logs in export import and remove resources. Understood? Confirm before editing any file.
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:13:53 PM</sup>
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:13:53 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\services\\backupService.ts"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 3:13:53 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+1	import { Filesystem, Directory } from '@capacitor/filesystem';
+2	import { Share } from '@capacitor/share';
+3	import { FileOpener } from '@capacitor-community/file-opener';
+4	import JSZip from 'jszip';
+5	import * as XLSX from 'xlsx';
+6	import { localDB } from '../db/localDB';
+7	
+8	const BACKUP_SCHEMA_VERSION = 1;
+9	const BACKUPS_DIR = 'backups';
+10	
+11	const MIME_TYPES: Record<string, string> = {
+12	  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+13	  zip: 'application/zip',
+14	};
+15	
+16	function mimeTypeFor(name: string): string {
+17	  const ext = name.split('.').pop()?.toLowerCase() ?? '';
+18	  return MIME_TYPES[ext] ?? 'application/octet-stream';
+19	}
+20	
+21	const TABLE_NAMES = ['sessions', 'therapists', 'patients', 'settings', 'resources'] as const;
+22	type TableName = typeof TABLE_NAMES[number];
+23	
+24	// Resources are excluded from exports (Excel and backup zip) but still supported on import
+25	// so older backups that include a resources.json can st
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:14:01 PM</sup>
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:14:04 PM</sup>
+
+Understood. Currently in `backupService.ts`:
+
+- `TABLE_NAMES` = `['sessions', 'therapists', 'patients', 'settings', 'resources']` — used for both export and import(restore).
+- `EXPORT_TABLE_NAMES` filters out `'resources'` from exports only, but `resources` is still restorable on import (kept for backward-compat with older backups).
+- `reminder_logs` isn't in either list at all.
+
+My plan: replace `'resources'` with `'reminder_logs'` in `TABLE_NAMES` entirely (so it's removed from both export and import, and `reminder_logs` is added to both), and drop the now-unneeded `EXPORT_TABLE_NAMES` filter since there's nothing left to exclude — `TABLE_NAMES` itself becomes the export list too. I'll also update the `counts` object in `restoreFromZip` (`resources: 0` → `reminder_logs: 0`).
+
+This only touches `backupService.ts`, not `DataExportImport.tsx` itself (which just calls the service functions and doesn't reference table names directly). Confirm and I'll implement.
+
+
+---
+
+## User <sup>8/8/2026, 3:15:45 PM</sup>
+
+go
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:15:51 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\services\\backupService.ts",
+  "old_string": "const TABLE_NAMES = ['sessions', 'therapists', 'patients', 'settings', 'resources'] as const;\ntype TableName = typeof TABLE_NAMES[number];\n\n// Resources are excluded from exports (Excel and backup zip) but still supported on import\n// so older backups that include a resources.json can still be restored.\nconst EXPORT_TABLE_NAMES = TABLE_NAMES.filter((t) => t !== 'resources');",
+  "new_string": "const TABLE_NAMES = ['sessions', 'therapists', 'patients', 'settings', 'reminder_logs'] as const;\ntype TableName = typeof TABLE_NAMES[number];\n\nconst EXPORT_TABLE_NAMES = TABLE_NAMES;"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 3:15:52 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\services\backupService.ts has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:15:57 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\services\\backupService.ts",
+  "old_string": "  const counts: Record<TableName, number> = { sessions: 0, therapists: 0, patients: 0, settings: 0, resources: 0 };",
+  "new_string": "  const counts: Record<TableName, number> = { sessions: 0, therapists: 0, patients: 0, settings: 0, reminder_logs: 0 };"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 3:15:58 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\services\backupService.ts has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:16:00 PM</sup>
+
+Now type-check.
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:16:01 PM</sup>
+
+<details>
+<summary>Tool: <code>Bash</code></summary>
+
+```json
+{
+  "command": "cd \"d:/projects/production-hydro-colon-therapy/frontend\" && npx tsc --noEmit -p . 2>&1",
+  "description": "Type-check frontend after swapping resources for reminder_logs in backup service",
+  "timeout": 120000
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 3:16:10 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+(Bash completed with no output)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:16:29 PM</sup>
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:16:30 PM</sup>
+
+Clean, no errors. Done. `backupService.ts` now exports/imports `reminder_logs` instead of `resources` — `TABLE_NAMES` is `['sessions', 'therapists', 'patients', 'settings', 'reminder_logs']`, used directly for both export and restore (the `EXPORT_TABLE_NAMES` filter was removed since there's nothing left to exclude). `restoreFromZip`'s `counts` object was updated to match. `DataExportImport.tsx` itself needed no changes since it only calls the service functions.
+
+
+---
+
+## User <sup>8/8/2026, 3:27:27 PM</sup>
+
+@frontend/src/pages/NextTherapyNotification.tsx  add action to view list of reminder_logs. Understood? Clarify before editing any file.
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:27:38 PM</sup>
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:27:39 PM</sup>
+
+I want to make sure I'm not duplicating something that already exists. The **Reminded** tab already lists every `reminder_logs` entry (across all patients) with Name, Mobile, Method, Message, Sent On, and Status.
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:27:41 PM</sup>
+
+<details>
+<summary>Tool: <code>AskUserQuestion</code></summary>
+
+```json
+{
+  "questions": [
+    {
+      "question": "What should the new \"view reminder_logs\" action actually show, given the Reminded tab already lists every log entry across all patients?",
+      "header": "Scope",
+      "options": [
+        {
+          "label": "Per-patient history from Due List",
+          "description": "Add a \"View History\" icon on each Due List row that opens a modal showing just that one patient's past reminder logs (all their sends), separate from the all-patients Reminded tab."
+        },
+        {
+          "label": "Something else entirely",
+          "description": "The Reminded tab isn't what you mean — describe what this action/view should actually be."
+        }
+      ]
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 3:29:46 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The user doesn't want to proceed with this tool use. The tool use was rejected (eg. if it was a file edit, the new_string was NOT written to the file). STOP what you are doing and wait for the user to tell you how to proceed.
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 3:29:46 PM</sup>
+
+[Request interrupted by user for tool use]
+
+
+---
+
+## User <sup>8/8/2026, 3:31:15 PM</sup>
+
+@frontend/src/pages/NextTherapyNotification.tsx replace text with appropriate icon for Method column of reminded tab.
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:31:20 PM</sup>
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:31:21 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\NextTherapyNotification.tsx",
+  "offset": 495,
+  "limit": 10
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 3:31:21 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+495	                  {filteredRemindedEntries.map((entry) => (
+496	                    <React.Fragment key={entry.log.id}>
+497	                      <tr>
+498	                        <td style={tdStyle}>{entry.patient.first_name} {entry.patient.last_name}</td>
+499	                        <td style={tdStyle}>{entry.patient.phone}</td>
+500	                        <td style={tdStyle}>{METHOD_LABEL[entry.log.method]}</td>
+501	                        <td style={{ ...tdStyle, maxWidth: '220px', overflow: 'hidden', textOverflow: 'ellipsis' }} title={entry.log.message || ''}>
+502	                          {entry.log.message ? (entry.log.message.length > 40 ? `${entry.log.message.slice(0, 40)}…` : entry.log.message) : '—'}
+503	                        </td>
+504	                        <td style={tdStyle}>{formatDate(new Date(entry.log.sent_at))}</td>
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:31:24 PM</sup>
+
+Adding a `METHOD_ICON` map (reusing icons already imported for the Send modal) and rendering it in place of the text label.
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:31:25 PM</sup>
+
+<details>
+<summary>Tool: <code>Grep</code></summary>
+
+```json
+{
+  "pattern": "const METHOD_LABEL",
+  "path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\NextTherapyNotification.tsx",
+  "output_mode": "content",
+  "-n": true
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 3:31:25 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+93:const METHOD_LABEL: Record<'sms' | 'whatsapp' | 'email' | 'call', string> = {
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:31:32 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\NextTherapyNotification.tsx",
+  "old_string": "const METHOD_LABEL: Record<'sms' | 'whatsapp' | 'email' | 'call', string> = {\n  sms: 'SMS', whatsapp: 'WhatsApp', email: 'Email', call: 'Call',\n};",
+  "new_string": "const METHOD_LABEL: Record<'sms' | 'whatsapp' | 'email' | 'call', string> = {\n  sms: 'SMS', whatsapp: 'WhatsApp', email: 'Email', call: 'Call',\n};\n\nconst METHOD_ICON: Record<'sms' | 'whatsapp' | 'email' | 'call', string> = {\n  sms: chatbubbleOutline, whatsapp: logoWhatsapp, email: mailOutline, call: callOutline,\n};\n\nconst METHOD_COLOR: Record<'sms' | 'whatsapp' | 'email' | 'call', string> = {\n  sms: '#0a5c99', whatsapp: '#25D366', email: '#eb445a', call: '#666',\n};"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 3:31:33 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\NextTherapyNotification.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:31:36 PM</sup>
+
+Now wiring it into the table cell.
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:31:38 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\NextTherapyNotification.tsx",
+  "old_string": "                        <td style={tdStyle}>{METHOD_LABEL[entry.log.method]}</td>",
+  "new_string": "                        <td style={tdStyle}>\n                          <IonIcon\n                            icon={METHOD_ICON[entry.log.method]}\n                            title={METHOD_LABEL[entry.log.method]}\n                            style={{ color: METHOD_COLOR[entry.log.method], fontSize: '1.2rem' }}\n                          />\n                        </td>"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 3:31:39 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\NextTherapyNotification.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:31:43 PM</sup>
+
+Now type-check.
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:31:44 PM</sup>
+
+<details>
+<summary>Tool: <code>Bash</code></summary>
+
+```json
+{
+  "command": "cd \"d:/projects/production-hydro-colon-therapy/frontend\" && npx tsc --noEmit -p . 2>&1",
+  "description": "Type-check frontend after Method column icon change",
+  "timeout": 120000
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 3:31:58 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+(Bash completed with no output)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:32:01 PM</sup>
+
+Clean. The Method column in the Reminded tab now shows an icon (SMS/WhatsApp/Email/Call — reusing the icons already imported for the Send modal) with a colored tint and a hover `title` tooltip carrying the text label, instead of plain text.
+
+
+---
+
+## User <sup>8/8/2026, 3:34:54 PM</sup>
+
+@frontend/src/pages/NextTherapyNotification.tsx in reminded tab if method is call can we give option to edit the message part? Confirm before editing any file.
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:35:06 PM</sup>
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:35:07 PM</sup>
+
+Understood. For `call` log entries (which have no `message` since calls don't carry text), I'll:
+
+1. Add a pencil/edit icon next to the Message cell, shown only when `entry.log.method === 'call'`.
+2. Clicking it opens an inline editable row (same pattern as the existing "Set custom reminder days" expandable row) with a textarea for call notes, plus Save/Cancel.
+3. Saving updates that specific log's `message` field via `localDB.reminder_logs.update(log.id, { message })` and reloads.
+
+Confirm and I'll implement.
+
+
+---
+
+## User <sup>8/8/2026, 3:35:32 PM</sup>
+
+go
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:35:40 PM</sup>
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:35:42 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\NextTherapyNotification.tsx",
+  "old_string": "import {\n  arrowBack, searchOutline, alarmOutline, checkmarkDoneOutline, paperPlaneOutline, closeOutline,\n  chatbubbleOutline, logoWhatsapp, mailOutline, callOutline,\n} from 'ionicons/icons';",
+  "new_string": "import {\n  arrowBack, searchOutline, alarmOutline, checkmarkDoneOutline, paperPlaneOutline, closeOutline,\n  chatbubbleOutline, logoWhatsapp, mailOutline, callOutline, createOutline,\n} from 'ionicons/icons';"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 3:35:43 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\NextTherapyNotification.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:35:48 PM</sup>
+
+Adding state and handlers for the call-log message editor.
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:35:50 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\NextTherapyNotification.tsx",
+  "old_string": "  const [reminderLogs, setReminderLogs] = useState<LocalReminderLog[]>([]);",
+  "new_string": "  const [reminderLogs, setReminderLogs] = useState<LocalReminderLog[]>([]);\n  const [editingLogId, setEditingLogId] = useState<number | null>(null);\n  const [logMessageDraft, setLogMessageDraft] = useState('');"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 3:35:51 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\NextTherapyNotification.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:35:54 PM</sup>
+
+Now adding the handler functions near `openOverrideEditor`.
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:35:57 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\NextTherapyNotification.tsx",
+  "old_string": "  const openOverrideEditor = (patient: LocalPatient, reminderDays: number, leadDays: number) => {",
+  "new_string": "  const openLogMessageEditor = (log: LocalReminderLog) => {\n    setEditingLogId(log.id!);\n    setLogMessageDraft(log.message ?? '');\n  };\n\n  const saveLogMessage = async (log: LocalReminderLog) => {\n    if (!log.id) return;\n    await localDB.reminder_logs.update(log.id, { message: logMessageDraft.trim() || undefined });\n    setEditingLogId(null);\n    await loadData();\n  };\n\n  const openOverrideEditor = (patient: LocalPatient, reminderDays: number, leadDays: number) => {"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 3:35:58 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\NextTherapyNotification.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:36:02 PM</sup>
+
+Now wiring the JSX: edit icon in the Message cell, and the inline editor row.
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:36:05 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\NextTherapyNotification.tsx",
+  "old_string": "                        <td style={{ ...tdStyle, maxWidth: '220px', overflow: 'hidden', textOverflow: 'ellipsis' }} title={entry.log.message || ''}>\n                          {entry.log.message ? (entry.log.message.length > 40 ? `${entry.log.message.slice(0, 40)}…` : entry.log.message) : '—'}\n                        </td>",
+  "new_string": "                        <td style={{ ...tdStyle, maxWidth: '220px', overflow: 'hidden', textOverflow: 'ellipsis' }} title={entry.log.message || ''}>\n                          {entry.log.message ? (entry.log.message.length > 40 ? `${entry.log.message.slice(0, 40)}…` : entry.log.message) : '—'}\n                          {entry.log.method === 'call' && (\n                            <IonIcon\n                              icon={createOutline}\n                              title=\"Edit call notes\"\n                              style={{ color: '#0a5c99', cursor: 'pointer', fontSize: '1.1rem', marginLeft: '0.5rem', verticalAlign: 'middle' }}\n                              onClick={() => openLogMessageEditor(entry.log)}\n                            />\n                          )}\n                        </td>"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 3:36:06 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\NextTherapyNotification.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:36:10 PM</sup>
+
+Now add the inline editor row, right after the existing reminder-days editor row for the Reminded tab.
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:36:11 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\NextTherapyNotification.tsx",
+  "offset": 544,
+  "limit": 32
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 3:36:11 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+544	                        <td style={tdStyle}>
+545	                          <IonIcon
+546	                            icon={alarmOutline}
+547	                            title="Set custom reminder days for this patient"
+548	                            style={{ color: '#0a5c99', cursor: 'pointer', fontSize: '1.2rem', marginRight: '0.75rem' }}
+549	                            onClick={() => openOverrideEditor(entry.patient, entry.reminderDays, entry.leadDays)}
+550	                          />
+551	                          {entry.status ? (
+552	                            <IonIcon
+553	                              icon={paperPlaneOutline}
+554	                              title="Resend reminder"
+555	                              style={{ color: '#0a5c99', cursor: 'pointer', fontSize: '1.2rem' }}
+556	                              onClick={() => openSendModal(entry.patient, entry.log.language, entry.log.message)}
+557	                            />
+558	                          ) : null}
+55
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:36:14 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\NextTherapyNotification.tsx",
+  "offset": 576,
+  "limit": 18
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 3:36:14 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+576	                                <input
+577	                                  type="number" min={0} style={inputStyle}
+578	                                  value={leadDaysDraft}
+579	                                  onChange={(e) => setLeadDaysDraft(e.target.value)}
+580	                                />
+581	                                <span style={{ fontSize: '0.8rem', color: '#888' }}>days</span>
+582	                              </div>
+583	                              <IonButton size="small" onClick={() => saveOverride(entry.patient)}>Save</IonButton>
+584	                              <IonButton size="small" fill="outline" onClick={() => clearOverride(entry.patient)}>Use Global Default</IonButton>
+585	                              <IonButton size="small" fill="clear" onClick={() => setEditingPatientId(null)}>Cancel</IonButton>
+586	                            </div>
+587	                          </td>
+588	                        </tr>
+589	                      )}
+590	       
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:36:25 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\NextTherapyNotification.tsx",
+  "old_string": "                              <IonButton size=\"small\" onClick={() => saveOverride(entry.patient)}>Save</IonButton>\n                              <IonButton size=\"small\" fill=\"outline\" onClick={() => clearOverride(entry.patient)}>Use Global Default</IonButton>\n                              <IonButton size=\"small\" fill=\"clear\" onClick={() => setEditingPatientId(null)}>Cancel</IonButton>\n                            </div>\n                          </td>\n                        </tr>\n                      )}\n                    </React.Fragment>\n                  ))}\n                </tbody>\n              </table>",
+  "new_string": "                              <IonButton size=\"small\" onClick={() => saveOverride(entry.patient)}>Save</IonButton>\n                              <IonButton size=\"small\" fill=\"outline\" onClick={() => clearOverride(entry.patient)}>Use Global Default</IonButton>\n                              <IonButton size=\"small\" fill=\"clear\" onClick={() => setEditingPatientId(null)}>Cancel</IonButton>\n                            </div>\n                          </td>\n                        </tr>\n                      )}\n                      {editingLogId === entry.log.id && (\n                        <tr>\n                          <td colSpan={7} style={{ ...tdStyle, backgroundColor: '#f9f9f9' }}>\n                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', flexWrap: 'wrap' }}>\n                              <textarea\n                                value={logMessageDraft}\n                                onChange={(e) => setLogMessageDraft(e.target.value)}\n                                rows={2}\n                                placeholder=\"Add call notes...\"\n                                style={{ flex: 1, minWidth:
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 3:36:25 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+<tool_use_error>Found 2 matches of the string to replace, but replace_all is false. To replace all occurrences, set replace_all to true. To replace only one occurrence, please provide more context to uniquely identify the instance.
+String:                               <IonButton size="small" onClick={() => saveOverride(entry.patient)}>Save</IonButton>
+                              <IonButton size="small" fill="outline" onClick={() => clearOverride(entry.patient)}>Use Global Default</IonButton>
+                              <IonButton size="small" fill="clear" onClick={() => setEditingPatientId(null)}>Cancel</IonButton>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  ))}
+                </tbody>
+              </table></tool_use_error>
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:36:29 PM</sup>
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:36:43 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\NextTherapyNotification.tsx",
+  "old_string": "                          {entry.status ? (\n                            <IonIcon\n                              icon={paperPlaneOutline}\n                              title=\"Resend reminder\"\n                              style={{ color: '#0a5c99', cursor: 'pointer', fontSize: '1.2rem' }}\n                              onClick={() => openSendModal(entry.patient, entry.log.language, entry.log.message)}\n                            />\n                          ) : null}\n                        </td>\n                      </tr>\n                      {editingPatientId === entry.patient.id && (\n                        <tr>\n                          <td colSpan={7} style={{ ...tdStyle, backgroundColor: '#f9f9f9' }}>\n                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>\n                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>\n                                <span style={{ fontSize: '0.82rem', color: '#555' }}>Remind after</span>\n                                <input\n                                  type=\"number\" min={1} style={inputStyle}\n                                  value={reminderDaysDraft}\n                                  onChange={(e) => setReminderDaysDraft(e.target.value)}\n                                />\n                                <span style={{ fontSize: '0.8rem', color: '#888' }}>days</span>\n                              </div>\n                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>\n                                <span style={{ fontSize: '0.82rem', color: '#555' }}>Alert lead</span>\n                                <input\n                                  type=\"number\" min={0} style={inputStyle}\n                        
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 3:36:44 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\NextTherapyNotification.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:36:48 PM</sup>
+
+Now type-check.
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:36:49 PM</sup>
+
+<details>
+<summary>Tool: <code>Bash</code></summary>
+
+```json
+{
+  "command": "cd \"d:/projects/production-hydro-colon-therapy/frontend\" && npx tsc --noEmit -p . 2>&1",
+  "description": "Type-check frontend after call-message edit feature",
+  "timeout": 120000
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 3:36:58 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+(Bash completed with no output)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:37:01 PM</sup>
+
+Clean. Done. In the Reminded tab, `call`-method entries now show an edit (pencil) icon next to their Message cell. Clicking it opens an inline row with a textarea to add/edit call notes, which saves directly to that log entry's `message` field in `localDB.reminder_logs` and reloads the list.
+
+
+---
+
+## User <sup>8/8/2026, 3:39:37 PM</sup>
+
+<ide_opened_file>The user opened the file d:\projects\production-hydro-colon-therapy\frontend\.env.prod in the IDE. This may or may not be related to the current task.</ide_opened_file>
+
+@frontend/src/pages/NextTherapyNotification.tsx in reminded tab, add view option as message column long text is not visible fully. Understood? Confirm before editing any file.
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:39:50 PM</sup>
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:39:51 PM</sup>
+
+Understood. I'll add a "View" (eye icon) action next to the Message cell in the Reminded tab that opens a small read-only modal showing the full message text (the cell currently truncates to 40 chars with only a hover `title` tooltip, which isn't practical on a touch/tablet interface).
+
+Confirm and I'll implement.
+
+
+---
+
+## User <sup>8/8/2026, 3:41:23 PM</sup>
+
+go
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:41:29 PM</sup>
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:41:32 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\NextTherapyNotification.tsx",
+  "old_string": "  arrowBack, searchOutline, alarmOutline, checkmarkDoneOutline, paperPlaneOutline, closeOutline,\n  chatbubbleOutline, logoWhatsapp, mailOutline, callOutline, createOutline,\n} from 'ionicons/icons';",
+  "new_string": "  arrowBack, searchOutline, alarmOutline, checkmarkDoneOutline, paperPlaneOutline, closeOutline,\n  chatbubbleOutline, logoWhatsapp, mailOutline, callOutline, createOutline, eyeOutline,\n} from 'ionicons/icons';"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 3:41:33 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\NextTherapyNotification.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:41:37 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\NextTherapyNotification.tsx",
+  "old_string": "  const [editingLogId, setEditingLogId] = useState<number | null>(null);\n  const [logMessageDraft, setLogMessageDraft] = useState('');",
+  "new_string": "  const [editingLogId, setEditingLogId] = useState<number | null>(null);\n  const [logMessageDraft, setLogMessageDraft] = useState('');\n  const [viewMessageEntry, setViewMessageEntry] = useState<{ patientName: string; message: string } | null>(null);"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 3:41:38 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\NextTherapyNotification.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:41:41 PM</sup>
+
+Now wiring the eye icon into the Message cell and adding the modal.
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:41:45 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\NextTherapyNotification.tsx",
+  "old_string": "                        <td style={{ ...tdStyle, maxWidth: '220px', overflow: 'hidden', textOverflow: 'ellipsis' }} title={entry.log.message || ''}>\n                          {entry.log.message ? (entry.log.message.length > 40 ? `${entry.log.message.slice(0, 40)}…` : entry.log.message) : '—'}\n                          {entry.log.method === 'call' && (",
+  "new_string": "                        <td style={{ ...tdStyle, maxWidth: '220px', overflow: 'hidden', textOverflow: 'ellipsis' }} title={entry.log.message || ''}>\n                          {entry.log.message ? (entry.log.message.length > 40 ? `${entry.log.message.slice(0, 40)}…` : entry.log.message) : '—'}\n                          {entry.log.message && (\n                            <IonIcon\n                              icon={eyeOutline}\n                              title=\"View full message\"\n                              style={{ color: '#0a5c99', cursor: 'pointer', fontSize: '1.1rem', marginLeft: '0.5rem', verticalAlign: 'middle' }}\n                              onClick={() => setViewMessageEntry({ patientName: `${entry.patient.first_name} ${entry.patient.last_name}`, message: entry.log.message! })}\n                            />\n                          )}\n                          {entry.log.method === 'call' && ("
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 3:41:46 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\NextTherapyNotification.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:41:50 PM</sup>
+
+Now add the view modal, alongside the existing Send Reminder modal.
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:41:54 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\NextTherapyNotification.tsx",
+  "old_string": "        </IonContent>\n      </IonModal>\n    </IonPage>\n  );\n};",
+  "new_string": "        </IonContent>\n      </IonModal>\n\n      <IonModal isOpen={!!viewMessageEntry} onDidDismiss={() => setViewMessageEntry(null)} style={{ '--width': '460px', '--height': '340px', '--border-radius': '12px' } as React.CSSProperties}>\n        <IonHeader>\n          <IonToolbar color=\"primary\">\n            <IonTitle>Message{viewMessageEntry ? ` — ${viewMessageEntry.patientName}` : ''}</IonTitle>\n            <IonButton slot=\"end\" fill=\"clear\" color=\"light\" onClick={() => setViewMessageEntry(null)}>\n              <IonIcon icon={closeOutline} />\n            </IonButton>\n          </IonToolbar>\n        </IonHeader>\n        <IonContent className=\"ion-padding\">\n          <p style={{ whiteSpace: 'pre-wrap', fontSize: '0.92rem', color: '#333', lineHeight: 1.5 }}>\n            {viewMessageEntry?.message}\n          </p>\n        </IonContent>\n      </IonModal>\n    </IonPage>\n  );\n};"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 3:41:55 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\NextTherapyNotification.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:41:57 PM</sup>
+
+Now type-check.
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:41:59 PM</sup>
+
+<details>
+<summary>Tool: <code>Bash</code></summary>
+
+```json
+{
+  "command": "cd \"d:/projects/production-hydro-colon-therapy/frontend\" && npx tsc --noEmit -p . 2>&1",
+  "description": "Type-check frontend after adding view-full-message modal",
+  "timeout": 120000
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 3:42:07 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+(Bash completed with no output)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:42:11 PM</sup>
+
+Clean. Done. In the Reminded tab, any row with a message now shows an eye icon next to the truncated text — clicking it opens a small modal with the patient's name and the full, unabridged message.
 
 
 ---

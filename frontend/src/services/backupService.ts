@@ -18,12 +18,10 @@ function mimeTypeFor(name: string): string {
   return MIME_TYPES[ext] ?? 'application/octet-stream';
 }
 
-const TABLE_NAMES = ['sessions', 'therapists', 'patients', 'settings', 'resources'] as const;
+const TABLE_NAMES = ['sessions', 'therapists', 'patients', 'settings', 'reminder_logs'] as const;
 type TableName = typeof TABLE_NAMES[number];
 
-// Resources are excluded from exports (Excel and backup zip) but still supported on import
-// so older backups that include a resources.json can still be restored.
-const EXPORT_TABLE_NAMES = TABLE_NAMES.filter((t) => t !== 'resources');
+const EXPORT_TABLE_NAMES = TABLE_NAMES;
 
 interface BackupManifest {
   schema_version: number;
@@ -190,7 +188,7 @@ async function restoreFromZip(zip: JSZip, mode: ImportMode): Promise<ImportResul
     data[table] = entry ? JSON.parse(await entry.async('string')) : [];
   }
 
-  const counts: Record<TableName, number> = { sessions: 0, therapists: 0, patients: 0, settings: 0, resources: 0 };
+  const counts: Record<TableName, number> = { sessions: 0, therapists: 0, patients: 0, settings: 0, reminder_logs: 0 };
 
   await localDB.transaction('rw', localDB.tables, async () => {
     for (const table of TABLE_NAMES) {

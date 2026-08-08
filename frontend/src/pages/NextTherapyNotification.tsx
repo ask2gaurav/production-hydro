@@ -5,7 +5,7 @@ import {
 } from '@ionic/react';
 import {
   arrowBack, searchOutline, alarmOutline, checkmarkDoneOutline, paperPlaneOutline, closeOutline,
-  chatbubbleOutline, logoWhatsapp, mailOutline, callOutline,
+  chatbubbleOutline, logoWhatsapp, mailOutline, callOutline, createOutline, eyeOutline,
 } from 'ionicons/icons';
 import { useHistory } from 'react-router';
 import { useStore } from '../store/useStore';
@@ -94,6 +94,14 @@ const METHOD_LABEL: Record<'sms' | 'whatsapp' | 'email' | 'call', string> = {
   sms: 'SMS', whatsapp: 'WhatsApp', email: 'Email', call: 'Call',
 };
 
+const METHOD_ICON: Record<'sms' | 'whatsapp' | 'email' | 'call', string> = {
+  sms: chatbubbleOutline, whatsapp: logoWhatsapp, email: mailOutline, call: callOutline,
+};
+
+const METHOD_COLOR: Record<'sms' | 'whatsapp' | 'email' | 'call', string> = {
+  sms: '#0a5c99', whatsapp: '#25D366', email: '#eb445a', call: '#666',
+};
+
 const NextTherapyNotification: React.FC = () => {
   const history = useHistory();
   const { machineId } = useStore();
@@ -116,6 +124,9 @@ const NextTherapyNotification: React.FC = () => {
   const [messageHi, setMessageHi] = useState('');
 
   const [reminderLogs, setReminderLogs] = useState<LocalReminderLog[]>([]);
+  const [editingLogId, setEditingLogId] = useState<number | null>(null);
+  const [logMessageDraft, setLogMessageDraft] = useState('');
+  const [viewMessageEntry, setViewMessageEntry] = useState<{ patientName: string; message: string } | null>(null);
   const [sendTarget, setSendTarget] = useState<LocalPatient | null>(null);
   const [selectedLang, setSelectedLang] = useState<'en' | 'gu' | 'hi'>('en');
   const [draftMessage, setDraftMessage] = useState('');
@@ -202,9 +213,11 @@ const NextTherapyNotification: React.FC = () => {
         if (!patient) return null;
         const lastSession = patient.server_id ? lastSessionByPatientId[patient.server_id] : undefined;
         const dueInfo = lastSession ? computeDueStatus(patient, lastSession, globalReminderDays, globalLeadDays) : undefined;
-        return { log, patient, lastSession, status: dueInfo?.status };
+        const reminderDays = dueInfo?.reminderDays ?? patient.reminder_days_override ?? globalReminderDays;
+        const leadDays = dueInfo?.leadDays ?? patient.alert_lead_days_override ?? globalLeadDays;
+        return { log, patient, lastSession, status: dueInfo?.status, reminderDays, leadDays };
       })
-      .filter((e): e is { log: LocalReminderLog; patient: LocalPatient; lastSession: Date | undefined; status: DueStatus | undefined } => e !== null);
+      .filter((e): e is { log: LocalReminderLog; patient: LocalPatient; lastSession: Date | undefined; status: DueStatus | undefined; reminderDays: number; leadDays: number } => e !== null);
   }, [reminderLogs, patientsById, lastSessionByPatientId, globalReminderDays, globalLeadDays]);
 
   const filteredRemindedEntries = useMemo(() => {
@@ -281,10 +294,22 @@ const NextTherapyNotification: React.FC = () => {
     await loadData();
   };
 
-  const openOverrideEditor = (entry: DueEntry) => {
-    setEditingPatientId(entry.patient.id!);
-    setReminderDaysDraft(String(entry.reminderDays));
-    setLeadDaysDraft(String(entry.leadDays));
+  const openLogMessageEditor = (log: LocalReminderLog) => {
+    setEditingLogId(log.id!);
+    setLogMessageDraft(log.message ?? '');
+  };
+
+  const saveLogMessage = async (log: LocalReminderLog) => {
+    if (!log.id) return;
+    await localDB.reminder_logs.update(log.id, { message: logMessageDraft.trim() || undefined });
+    setEditingLogId(null);
+    await loadData();
+  };
+
+  const openOverrideEditor = (patient: LocalPatient, reminderDays: number, leadDays: number) => {
+    setEditingPatientId(patient.id!);
+    setReminderDaysDraft(String(reminderDays));
+    setLeadDaysDraft(String(leadDays));
   };
 
   const saveOverride = async (patient: LocalPatient) => {
@@ -406,7 +431,7 @@ const NextTherapyNotification: React.FC = () => {
                             icon={alarmOutline}
                             title="Set custom reminder days for this patient"
                             style={{ color: '#0a5c99', cursor: 'pointer', fontSize: '1.2rem', marginRight: '0.75rem' }}
-                            onClick={() => openOverrideEditor(entry)}
+                            onClick={() => openOverrideEditor(entry.patient, entry.reminderDays, entry.leadDays)}
                           />
                           <IonIcon
                             icon={paperPlaneOutline}
@@ -491,28 +516,106 @@ const NextTherapyNotification: React.FC = () => {
                     </tr>
                   )}
                   {filteredRemindedEntries.map((entry) => (
-                    <tr key={entry.log.id}>
-                      <td style={tdStyle}>{entry.patient.first_name} {entry.patient.last_name}</td>
-                      <td style={tdStyle}>{entry.patient.phone}</td>
-                      <td style={tdStyle}>{METHOD_LABEL[entry.log.method]}</td>
-                      <td style={{ ...tdStyle, maxWidth: '220px', overflow: 'hidden', textOverflow: 'ellipsis' }} title={entry.log.message || ''}>
-                        {entry.log.message ? (entry.log.message.length > 40 ? `${entry.log.message.slice(0, 40)}…` : entry.log.message) : '—'}
-                      </td>
-                      <td style={tdStyle}>{formatDate(new Date(entry.log.sent_at))}</td>
-                      <td style={tdStyle}>
-                        {entry.status ? <IonBadge color={statusColor(entry.status)}>{entry.status}</IonBadge> : '—'}
-                      </td>
-                      <td style={tdStyle}>
-                        {entry.status ? (
+                    <React.Fragment key={entry.log.id}>
+                      <tr>
+                        <td style={tdStyle}>{entry.patient.first_name} {entry.patient.last_name}</td>
+                        <td style={tdStyle}>{entry.patient.phone}</td>
+                        <td style={tdStyle}>
                           <IonIcon
-                            icon={paperPlaneOutline}
-                            title="Resend reminder"
-                            style={{ color: '#0a5c99', cursor: 'pointer', fontSize: '1.2rem' }}
-                            onClick={() => openSendModal(entry.patient, entry.log.language, entry.log.message)}
+                            icon={METHOD_ICON[entry.log.method]}
+                            title={METHOD_LABEL[entry.log.method]}
+                            style={{ color: METHOD_COLOR[entry.log.method], fontSize: '1.2rem' }}
                           />
-                        ) : '—'}
-                      </td>
-                    </tr>
+                        </td>
+                        <td style={{ ...tdStyle, maxWidth: '220px', overflow: 'hidden', textOverflow: 'ellipsis' }} title={entry.log.message || ''}>
+                          {entry.log.message ? (entry.log.message.length > 40 ? `${entry.log.message.slice(0, 40)}…` : entry.log.message) : '—'}
+                          {entry.log.message && (
+                            <IonIcon
+                              icon={eyeOutline}
+                              title="View full message"
+                              style={{ color: '#0a5c99', cursor: 'pointer', fontSize: '1.1rem', marginLeft: '0.5rem', verticalAlign: 'middle' }}
+                              onClick={() => setViewMessageEntry({ patientName: `${entry.patient.first_name} ${entry.patient.last_name}`, message: entry.log.message! })}
+                            />
+                          )}
+                          {entry.log.method === 'call' && (
+                            <IonIcon
+                              icon={createOutline}
+                              title="Edit call notes"
+                              style={{ color: '#0a5c99', cursor: 'pointer', fontSize: '1.1rem', marginLeft: '0.5rem', verticalAlign: 'middle' }}
+                              onClick={() => openLogMessageEditor(entry.log)}
+                            />
+                          )}
+                        </td>
+                        <td style={tdStyle}>{formatDate(new Date(entry.log.sent_at))}</td>
+                        <td style={tdStyle}>
+                          {entry.status ? <IonBadge color={statusColor(entry.status)}>{entry.status}</IonBadge> : '—'}
+                        </td>
+                        <td style={tdStyle}>
+                          <IonIcon
+                            icon={alarmOutline}
+                            title="Set custom reminder days for this patient"
+                            style={{ color: '#0a5c99', cursor: 'pointer', fontSize: '1.2rem', marginRight: '0.75rem' }}
+                            onClick={() => openOverrideEditor(entry.patient, entry.reminderDays, entry.leadDays)}
+                          />
+                          {entry.status ? (
+                            <IonIcon
+                              icon={paperPlaneOutline}
+                              title="Resend reminder"
+                              style={{ color: '#0a5c99', cursor: 'pointer', fontSize: '1.2rem' }}
+                              onClick={() => openSendModal(entry.patient, entry.log.language, entry.log.message)}
+                            />
+                          ) : null}
+                        </td>
+                      </tr>
+                      {editingPatientId === entry.patient.id && (
+                        <tr>
+                          <td colSpan={7} style={{ ...tdStyle, backgroundColor: '#f9f9f9' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                <span style={{ fontSize: '0.82rem', color: '#555' }}>Remind after</span>
+                                <input
+                                  type="number" min={1} style={inputStyle}
+                                  value={reminderDaysDraft}
+                                  onChange={(e) => setReminderDaysDraft(e.target.value)}
+                                />
+                                <span style={{ fontSize: '0.8rem', color: '#888' }}>days</span>
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                <span style={{ fontSize: '0.82rem', color: '#555' }}>Alert lead</span>
+                                <input
+                                  type="number" min={0} style={inputStyle}
+                                  value={leadDaysDraft}
+                                  onChange={(e) => setLeadDaysDraft(e.target.value)}
+                                />
+                                <span style={{ fontSize: '0.8rem', color: '#888' }}>days</span>
+                              </div>
+                              <IonButton size="small" onClick={() => saveOverride(entry.patient)}>Save</IonButton>
+                              <IonButton size="small" fill="outline" onClick={() => clearOverride(entry.patient)}>Use Global Default</IonButton>
+                              <IonButton size="small" fill="clear" onClick={() => setEditingPatientId(null)}>Cancel</IonButton>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                      {editingLogId === entry.log.id && (
+                        <tr>
+                          <td colSpan={7} style={{ ...tdStyle, backgroundColor: '#f9f9f9' }}>
+                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', flexWrap: 'wrap' }}>
+                              <textarea
+                                value={logMessageDraft}
+                                onChange={(e) => setLogMessageDraft(e.target.value)}
+                                rows={2}
+                                placeholder="Add call notes..."
+                                style={{ flex: 1, minWidth: '220px', padding: '0.4rem 0.6rem', border: '1px solid #ccc', borderRadius: '6px', fontSize: '0.85rem', outline: 'none', resize: 'vertical', fontFamily: 'inherit' }}
+                              />
+                              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                <IonButton size="small" onClick={() => saveLogMessage(entry.log)}>Save</IonButton>
+                                <IonButton size="small" fill="clear" onClick={() => setEditingLogId(null)}>Cancel</IonButton>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
                   ))}
                 </tbody>
               </table>
@@ -635,6 +738,22 @@ const NextTherapyNotification: React.FC = () => {
               <IonIcon icon={callOutline} slot="start" /> Call
             </IonButton>
           </div>
+        </IonContent>
+      </IonModal>
+
+      <IonModal isOpen={!!viewMessageEntry} onDidDismiss={() => setViewMessageEntry(null)} style={{ '--width': '460px', '--height': '340px', '--border-radius': '12px' } as React.CSSProperties}>
+        <IonHeader>
+          <IonToolbar color="primary">
+            <IonTitle>Message{viewMessageEntry ? ` — ${viewMessageEntry.patientName}` : ''}</IonTitle>
+            <IonButton slot="end" fill="clear" color="light" onClick={() => setViewMessageEntry(null)}>
+              <IonIcon icon={closeOutline} />
+            </IonButton>
+          </IonToolbar>
+        </IonHeader>
+        <IonContent className="ion-padding">
+          <p style={{ whiteSpace: 'pre-wrap', fontSize: '0.92rem', color: '#333', lineHeight: 1.5 }}>
+            {viewMessageEntry?.message}
+          </p>
         </IonContent>
       </IonModal>
     </IonPage>
