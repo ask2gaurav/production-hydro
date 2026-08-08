@@ -11,8 +11,8 @@ import { useHistory } from 'react-router';
 import { useStore } from '../store/useStore';
 import { localDB, type LocalPatient, type LocalReminderLog } from '../db/localDB';
 
-const DEFAULT_REMINDER_DAYS = 90;
-const DEFAULT_LEAD_DAYS = 7;
+const DEFAULT_REMINDER_DAYS = 15;
+const DEFAULT_LEAD_DAYS = 2;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 const thStyle: React.CSSProperties = {
