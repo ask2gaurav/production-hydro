@@ -266,6 +266,13 @@ export default function AdminMachines() {
                 <td className="px-4 py-3 font-mono text-xs text-gray-700">{m.password || "—"}</td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">
+                    <a
+                      href={`/admin/machines/${m._id}`}
+                      className="text-blue-600 hover:underline text-xs font-medium"
+                    >
+                      View
+                    </a>
+                    &nbsp;|&nbsp;
                     <button
                       onClick={() => openEdit(m as MachineDoc)}
                       className="text-blue-600 hover:underline text-xs font-medium"

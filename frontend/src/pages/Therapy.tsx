@@ -382,7 +382,7 @@ const Therapy: React.FC = () => {
       setTotalSeconds(secs);
       setTimeLeft(secs);
       if (s?.default_temperature) setDefaultTemp(s.default_temperature);
-      setTherapyMinTemp(s?.therapy_min_temp ?? 0);
+      setTherapyMinTemp(s?.therapy_min_temp ?? 35);
       setMaxTemp(s?.max_temperature ?? 40);
       setBlowerAuto(s?.blower_auto ?? false);
       setFlushAuto(s?.auto_flush ?? false);
@@ -459,6 +459,7 @@ const Therapy: React.FC = () => {
           try {
             const params = await buildAllParams();
             await sendPrepareParams({ ...params, start_session: 1, prepare_session: 1, pause_session: 1 });
+            await sendPrepareParams({ ...params, start_session: 1, prepare_session: 1, pause_session: 1, heater: 0 });
           } catch {
             // Stay paused locally even if command fails
           }
@@ -471,6 +472,7 @@ const Therapy: React.FC = () => {
         }
 
         // Auto-pause: temp drops below therapy min during active session
+        console.log('Checking low temp pause:', therapyMinTemp, defaultTemp, info.temp);
         const isMinTempValid = therapyMinTemp > 0 && therapyMinTemp < defaultTemp;
         if (state === 'ACTIVE' && isMinTempValid && info.temp < therapyMinTemp) {
           lowTempPaused.current = true;
@@ -478,7 +480,7 @@ const Therapy: React.FC = () => {
           setShowLowTempModal(true);
           try {
             const params = await buildAllParams();
-            await sendPrepareParams({ ...params, start_session: 1, prepare_session: 1, pause_session: 1 });
+            await sendPrepareParams({ ...params, start_session: 1, prepare_session: 1, pause_session: 1, heater: 1 });
           } catch {
             // Stay paused locally even if command fails
           }
@@ -498,6 +500,7 @@ const Therapy: React.FC = () => {
           try {
             const params = await buildAllParams();
             await sendPrepareParams({ ...params, start_session: 1, prepare_session: 1, pause_session: 1 });
+            await sendPrepareParams({ ...params, start_session: 1, prepare_session: 1, pause_session: 1, heater: 0 });
           } catch {
             // Stay paused locally even if command fails
           }

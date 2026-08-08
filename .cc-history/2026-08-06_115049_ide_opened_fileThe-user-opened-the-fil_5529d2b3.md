@@ -6,8 +6,8 @@
 | **Session ID** | `5529d2b3-4ebf-4965-aa06-df984f081bd8` |
 | **Working Dir** | `d:\projects\production-hydro-colon-therapy` |
 | **Started** | 8/6/2026, 11:50:49 AM |
-| **Last Updated** | 8/7/2026, 7:09:38 PM |
-| **Messages** | 879 |
+| **Last Updated** | 8/8/2026, 3:02:23 PM |
+| **Messages** | 1013 |
 
 ---
 
@@ -14469,6 +14469,2164 @@ Confirmed `heater: number` is already a valid field in the ESP32 params type, an
 - `maxTemp` is now loaded from `settings.max_temperature` (default 40) alongside the existing `therapyMinTemp`.
 
 Since this depends on live ESP32 hardware behavior, it's worth a real run to confirm the pause/resume-block/heater-off commands actually take effect on the machine as expected.
+
+
+---
+
+## User <sup>8/8/2026, 12:25:20 PM</sup>
+
+<ide_opened_file>The user opened the file d:\projects\production-hydro-colon-therapy\frontend\android\gradlew in the IDE. This may or may not be related to the current task.</ide_opened_file>
+
+in ACTIVE state when we send pause_session: 1 after that we need to send heater: 0 request also. It's new request immediately after pause_session: 1
+
+
+---
+
+## Assistant <sup>8/8/2026, 12:25:33 PM</sup>
+
+
+---
+
+## Assistant <sup>8/8/2026, 12:25:34 PM</sup>
+
+<details>
+<summary>Tool: <code>Grep</code></summary>
+
+```json
+{
+  "pattern": "pause_session: 1",
+  "path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Therapy.tsx",
+  "output_mode": "content",
+  "-n": true,
+  "-B": 3,
+  "-A": 2
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 12:25:34 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+458-          setShowLowWaterModal(true);
+459-          try {
+460-            const params = await buildAllParams();
+461:            await sendPrepareParams({ ...params, start_session: 1, prepare_session: 1, pause_session: 1 });
+462-          } catch {
+463-            // Stay paused locally even if command fails
+--
+478-          setShowLowTempModal(true);
+479-          try {
+480-            const params = await buildAllParams();
+481:            await sendPrepareParams({ ...params, start_session: 1, prepare_session: 1, pause_session: 1 });
+482-          } catch {
+483-            // Stay paused locally even if command fails
+--
+497-          setShowHighTempModal(true);
+498-          try {
+499-            const params = await buildAllParams();
+500:            await sendPrepareParams({ ...params, start_session: 1, prepare_session: 1, pause_session: 1 });
+501-          } catch {
+502-            // Stay paused locally even if command fails
+--
+602-          setState('PAUSED');
+603-          tr
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 12:25:37 PM</sup>
+
+
+---
+
+## Assistant <sup>8/8/2026, 12:25:38 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Therapy.tsx",
+  "offset": 632,
+  "limit": 15
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 12:25:38 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+632	    } catch {
+633	      presentAlert({ header: 'Command Failed', message: 'Could not start session on the machine. Check the connection.', buttons: ['OK'] });
+634	      return;
+635	    }
+636	
+637	    const therapist = therapists.find((t) => t.id === selectedTherapistId);
+638	    const patient = patients.find((p) => p.id === selectedPatientId);
+639	
+640	    const now = new Date();
+641	    sessionStartTime.current = now;
+642	
+643	    const localId = await localDB.sessions.add({
+644	      machine_id: machineId,
+645	      therapist_id: String(selectedTherapistId),
+646	      patient_id: String(selectedPatientId),
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 12:25:43 PM</sup>
+
+
+---
+
+## Assistant <sup>8/8/2026, 12:25:44 PM</sup>
+
+<details>
+<summary>Tool: <code>Grep</code></summary>
+
+```json
+{
+  "pattern": "const handlePauseResume",
+  "path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Therapy.tsx",
+  "output_mode": "content",
+  "-n": true,
+  "-A": 12
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 12:25:44 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+663:  const handlePauseResume = async () => {
+664-    const isPausing = state === 'ACTIVE';
+665-    try {
+666-      const params = await buildAllParams();
+667-      const updated = await sendPrepareParams({ ...params, start_session: 1, prepare_session: 1, pause_session: isPausing ? 1 : 0 });
+668-      setMachineInfo(updated);
+669-    } catch {
+670-      presentAlert({ header: 'Command Failed', message: `Could not ${isPausing ? 'pause' : 'resume'} session on the machine. Check the connection.`, buttons: ['OK'] });
+671-      return;
+672-    }
+673-    setState(isPausing ? 'PAUSED' : 'ACTIVE');
+674-  };
+675-
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 12:25:57 PM</sup>
+
+
+---
+
+## Assistant <sup>8/8/2026, 12:25:58 PM</sup>
+
+Applying this to all four `ACTIVE`-state pause triggers (low water, low temp, high temp, background pause) plus the manual PAUSE button — each already sends `pause_session: 1` while in `ACTIVE`.
+
+
+---
+
+## Assistant <sup>8/8/2026, 12:25:58 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Therapy.tsx",
+  "offset": 454,
+  "limit": 10
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 12:25:58 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+454	        // Auto-pause: water low level drops to 0 during active session
+455	        if (state === 'ACTIVE' && info.water_ll === 0) {
+456	          lowWaterPaused.current = true;
+457	          setState('PAUSED');
+458	          setShowLowWaterModal(true);
+459	          try {
+460	            const params = await buildAllParams();
+461	            await sendPrepareParams({ ...params, start_session: 1, prepare_session: 1, pause_session: 1 });
+462	          } catch {
+463	            // Stay paused locally even if command fails
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 12:26:02 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Therapy.tsx",
+  "old_string": "          setShowLowWaterModal(true);\n          try {\n            const params = await buildAllParams();\n            await sendPrepareParams({ ...params, start_session: 1, prepare_session: 1, pause_session: 1 });\n          } catch {\n            // Stay paused locally even if command fails",
+  "new_string": "          setShowLowWaterModal(true);\n          try {\n            const params = await buildAllParams();\n            await sendPrepareParams({ ...params, start_session: 1, prepare_session: 1, pause_session: 1 });\n            await sendPrepareParams({ ...params, start_session: 1, prepare_session: 1, pause_session: 1, heater: 0 });\n          } catch {\n            // Stay paused locally even if command fails"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 12:26:04 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\Therapy.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 12:26:07 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Therapy.tsx",
+  "offset": 474,
+  "limit": 10
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 12:26:07 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+474	        // Auto-pause: temp drops below therapy min during active session
+475	        const isMinTempValid = therapyMinTemp > 0 && therapyMinTemp < defaultTemp;
+476	        if (state === 'ACTIVE' && isMinTempValid && info.temp < therapyMinTemp) {
+477	          lowTempPaused.current = true;
+478	          setState('PAUSED');
+479	          setShowLowTempModal(true);
+480	          try {
+481	            const params = await buildAllParams();
+482	            await sendPrepareParams({ ...params, start_session: 1, prepare_session: 1, pause_session: 1 });
+483	          } catch {
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 12:26:12 PM</sup>
+
+
+---
+
+## Assistant <sup>8/8/2026, 12:26:14 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Therapy.tsx",
+  "old_string": "          setShowLowTempModal(true);\n          try {\n            const params = await buildAllParams();\n            await sendPrepareParams({ ...params, start_session: 1, prepare_session: 1, pause_session: 1 });\n          } catch {",
+  "new_string": "          setShowLowTempModal(true);\n          try {\n            const params = await buildAllParams();\n            await sendPrepareParams({ ...params, start_session: 1, prepare_session: 1, pause_session: 1 });\n            await sendPrepareParams({ ...params, start_session: 1, prepare_session: 1, pause_session: 1, heater: 0 });\n          } catch {"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 12:26:15 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\Therapy.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 12:26:18 PM</sup>
+
+Now the high-temp block I added earlier.
+
+
+---
+
+## User <sup>8/8/2026, 12:26:18 PM</sup>
+
+[Request interrupted by user]
+
+
+---
+
+## User <sup>8/8/2026, 12:55:55 PM</sup>
+
+<ide_selection>The user selected the lines 682 to 682 from d:\projects\production-hydro-colon-therapy\frontend\src\pages\Therapy.tsx:
+temperature
+
+This may or may not be related to the current task.</ide_selection>
+
+@frontend/src/pages/Therapy.tsx add code to check Therapy Temperature, if the temperature read from hardware is less than Therapy temperature then pauses the session with appropriate message. Send pause session command to esp34 with header:1 param. Disable resume button until temperature return to normal. Once temperature is return to normal, show modal popup with appropriate message and resume button enabled again. Understood? Confirm before modifying any file.
+
+
+---
+
+## Assistant <sup>8/8/2026, 12:56:20 PM</sup>
+
+
+---
+
+## Assistant <sup>8/8/2026, 12:56:21 PM</sup>
+
+Let me check the current state of that block before confirming, since I'd just started making related edits.
+
+
+---
+
+## Assistant <sup>8/8/2026, 12:56:22 PM</sup>
+
+<details>
+<summary>Tool: <code>Grep</code></summary>
+
+```json
+{
+  "pattern": "Auto-pause: temp drops below therapy min|lowTempPaused|showLowTempModal|showTempRecoveredModal|disabled=\\{",
+  "path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Therapy.tsx",
+  "output_mode": "content",
+  "-n": true
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 12:56:22 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+261:  const [showLowTempModal, setShowLowTempModal] = useState(false);
+262:  const [showTempRecoveredModal, setShowTempRecoveredModal] = useState(false);
+279:  const lowTempPaused = useRef(false);
+473:        // Auto-pause: temp drops below therapy min during active session
+476:          lowTempPaused.current = true;
+487:        if (state === 'PAUSED' && lowTempPaused.current && isMinTempValid && info.temp >= therapyMinTemp) {
+488:          lowTempPaused.current = false;
+1043:                  disabled={isLocked}
+1064:                  disabled={isLocked}
+1073:                  disabled={isLocked}
+1098:                  <IonButton expand="block" color="warning" onClick={handlePrepare} disabled={state !== 'READY'}>
+1108:                      disabled={
+1110:                        (state === 'PAUSED' && lowTempPaused.current && machineInfo != null && machineInfo.temp < therapyMinTemp) ||
+1117:                    <IonButton expand="block" color="success" onClick={handleStart} disabled={s
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 12:56:28 PM</sup>
+
+Good — this confirms the low-temperature auto-pause feature already exists in full (auto-pause on `temp < therapyMinTemp`, disabled Resume, "paused" modal, "recovered" modal). Two things to reconcile before I touch anything:
+
+1. This matches what you're describing almost exactly — so I believe you're asking me to **add the missing `heater: 1` param** to the existing low-temp pause command (currently it only sends `pause_session: 1`), not rebuild the feature from scratch.
+2. This conflicts with your prior instruction to send `heater: 0` after every `pause_session: 1` (which I'd just started applying, including to this same low-temp block, before you interrupted). Physically, `heater: 1` (turn heater **on**, to help recover) makes sense for the low-temp case, while `heater: 0` (turn heater **off**) makes sense for the high-temp case — they shouldn't be the same command.
+
+
+---
+
+## Assistant <sup>8/8/2026, 12:56:32 PM</sup>
+
+<details>
+<summary>Tool: <code>AskUserQuestion</code></summary>
+
+```json
+{
+  "questions": [
+    {
+      "question": "For the low-temperature auto-pause (temp < Therapy Min Temp), which heater command should accompany pause_session: 1?",
+      "header": "Low-temp heater cmd",
+      "options": [
+        {
+          "label": "heater: 1 (turn ON, to help recover) — as just described",
+          "description": "Matches your latest message: pausing due to low temp also turns the heater on so it can climb back to safe range."
+        }
+      ]
+    },
+    {
+      "question": "Should I keep the heater:0 I already added to the low-water and high-temp auto-pause blocks a moment ago, or revert those too?",
+      "header": "Other pause blocks",
+      "options": [
+        {
+          "label": "Keep heater:0 for high-temp and low-water pauses",
+          "description": "Only the low-temp pause gets heater:1; high-temp and low-water pauses keep the heater:0 already added."
+        },
+        {
+          "label": "Revert all heater:0 additions, start fresh",
+          "description": "Undo the heater:0 calls added so far; tell me exactly which pause scenarios should send which heater value before I redo anything."
+        }
+      ]
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 12:56:32 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+<tool_use_error>InputValidationError: [
+  {
+    "origin": "array",
+    "code": "too_small",
+    "minimum": 2,
+    "inclusive": true,
+    "path": [
+      "questions",
+      0,
+      "options"
+    ],
+    "message": "Too small: expected array to have >=2 items"
+  }
+]
+
+This call included a question with fewer than 2 options, so it was rejected and the person never saw it. A question with a single option has no decision in it. Do not retry this call and do not invent a filler second option. Instead, state the one path you were going to offer as the approach you are taking, then continue with the task. If this call also contained questions with 2 to 4 options (each with distinct labels), you may re-ask those questions alone in a new call. Ask a question only when the person has at least two genuinely distinct choices.</tool_use_error>
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 12:56:35 PM</sup>
+
+I'll take it as confirmed that the low-temp pause sends `heater: 1`. Let me just ask the second question about the other blocks.
+
+
+---
+
+## Assistant <sup>8/8/2026, 12:56:36 PM</sup>
+
+<details>
+<summary>Tool: <code>AskUserQuestion</code></summary>
+
+```json
+{
+  "questions": [
+    {
+      "question": "Should I keep the heater:0 I already added to the low-water and high-temp auto-pause blocks a moment ago, or revert those too?",
+      "header": "Other pause blocks",
+      "options": [
+        {
+          "label": "Keep heater:0 for high-temp and low-water pauses",
+          "description": "Only the low-temp pause gets heater:1; high-temp and low-water pauses keep the heater:0 already added."
+        },
+        {
+          "label": "Revert all heater:0 additions, start fresh",
+          "description": "Undo the heater:0 calls added so far; tell me exactly which pause scenarios should send which heater value before I redo anything."
+        }
+      ]
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 1:00:39 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Your questions have been answered: "Should I keep the heater:0 I already added to the low-water and high-temp auto-pause blocks a moment ago, or revert those too?"="Keep heater:0 for high-temp and low-water pauses". You can now continue with these answers in mind.
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 1:00:42 PM</sup>
+
+
+---
+
+## Assistant <sup>8/8/2026, 1:00:43 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Therapy.tsx",
+  "offset": 473,
+  "limit": 20
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 1:00:43 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+473	        // Auto-pause: temp drops below therapy min during active session
+474	        const isMinTempValid = therapyMinTemp > 0 && therapyMinTemp < defaultTemp;
+475	        if (state === 'ACTIVE' && isMinTempValid && info.temp < therapyMinTemp) {
+476	          lowTempPaused.current = true;
+477	          setState('PAUSED');
+478	          setShowLowTempModal(true);
+479	          try {
+480	            const params = await buildAllParams();
+481	            await sendPrepareParams({ ...params, start_session: 1, prepare_session: 1, pause_session: 1 });
+482	          } catch {
+483	            // Stay paused locally even if command fails
+484	          }
+485	        }
+486	        // Auto-recover: temp restored while paused due to low temp
+487	        if (state === 'PAUSED' && lowTempPaused.current && isMinTempValid && info.temp >= therapyMinTemp) {
+488	          lowTempPaused.current = false;
+489	          setShowLowTempModal(false);
+490	          setShowTempRecoveredModal(true);
+491	      
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 1:00:57 PM</sup>
+
+
+---
+
+## Assistant <sup>8/8/2026, 1:00:57 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Therapy.tsx",
+  "offset": 453,
+  "limit": 20
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 1:00:57 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+453	        }
+454	        // Auto-pause: water low level drops to 0 during active session
+455	        if (state === 'ACTIVE' && info.water_ll === 0) {
+456	          lowWaterPaused.current = true;
+457	          setState('PAUSED');
+458	          setShowLowWaterModal(true);
+459	          try {
+460	            const params = await buildAllParams();
+461	            await sendPrepareParams({ ...params, start_session: 1, prepare_session: 1, pause_session: 1 });
+462	          } catch {
+463	            // Stay paused locally even if command fails
+464	          }
+465	        }
+466	        // Auto-recover: water level restored while paused due to low water
+467	        if (state === 'PAUSED' && lowWaterPaused.current && info.water_ll === 1) {
+468	          lowWaterPaused.current = false;
+469	          setShowLowWaterModal(false);
+470	          setShowWaterRecoveredModal(true);
+471	        }
+472
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 1:01:07 PM</sup>
+
+
+---
+
+## Assistant <sup>8/8/2026, 1:01:08 PM</sup>
+
+<details>
+<summary>Tool: <code>Grep</code></summary>
+
+```json
+{
+  "pattern": "Auto-pause: temp exceeds max threshold",
+  "path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Therapy.tsx",
+  "output_mode": "content",
+  "-n": true,
+  "-A": 12
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 1:01:08 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+493:        // Auto-pause: temp exceeds max threshold during active session
+494-        if (state === 'ACTIVE' && info.temp > maxTemp) {
+495-          highTempPaused.current = true;
+496-          setState('PAUSED');
+497-          setShowHighTempModal(true);
+498-          try {
+499-            const params = await buildAllParams();
+500-            await sendPrepareParams({ ...params, start_session: 1, prepare_session: 1, pause_session: 1, heater: 0 });
+501-          } catch {
+502-            // Stay paused locally even if command fails
+503-          }
+504-        }
+505-        \ Auto-recover: temp back within safe range while paused due to high temp
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 1:01:12 PM</sup>
+
+
+---
+
+## Assistant <sup>8/8/2026, 1:01:13 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Therapy.tsx",
+  "offset": 493,
+  "limit": 15
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 1:01:13 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+493	        // Auto-pause: temp exceeds max threshold during active session
+494	        if (state === 'ACTIVE' && info.temp > maxTemp) {
+495	          highTempPaused.current = true;
+496	          setState('PAUSED');
+497	          setShowHighTempModal(true);
+498	          try {
+499	            const params = await buildAllParams();
+500	            await sendPrepareParams({ ...params, start_session: 1, prepare_session: 1, pause_session: 1, heater: 0 });
+501	          } catch {
+502	            // Stay paused locally even if command fails
+503	          }
+504	        }
+505	        // Auto-recover: temp back within safe range while paused due to high temp
+506	        if (state === 'PAUSED' && highTempPaused.current && info.temp <= maxTemp) {
+507	          highTempPaused.current = false;
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 1:01:27 PM</sup>
+
+
+---
+
+## Assistant <sup>8/8/2026, 1:01:29 PM</sup>
+
+Now implementing: low-water → `heater: 0`, low-temp → `heater: 1`, high-temp → split into two separate sequential requests (matching your "new request immediately after" instruction, instead of the single combined call I'd used earlier).
+
+
+---
+
+## Assistant <sup>8/8/2026, 1:01:29 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Therapy.tsx",
+  "old_string": "          setShowLowWaterModal(true);\n          try {\n            const params = await buildAllParams();\n            await sendPrepareParams({ ...params, start_session: 1, prepare_session: 1, pause_session: 1 });\n          } catch {\n            // Stay paused locally even if command fails",
+  "new_string": "          setShowLowWaterModal(true);\n          try {\n            const params = await buildAllParams();\n            await sendPrepareParams({ ...params, start_session: 1, prepare_session: 1, pause_session: 1 });\n            await sendPrepareParams({ ...params, start_session: 1, prepare_session: 1, pause_session: 1, heater: 0 });\n          } catch {\n            // Stay paused locally even if command fails"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 1:01:31 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\Therapy.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 1:01:35 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Therapy.tsx",
+  "old_string": "          setShowLowTempModal(true);\n          try {\n            const params = await buildAllParams();\n            await sendPrepareParams({ ...params, start_session: 1, prepare_session: 1, pause_session: 1 });\n          } catch {\n            // Stay paused locally even if command fails",
+  "new_string": "          setShowLowTempModal(true);\n          try {\n            const params = await buildAllParams();\n            await sendPrepareParams({ ...params, start_session: 1, prepare_session: 1, pause_session: 1 });\n            await sendPrepareParams({ ...params, start_session: 1, prepare_session: 1, pause_session: 1, heater: 1 });\n          } catch {\n            // Stay paused locally even if command fails"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 1:01:37 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\Therapy.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 1:01:39 PM</sup>
+
+Now split the high-temp block into two sequential calls.
+
+
+---
+
+## Assistant <sup>8/8/2026, 1:01:42 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Therapy.tsx",
+  "old_string": "          setShowHighTempModal(true);\n          try {\n            const params = await buildAllParams();\n            await sendPrepareParams({ ...params, start_session: 1, prepare_session: 1, pause_session: 1, heater: 0 });\n          } catch {\n            // Stay paused locally even if command fails",
+  "new_string": "          setShowHighTempModal(true);\n          try {\n            const params = await buildAllParams();\n            await sendPrepareParams({ ...params, start_session: 1, prepare_session: 1, pause_session: 1 });\n            await sendPrepareParams({ ...params, start_session: 1, prepare_session: 1, pause_session: 1, heater: 0 });\n          } catch {\n            // Stay paused locally even if command fails"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 1:01:43 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\Therapy.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 1:01:46 PM</sup>
+
+Now verify with type-check.
+
+
+---
+
+## Assistant <sup>8/8/2026, 1:01:47 PM</sup>
+
+<details>
+<summary>Tool: <code>Bash</code></summary>
+
+```json
+{
+  "command": "cd \"d:/projects/production-hydro-colon-therapy/frontend\" && npx tsc --noEmit -p . 2>&1",
+  "description": "Type-check frontend after heater command fixes",
+  "timeout": 120000
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 1:02:07 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+(Bash completed with no output)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 1:02:13 PM</sup>
+
+Clean. Now let me re-confirm the current full state of all three pause blocks so we're aligned before I consider this done.
+
+
+---
+
+## Assistant <sup>8/8/2026, 1:02:14 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Therapy.tsx",
+  "offset": 454,
+  "limit": 55
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 1:02:14 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+454	        // Auto-pause: water low level drops to 0 during active session
+455	        if (state === 'ACTIVE' && info.water_ll === 0) {
+456	          lowWaterPaused.current = true;
+457	          setState('PAUSED');
+458	          setShowLowWaterModal(true);
+459	          try {
+460	            const params = await buildAllParams();
+461	            await sendPrepareParams({ ...params, start_session: 1, prepare_session: 1, pause_session: 1 });
+462	            await sendPrepareParams({ ...params, start_session: 1, prepare_session: 1, pause_session: 1, heater: 0 });
+463	          } catch {
+464	            // Stay paused locally even if command fails
+465	          }
+466	        }
+467	        // Auto-recover: water level restored while paused due to low water
+468	        if (state === 'PAUSED' && lowWaterPaused.current && info.water_ll === 1) {
+469	          lowWaterPaused.current = false;
+470	          setShowLowWaterModal(false);
+471	          setShowWaterRecoveredModal(true);
+472	        }
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 1:02:19 PM</sup>
+
+This all matches — three consistent auto-pause blocks, each sending `pause_session: 1` then a follow-up request with the heater command:
+
+- **Low water** → `heater: 0`
+- **Low temp** (below `therapyMinTemp`) → `heater: 1` (turn heater on to help recover)
+- **High temp** (above `maxTemp`) → `heater: 0` (turn heater off to stop it climbing)
+
+The auto-pause/disable-Resume/recovery-modal behavior for all three was already in place from earlier work (`lowWaterPaused`/`lowTempPaused`/`highTempPaused` refs, `showLowTempModal`/`showTempRecoveredModal`/`showHighTempModal`/`showTempSafeModal`, and the Resume button's `disabled` condition). `npx tsc --noEmit` passes clean.
+
+Note: I left the background-pause (`bgPaused`) and manual PAUSE button (`handlePauseResume`) blocks untouched, since those weren't part of what got explicitly confirmed — let me know if those should also get a heater command.
+
+
+---
+
+## User <sup>8/8/2026, 1:08:58 PM</sup>
+
+@backend/app/routes/admin.machines.tsx add a view link which open another page with tabs for Patients, Therapists, Session Logs, Demo Extensions , Login Extensions. Understood? Confirm before modifying any file.
+
+
+---
+
+## Assistant <sup>8/8/2026, 1:09:02 PM</sup>
+
+
+---
+
+## Assistant <sup>8/8/2026, 1:09:02 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\models\\Machine.ts"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 1:09:02 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+1	import mongoose from 'mongoose';
+2	
+3	const MachineSchema = new mongoose.Schema({
+4	  model_name: { type: String, required: true },
+5	  serial_number: { type: String, required: true, unique: true },
+6	  machine_status: { type: String, enum: ['Active', 'Inactive', 'Maintenance'], default: 'Active' },
+7	  production_date: { type: Date },
+8	  asset_type: { type: String },
+9	  installation_date: { type: Date },
+10	  installation_location: { type: String },
+11	  operating_status: { type: String, default: 'offline' }, // e.g. 'demo_locked'
+12	  // Demo Mode Config
+13	  mode: { type: String, enum: ['demo', 'full'], default: 'demo' },
+14	  demo_session_limit: { type: Number, default: 10 },
+15	  demo_sessions_used: { type: Number, default: 0 },
+16	  demo_extended_at: [{
+17	    extended_by: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+18	    previous_limit: Number,
+19	    new_limit: Number,
+20	    reason: String,
+21	    timestamp: { type: Date, default: Date.now }
+22	  }],
+23	  activ
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 1:09:06 PM</sup>
+
+
+---
+
+## Assistant <sup>8/8/2026, 1:09:07 PM</sup>
+
+<details>
+<summary>Tool: <code>Bash</code></summary>
+
+```json
+{
+  "command": "cd \"d:/projects/production-hydro-colon-therapy/backend\" && ls app/routes | grep -i \"machine\\|supplier\\.machines\"",
+  "description": "List machine-related route files"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 1:09:07 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+admin.machines.tsx
+supplier.machines.$id.tsx
+supplier.machines.tsx
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 1:09:10 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\supplier.machines.$id.tsx"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 1:09:10 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+1	import { useLoaderData, Link } from "react-router";
+2	import { useState } from "react";
+3	import { requireSupplier } from "../lib/auth.server";
+4	import { connectDB } from "../lib/db";
+5	import Machine from "../models/Machine";
+6	import MachineSupplier from "../models/MachineSupplier";
+7	import Patient from "../models/Patient";
+8	import Therapist from "../models/Therapist";
+9	import Session from "../models/Session";
+10	import User from "../models/User";
+11	
+12	// ---------- Helpers ----------
+13	
+14	const computeAge = (dob?: string): string => {
+15	  if (!dob) return "—";
+16	  const birth = new Date(dob);
+17	  if (isNaN(birth.getTime())) return "—";
+18	  const now = new Date();
+19	  let age = now.getFullYear() - birth.getFullYear();
+20	  const m = now.getMonth() - birth.getMonth();
+21	  if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) age--;
+22	  return String(age);
+23	};
+24	
+25	const formatDate = (d: any): string =>
+26	  d ? new Date(d).toLocaleDateString(undefined, { year
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 1:09:15 PM</sup>
+
+
+---
+
+## Assistant <sup>8/8/2026, 1:09:18 PM</sup>
+
+I found an existing reference implementation — `backend/app/routes/supplier.machines.$id.tsx` already has this exact page: a machine detail view with 5 tabs (Patients, Therapists, Session Logs, Demo Extensions, Login Extensions), pulling from `Patient`, `Therapist`, `Session`, and the machine's own `demo_extended_at`/`owner_login_extended_at` arrays.
+
+My plan:
+1. Add a **"View"** link to each row in `admin.machines.tsx`'s Actions column, linking to `/admin/machines/:id`.
+2. Create a new `backend/app/routes/admin.machines.$id.tsx`, adapted from `supplier.machines.$id.tsx` — same 5 tabs, same data/queries — but without the supplier-ownership check (`requireSupplier` + `MachineSupplier.findOne`), since Admin can view any machine regardless of which supplier it's assigned to (or even unassigned ones).
+3. Register the new route in `routes.ts` under the existing `admin` prefix block.
+
+Confirm and I'll implement.
+
+
+---
+
+## User <sup>8/8/2026, 1:14:14 PM</sup>
+
+<ide_opened_file>The user opened the file d:\projects\production-hydro-colon-therapy\frontend\src\pages\Therapy.tsx in the IDE. This may or may not be related to the current task.</ide_opened_file>
+
+go
+
+
+---
+
+## Assistant <sup>8/8/2026, 1:14:24 PM</sup>
+
+
+---
+
+## Assistant <sup>8/8/2026, 1:15:27 PM</sup>
+
+<details>
+<summary>Tool: <code>Write</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.machines.$id.tsx",
+  "content": "import { useLoaderData, Link } from \"react-router\";\nimport { useState } from \"react\";\nimport { connectDB } from \"../lib/db\";\nimport Machine from \"../models/Machine\";\nimport Patient from \"../models/Patient\";\nimport Therapist from \"../models/Therapist\";\nimport Session from \"../models/Session\";\nimport User from \"../models/User\";\n\n// ---------- Helpers ----------\n\nconst computeAge = (dob?: string): string => {\n  if (!dob) return \"—\";\n  const birth = new Date(dob);\n  if (isNaN(birth.getTime())) return \"—\";\n  const now = new Date();\n  let age = now.getFullYear() - birth.getFullYear();\n  const m = now.getMonth() - birth.getMonth();\n  if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) age--;\n  return String(age);\n};\n\nconst formatDate = (d: any): string =>\n  d ? new Date(d).toLocaleDateString(undefined, { year: \"numeric\", month: \"short\", day: \"numeric\" }) : \"—\";\n\nconst formatTime = (d: any): string =>\n  d ? new Date(d).toLocaleTimeString(undefined, { hour: \"2-digit\", minute: \"2-digit\" }) : \"—\";\n\nconst formatDateTime = (d: any): string =>\n  d ? new Date(d).toLocaleString(undefined, { year: \"numeric\", month: \"short\", day: \"numeric\", hour: \"2-digit\", minute: \"2-digit\" }) : \"—\";\n\n// ---------- Loader ----------\n\nexport async function loader({ params }: { params: any }) {\n  await connectDB();\n\n  const { id } = params;\n\n  const machine = await Machine.findById(id).lean() as any;\n  if (!machine) throw new Response(\"Not Found\", { status: 404 });\n\n  const [rawPatients, rawTherapists, rawSessions] = await Promise.all([\n    Patient.find({ machine_id: id }).lean(),\n    Therapist.find({ machine_id: id }).lean(),\n    Session.find({ machine_id: id }).sort({ start_time: -1 }).lean(),\n  ]);\n\n  // Populate extended_by user names for demo history\n  const rawDemoHistory
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 1:15:28 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+File created successfully at: d:\projects\production-hydro-colon-therapy\backend\app\routes\admin.machines.$id.tsx (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 1:15:30 PM</sup>
+
+Now register the route.
+
+
+---
+
+## Assistant <sup>8/8/2026, 1:15:31 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes.ts",
+  "old_string": "      route(\"machines\", \"routes/admin.machines.tsx\"),",
+  "new_string": "      route(\"machines\", \"routes/admin.machines.tsx\"),\n      route(\"machines/:id\", \"routes/admin.machines.$id.tsx\"),"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 1:15:33 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes.ts has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 1:15:35 PM</sup>
+
+Now add the "View" link to `admin.machines.tsx`'s Actions column.
+
+
+---
+
+## Assistant <sup>8/8/2026, 1:15:38 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.machines.tsx",
+  "old_string": "                  <div className=\"flex items-center gap-3\">\n                    <button\n                      onClick={() => openEdit(m as MachineDoc)}\n                      className=\"text-blue-600 hover:underline text-xs font-medium\"\n                    >\n                      Edit\n                    </button>\n                    &nbsp;|&nbsp;",
+  "new_string": "                  <div className=\"flex items-center gap-3\">\n                    <a\n                      href={`/admin/machines/${m._id}`}\n                      className=\"text-blue-600 hover:underline text-xs font-medium\"\n                    >\n                      View\n                    </a>\n                    &nbsp;|&nbsp;\n                    <button\n                      onClick={() => openEdit(m as MachineDoc)}\n                      className=\"text-blue-600 hover:underline text-xs font-medium\"\n                    >\n                      Edit\n                    </button>\n                    &nbsp;|&nbsp;"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 1:15:39 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\admin.machines.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 1:15:41 PM</sup>
+
+Now type-check.
+
+
+---
+
+## Assistant <sup>8/8/2026, 1:15:42 PM</sup>
+
+<details>
+<summary>Tool: <code>Bash</code></summary>
+
+```json
+{
+  "command": "cd \"d:/projects/production-hydro-colon-therapy/backend\" && npx tsc --noEmit 2>&1",
+  "description": "Type-check backend after admin machine detail page addition",
+  "timeout": 120000
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 1:15:55 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Exit code 2
+app/routes/api/auth.login.ts(34,36): error TS2339: Property 'userId' does not exist on type 'string | JwtPayload'.
+  Property 'userId' does not exist on type 'string'.
+app/routes/api/auth.login.ts(36,77): error TS2339: Property 'userId' does not exist on type 'string | JwtPayload'.
+  Property 'userId' does not exist on type 'string'.
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 1:15:59 PM</sup>
+
+Only the same pre-existing, unrelated error. Done. Summary:
+
+- **New route**: `backend/app/routes/admin.machines.$id.tsx` (registered at `/admin/machines/:id` in `routes.ts`), adapted from the existing `supplier.machines.$id.tsx` reference implementation — same 5 tabs (Patients, Therapists, Session Logs, Demo Extensions, Login Extensions), same data queries, but with the supplier-ownership check removed since Admin can view any machine.
+- **`admin.machines.tsx`**: added a "View" link in the Actions column of each row, linking to the new detail page.
+
+`npx tsc --noEmit` shows no new errors (the one remaining error is pre-existing and unrelated, in `auth.login.ts`).
+
+
+---
+
+## User <sup>8/8/2026, 2:05:58 PM</sup>
+
+<ide_selection>The user selected the lines 479 to 479 from d:\projects\production-hydro-colon-therapy\frontend\src\pages\Therapy.tsx:
+setShowLowTempModal
+
+This may or may not be related to the current task.</ide_selection>
+
+@frontend/src/pages/Therapy.tsx  therapyMinTemp check and setShowLowTempModal code is there but it's not working, Investigate the cause and find possible fix. Confirm before editing any file.
+
+
+---
+
+## Assistant <sup>8/8/2026, 2:06:09 PM</sup>
+
+
+---
+
+## Assistant <sup>8/8/2026, 2:06:10 PM</sup>
+
+<details>
+<summary>Tool: <code>Grep</code></summary>
+
+```json
+{
+  "pattern": "therapyMinTemp|isMinTempValid|therapy_min_temp",
+  "path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Therapy.tsx",
+  "output_mode": "content",
+  "-n": true
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 2:06:11 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+257:  const [therapyMinTemp, setTherapyMinTemp] = useState(0);
+298:      therapy_min_temp: s?.therapy_min_temp ?? 0,
+385:      setTherapyMinTemp(s?.therapy_min_temp ?? 0);
+475:        const isMinTempValid = therapyMinTemp > 0 && therapyMinTemp < machineInfo.temp;
+476:        if (state === 'ACTIVE' && isMinTempValid && info.temp < therapyMinTemp) {
+488:        if (state === 'PAUSED' && lowTempPaused.current && isMinTempValid && info.temp >= therapyMinTemp) {
+546:  }, [state, defaultTemp, therapyMinTemp, maxTemp, setMachineConnected, setMachineInfo, buildAllParams]);
+1112:                        (state === 'PAUSED' && lowTempPaused.current && machineInfo != null && machineInfo.temp < therapyMinTemp) ||
+1815:              The water temperature has dropped below the minimum therapy threshold ({therapyMinTemp}°C).
+1823:                <li>Wait for the temperature to rise back above <strong>{therapyMinTemp}°C</strong> before resuming.</li>
+1863:              The water temperature is back abo
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 2:06:33 PM</sup>
+
+
+---
+
+## Assistant <sup>8/8/2026, 2:06:33 PM</sup>
+
+Found it. Let me confirm the exact context before proposing the fix.
+
+
+---
+
+## Assistant <sup>8/8/2026, 2:06:34 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Therapy.tsx",
+  "offset": 404,
+  "limit": 100
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 2:06:34 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+404	    window.addEventListener('online', handleOnline);
+405	    return () => window.removeEventListener('online', handleOnline);
+406	  }, [machineId, loadLocal]);
+407	
+408	  // ESP32 polling — 3s during PREPARING, 15s otherwise
+409	  useEffect(() => {
+410	    const interval = state === 'PREPARING' ? 500 : 3000;
+411	    const poll = async () => {
+412	      try {
+413	        const info = await fetchMachineInfo();
+414	        setMachineInfo(info);
+415	        setMachineConnected(true);
+416	        setShowMachineAlert(false);
+417	        if (state === 'INIT') {
+418	          setState('READY');
+419	        }
+420	        // Auto-advance: water high level reached AND temperature met (but not over the max threshold)
+421	        if (state === 'PREPARING' && info.water_hl === 1 && info.temp >= defaultTemp && info.temp < maxTemp) {
+422	          setState('IDLE');
+423	        }
+424	        // Degrade: conditions drop while IDLE (System Ready) → back to PREPARING
+425	        if (state === 'IDLE' &
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 2:06:44 PM</sup>
+
+
+---
+
+## Assistant <sup>8/8/2026, 2:06:44 PM</sup>
+
+<details>
+<summary>Tool: <code>Grep</code></summary>
+
+```json
+{
+  "pattern": "isMinTempValid",
+  "path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Therapy.tsx",
+  "output_mode": "content",
+  "-n": true
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 2:06:44 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+475:        const isMinTempValid = therapyMinTemp > 0 && therapyMinTemp < defaultTemp;
+476:        if (state === 'ACTIVE' && isMinTempValid && info.temp < therapyMinTemp) {
+488:        if (state === 'PAUSED' && lowTempPaused.current && isMinTempValid && info.temp >= therapyMinTemp) {
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 2:06:59 PM</sup>
+
+
+---
+
+## Assistant <sup>8/8/2026, 2:07:00 PM</sup>
+
+<details>
+<summary>Tool: <code>Grep</code></summary>
+
+```json
+{
+  "pattern": "therapy_min_temp|Therapy Min|therapyMinTemp",
+  "path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src",
+  "output_mode": "content",
+  "-n": true,
+  "-i": true
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 2:07:00 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+frontend\src\pages\Therapy.tsx:257:  const [therapyMinTemp, setTherapyMinTemp] = useState(0);
+frontend\src\pages\Therapy.tsx:298:      therapy_min_temp: s?.therapy_min_temp ?? 0,
+frontend\src\pages\Therapy.tsx:385:      setTherapyMinTemp(s?.therapy_min_temp ?? 0);
+frontend\src\pages\Therapy.tsx:474:        // Auto-pause: temp drops below therapy min during active session
+frontend\src\pages\Therapy.tsx:475:        const isMinTempValid = therapyMinTemp > 0 && therapyMinTemp < defaultTemp;
+frontend\src\pages\Therapy.tsx:476:        if (state === 'ACTIVE' && isMinTempValid && info.temp < therapyMinTemp) {
+frontend\src\pages\Therapy.tsx:488:        if (state === 'PAUSED' && lowTempPaused.current && isMinTempValid && info.temp >= therapyMinTemp) {
+frontend\src\pages\Therapy.tsx:546:  }, [state, defaultTemp, therapyMinTemp, maxTemp, setMachineConnected, setMachineInfo, buildAllParams]);
+frontend\src\pages\Therapy.tsx:1112:                        (state === 'PAUSED' && lowTempPaused.current &&
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 2:07:10 PM</sup>
+
+
+---
+
+## Assistant <sup>8/8/2026, 2:07:11 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Therapy.tsx",
+  "offset": 373,
+  "limit": 30
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 2:07:11 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+373	      }
+374	    }
+375	    return { total, last };
+376	  };
+377	
+378	  useIonViewDidEnter(() => {
+379	    if (!machineId) return;
+380	    localDB.settings.get(machineId).then((s) => {
+381	      const secs = s?.default_session_minutes ? s.default_session_minutes * 60 : DEFAULT_TOTAL_SECONDS;
+382	      setTotalSeconds(secs);
+383	      setTimeLeft(secs);
+384	      if (s?.default_temperature) setDefaultTemp(s.default_temperature);
+385	      setTherapyMinTemp(s?.therapy_min_temp ?? 0);
+386	      setMaxTemp(s?.max_temperature ?? 40);
+387	      setBlowerAuto(s?.blower_auto ?? false);
+388	      setFlushAuto(s?.auto_flush ?? false);
+389	      setBlowerMode(s?.blower_frequency_mode ?? 'continuous');
+390	      setBlowerInterval(s?.blower_interval ?? 30);
+391	      setBlowerDuration(s?.blower_duration ?? 10);
+392	      setFlushMode(s?.flush_mode ?? 'continuous');
+393	      setHotspotSsid(s?.ssid ?? null);
+394	      setHotspotPassword(s?.password ?? null);
+395	    });
+396	  });
+397	
+398	  useEff
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 2:07:24 PM</sup>
+
+
+---
+
+## Assistant <sup>8/8/2026, 2:07:25 PM</sup>
+
+<details>
+<summary>Tool: <code>Grep</code></summary>
+
+```json
+{
+  "pattern": "setShowLowTempModal|setShowTempRecoveredModal",
+  "path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Therapy.tsx",
+  "output_mode": "content",
+  "-n": true
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 2:07:26 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+261:  const [showLowTempModal, setShowLowTempModal] = useState(false);
+262:  const [showTempRecoveredModal, setShowTempRecoveredModal] = useState(false);
+479:          setShowLowTempModal(true);
+490:          setShowLowTempModal(false);
+491:          setShowTempRecoveredModal(true);
+1830:              onClick={() => setShowLowTempModal(false)}
+1867:              onClick={() => setShowTempRecoveredModal(false)}
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 2:07:52 PM</sup>
+
+
+---
+
+## Assistant <sup>8/8/2026, 2:07:52 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\services\\esp32Service.ts"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 2:07:52 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+1	import { nativeFetch, getEsp32BaseUrl } from './nativeHttp';
+2	
+3	const ENDPOINT = import.meta.env.VITE_ESP32_ENDPOINT ?? 'machineinfo.html';
+4	
+5	export interface MachineInfo {
+6	  temp: number;
+7	  water_ll: number;
+8	  water_hl: number;
+9	  heater: number;
+10	  pump: number;
+11	  blower: number;
+12	  water_in_valve: number;
+13	  flush_valve: number;
+14	  sessionP: number;
+15	  hes: number;
+16	}
+17	
+18	// The ESP32 returns non-standard JSON like {temp:24,water_ll:0,water_hl:0}
+19	// so we quote unquoted keys before parsing.
+20	function parseLooseJson(text: string): MachineInfo {
+21	  const normalized = text.replace(/([{,]\s*)(\w+)\s*:/g, '$1"$2":');
+22	  return JSON.parse(normalized);
+23	}
+24	
+25	export async function fetchMachineInfo(): Promise<MachineInfo> {
+26	  const base = getEsp32BaseUrl();
+27	  const text = await nativeFetch(`${base}/${ENDPOINT}`, 3000, 'poll');
+28	  return parseLooseJson(text);
+29	}
+30	
+31	export async function sendCommand(param: string, value: 0 | 1): Prom
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 2:08:26 PM</sup>
+
+
+---
+
+## Assistant <sup>8/8/2026, 2:08:27 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Settings.tsx",
+  "offset": 1,
+  "limit": 75
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 2:08:27 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+1	import React, { useState, useEffect } from 'react';
+2	import {
+3	  IonContent, IonHeader, IonPage, IonTitle, IonToolbar,
+4	  IonButton, IonIcon, IonBadge, useIonAlert
+5	} from '@ionic/react';
+6	import { arrowBack, wifiOutline/* , cloudOfflineOutline  */} from 'ionicons/icons';
+7	import { localDB } from '../db/localDB';
+8	import { useStore } from '../store/useStore';
+9	import { useHistory } from 'react-router-dom';
+10	import { sendCommand, fetchMachineInfo } from '../services/esp32Service';
+11	import MachineInfoModal from '../components/MachineInfoModal';
+12	
+13	// Debug panel imports — kept for reference, panel commented out for production release
+14	// import { getLog, clearLog, fmtTime, type LogEntry } from '../services/debugLog';
+15	
+16	const Settings: React.FC = () => {
+17	  const [presentAlert] = useIonAlert();
+18	  const { machineId, machineConnected, machineInfo, setMachineInfo } = useStore();
+19	  const history = useHistory();
+20	  const [showMachineInfo, setShowMachineInfo] 
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 2:08:31 PM</sup>
+
+
+---
+
+## Assistant <sup>8/8/2026, 2:08:32 PM</sup>
+
+<details>
+<summary>Tool: <code>Grep</code></summary>
+
+```json
+{
+  "pattern": "handleNumericBlur|const handleNumericBlur",
+  "path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Settings.tsx",
+  "output_mode": "content",
+  "-n": true,
+  "-A": 25
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 2:08:32 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+89:  const handleNumericBlur = (key: keyof typeof inputDraft, min: number, max?: number) => {
+90-    const parsed = parseInt(inputDraft[key], 10);
+91-    const valid = !isNaN(parsed) && parsed >= min && (max === undefined || parsed <= max);
+92-    if (valid) {
+93-      handleSetting(key, parsed);
+94-    } else {
+95-      setInputDraft((d) => ({ ...d, [key]: String(settings[key]) }));
+96-    }
+97-  };
+98-
+99-  const persistSettings = (updated: typeof settings) => {
+100-    localDB.settings.get(machineId).then((existing) => {
+101-      localDB.settings.put({ ...existing, machine_id: machineId, ...updated });
+102-    });
+103-  };
+104-
+105-  const handleSetting = (key: keyof typeof settings, value: number | boolean | string) => {
+106-    const updated = { ...settings, [key]: value };
+107-    setSettings(updated);
+108-    persistSettings(updated);
+109-  };
+110-
+111-  const handleHardwareToggle = async (param: string, value: boolean) => {
+112-    if (!machineConnected) {
+113-      presentAle
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 2:08:58 PM</sup>
+
+
+---
+
+## Assistant <sup>8/8/2026, 2:09:04 PM</sup>
+
+I read through the low-temp auto-pause block (lines 474-492) and compared it line-by-line against the high-temp block that was built the same way. The state-flow logic itself (`setState('PAUSED')`, `setShowLowTempModal(true)`, the recovery block, the Resume-button `disabled` check) is structurally sound and symmetric — I didn't find a JS logic bug in that code path itself.
+
+What I did find is a likely root cause in the **gating condition**:
+
+```ts
+const isMinTempValid = therapyMinTemp > 0 && therapyMinTemp < defaultTemp;
+if (state === 'ACTIVE' && isMinTempValid && info.temp < therapyMinTemp) { ... }
+```
+
+`therapyMinTemp` is loaded as `s?.therapy_min_temp ?? 0` (`Therapy.tsx:385`). Unlike `maxTemp`, which defaults to a real value (40) even if settings never loaded, **`therapyMinTemp` defaults to `0`**, and `isMinTempValid` requires it to be `> 0`. So if the `Min Temp` setting was never actually saved for this machine (e.g. the Settings page's "Min Temp" field was never touched, or the record predates that field), `therapyMinTemp` stays `0` and the entire low-temp pause path is silently disabled — no error, no console warning, it just never fires. This matches "the code is there but it's not working" exactly: nothing is broken syntactically, the feature is just quietly gated off by an unconfigured value.
+
+Two questions to pin down the actual fix:
+
+
+---
+
+## Assistant <sup>8/8/2026, 2:09:08 PM</sup>
+
+<details>
+<summary>Tool: <code>AskUserQuestion</code></summary>
+
+```json
+{
+  "questions": [
+    {
+      "question": "On the machine where you're testing this, have you explicitly set a \"Min Temp\" value on the Settings page (not just left it at whatever default shows)?",
+      "header": "Min Temp set?",
+      "options": [
+        {
+          "label": "Not sure / probably not explicitly set",
+          "description": "This matches the likely bug: therapy_min_temp defaults to 0 in the DB until someone actually edits and blurs that field on Settings, silently disabling the whole feature."
+        },
+        {
+          "label": "Yes, it's set to a real value (e.g. 35)",
+          "description": "If it's genuinely configured and still not triggering, the cause is elsewhere and I need to look further (e.g. actual hardware temp readings, or a different code path)."
+        }
+      ]
+    },
+    {
+      "question": "What exactly do you observe when you'd expect the low-temp pause to trigger?",
+      "header": "Symptom",
+      "options": [
+        {
+          "label": "Nothing happens at all",
+          "description": "Session stays ACTIVE, no pause, no modal — consistent with isMinTempValid silently being false."
+        },
+        {
+          "label": "It pauses but the modal doesn't show / Resume isn't disabled",
+          "description": "State does change to PAUSED, but the UI feedback (modal or disabled Resume button) is missing — points to a different, UI-specific bug."
+        }
+      ]
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 2:16:59 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The user answered: "On the machine where you're testing this, have you explicitly set a "Min Temp" value on the Settings page (not just left it at whatever default shows)?"="Not sure / probably not explicitly set", "What exactly do you observe when you'd expect the low-temp pause to trigger?"="it went back to preparing mode instead of pause, with disabled resume button. ". Read the answers carefully — they may request clarification, changes, or that you not proceed — and follow what they actually say.
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 2:17:24 PM</sup>
+
+
+---
+
+## Assistant <sup>8/8/2026, 2:17:25 PM</sup>
+
+<details>
+<summary>Tool: <code>Grep</code></summary>
+
+```json
+{
+  "pattern": "PREPARING|'Preparing'|Preparing",
+  "path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Therapy.tsx",
+  "output_mode": "content",
+  "-n": true
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 2:17:25 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+183:type SessionState = 'INIT' | 'READY' | 'PREPARING' | 'IDLE' | 'ACTIVE' | 'PAUSED';
+408:  // ESP32 polling — 3s during PREPARING, 15s otherwise
+410:    const interval = state === 'PREPARING' ? 500 : 3000;
+421:        if (state === 'PREPARING' && info.water_hl === 1 && info.temp >= defaultTemp && info.temp < maxTemp) {
+424:        // Degrade: conditions drop while IDLE (System Ready) → back to PREPARING
+426:          setState('PREPARING');
+429:        // Safety: while PREPARING, if temp reaches the max threshold, stay in PREPARING
+431:        if (state === 'PREPARING' && info.temp >= maxTemp && !heaterForcedOff.current) {
+441:        // Recovery: temp dropped back below max threshold while PREPARING — re-enable heater if still below target
+442:        if (state === 'PREPARING' && heaterForcedOff.current && info.temp < maxTemp) {
+450:              // Stay as-is; next poll will retry via the normal PREPARING flow
+539:          // Show alert banner when connection drops mid-session (PRE
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 2:17:30 PM</sup>
+
+
+---
+
+## Assistant <sup>8/8/2026, 2:17:31 PM</sup>
+
+<details>
+<summary>Tool: <code>Grep</code></summary>
+
+```json
+{
+  "pattern": "const endSession|setState\\(",
+  "path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Therapy.tsx",
+  "output_mode": "content",
+  "-n": true
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 2:17:31 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+204:  const endSessionRef = useRef<() => Promise<void>>(() => Promise.resolve());
+418:          setState('READY');
+422:          setState('IDLE');
+426:          setState('PREPARING');
+457:          setState('PAUSED');
+479:          setState('PAUSED');
+498:          setState('PAUSED');
+518:          setState('PAUSED');
+522:          setState('ACTIVE');
+533:          setState('INIT');
+536:          setState('PAUSED');
+551:  const endSession = useCallback(async () => {
+570:    setState('READY');
+605:          setState('PAUSED');
+663:    setState('ACTIVE');
+676:    setState(isPausing ? 'PAUSED' : 'ACTIVE');
+680:    setState('PREPARING');
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/8/2026, 2:17:49 PM</sup>
+
+
+---
+
+## Assistant <sup>8/8/2026, 2:17:51 PM</sup>
+
+That detail changes things — a transition to PREPARING only happens today from `IDLE` (in the "degrade" block) or from clicking `PREPARE`; nothing sends `ACTIVE`/`PAUSED` back to `PREPARING`. So I want to pin down the exact sequence rather than guess.
+
+
+---
+
+## Assistant <sup>8/8/2026, 2:17:54 PM</sup>
+
+<details>
+<summary>Tool: <code>AskUserQuestion</code></summary>
+
+```json
+{
+  "questions": [
+    {
+      "question": "Right before the temperature dropped, what state was the session actually in?",
+      "header": "State before drop",
+      "options": [
+        {
+          "label": "ACTIVE — therapy session was running",
+          "description": "A patient session had been started (STARTED/ACTIVE), and temp dropped below Min Temp while it was running."
+        },
+        {
+          "label": "PREPARING / IDLE — session not started yet",
+          "description": "The machine was still warming up / waiting to reach ready state, before a session was ever started."
+        }
+      ]
+    },
+    {
+      "question": "Was Min Temp explicitly configured to a non-zero value on the Settings page before this test (confirmed, not just \"probably not\")?",
+      "header": "Min Temp confirmed",
+      "options": [
+        {
+          "label": "Yes, I checked Settings and it shows a real number",
+          "description": "E.g. Settings page's \"Min Temp\" field displays something like 35, not blank/0."
+        },
+        {
+          "label": "I haven't checked / don't know",
+          "description": "I'll walk through checking this as part of the fix."
+        }
+      ]
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 2:19:59 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The user doesn't want to proceed with this tool use. The tool use was rejected (eg. if it was a file edit, the new_string was NOT written to the file). STOP what you are doing and wait for the user to tell you how to proceed.
+```
+
+</details>
+
+
+---
+
+## User <sup>8/8/2026, 2:19:59 PM</sup>
+
+[Request interrupted by user for tool use]
+
+
+---
+
+## User <sup>8/8/2026, 3:02:06 PM</sup>
+
+<ide_opened_file>The user opened the file d:\projects\production-hydro-colon-therapy\frontend\src\pages\Therapy.tsx in the IDE. This may or may not be related to the current task.</ide_opened_file>
+
+@frontend/src/pages/NextTherapyNotification.tsx  Add Set custom reminder days for this patient action in Remined tab also. Understood? Confirm before editing any file.
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:02:20 PM</sup>
+
+
+---
+
+## Assistant <sup>8/8/2026, 3:02:23 PM</sup>
+
+Understood. I'll:
+
+1. Add the same **alarm icon** ("Set custom reminder days for this patient") to each row's Actions column in the **Reminded** tab, next to the existing Resend icon.
+2. Refactor `openOverrideEditor` to accept `(patient, reminderDays, leadDays)` directly instead of a full `DueEntry` object, so it can be called from both tabs (Reminded-tab entries don't have the exact same shape as Due-List `DueEntry`).
+3. Add the same inline expandable editor row (Remind-after / Alert-lead inputs + Save / Use Global Default / Cancel) beneath a Reminded-tab row when it's being edited, mirroring the Due List tab's existing pattern (adjusting `colSpan` to 7 to match that table's column count).
+
+Confirm and I'll implement.
 
 
 ---
