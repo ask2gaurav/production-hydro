@@ -71,6 +71,7 @@ export default [
       index("routes/admin._index.tsx"),
       route("machines", "routes/admin.machines.tsx"),
       route("machines/:id", "routes/admin.machines.$id.tsx"),
+      route("machines/:id/export-backup", "routes/admin.machines.$id.export-backup.tsx"),
       route("users", "routes/admin.users.tsx"),
       route("owners", "routes/admin.owners.tsx"),
       route("suppliers", "routes/admin.suppliers.tsx"),

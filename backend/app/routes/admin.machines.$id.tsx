@@ -173,7 +173,7 @@ const STATUS_COLORS: Record<string, string> = {
   paused: "bg-yellow-100 text-yellow-700",
 };
 
-type Tab = "patients" | "therapists" | "sessions" | "demo_history" | "login_history";
+type Tab = "patients" | "therapists" | "sessions" | "demo_history" | "login_history" | "export_backup";
 
 // ---------- Component ----------
 
@@ -261,6 +261,9 @@ export default function AdminMachineDetail() {
           </button>
           <button className={tabClass("login_history")} onClick={() => setActiveTab("login_history")}>
             Login Extensions <span className="ml-1 text-xs text-gray-400">({loginHistory.length})</span>
+          </button>
+          <button className={tabClass("export_backup")} onClick={() => setActiveTab("export_backup")}>
+            Export Backup
           </button>
         </nav>
       </div>
@@ -587,6 +590,31 @@ export default function AdminMachineDetail() {
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+
+      {/* Export Backup Tab */}
+      {activeTab === "export_backup" && (
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6 max-w-2xl">
+          <h2 className="text-lg font-semibold text-gray-800 mb-2">Export Backup</h2>
+          <p className="text-sm text-gray-600 mb-4">
+            Download this machine's server-side data (patients, therapists, sessions, and settings) as a
+            backup .zip file. This file can be restored directly on the tablet via the Android app's{" "}
+            <strong>Data Export / Import → Import Backup</strong> feature — useful for setting up a
+            replacement or freshly wiped tablet from the server's records.
+          </p>
+          <div className="p-3 bg-yellow-50 border border-yellow-200 text-yellow-800 rounded text-sm mb-4">
+            Some local-only preferences aren't stored on the server and won't be included: reminder
+            message templates, reminder-day overrides, auto-backup settings, and detailed flush/blower
+            timing. These will need to be reconfigured on the tablet after restoring.
+          </div>
+          <a
+            href={`/admin/machines/${machine._id}/export-backup`}
+            download
+            className="inline-block px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-800 text-sm font-medium"
+          >
+            Download Backup (.zip)
+          </a>
         </div>
       )}
     </div>

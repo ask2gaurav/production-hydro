@@ -6,8 +6,8 @@
 | **Session ID** | `5529d2b3-4ebf-4965-aa06-df984f081bd8` |
 | **Working Dir** | `d:\projects\production-hydro-colon-therapy` |
 | **Started** | 8/6/2026, 11:50:49 AM |
-| **Last Updated** | 8/10/2026, 6:53:27 PM |
-| **Messages** | 1355 |
+| **Last Updated** | 8/10/2026, 7:11:08 PM |
+| **Messages** | 1400 |
 
 ---
 
@@ -21902,6 +21902,759 @@ Both are clean — the only error is the same pre-existing, unrelated one in `au
 - **`syncService.ts`**: `gender` is now included in both push payloads (`syncPendingPatients`/`syncPendingTherapists`) and both pull paths (`fetchAndCacheTherapists`/`fetchAndCachePatients`, both the update-existing and add-new branches).
 
 Since the backend API routes pass the whole request body through unfiltered, no route changes were needed. Gender should now flow end-to-end: local UI → sync push → MongoDB → sync pull → admin/supplier detail pages (which already read `p.gender`/`t.gender`, previously always blank).
+
+
+---
+
+## User <sup>8/10/2026, 7:07:07 PM</sup>
+
+<ide_opened_file>The user opened the file d:\projects\production-hydro-colon-therapy\.env.prod in the IDE. This may or may not be related to the current task.</ide_opened_file>
+
+@backend/app/routes/admin.machines.$id.tsx  add one more tab to export datatabase (zip format) for the particular machine which can be imported to the machine from frontend that is from androd app. Understood? Ask questions if taks is not clear or there is any confusion. Don't update any file before confirming.
+
+
+---
+
+## Assistant <sup>8/10/2026, 7:07:18 PM</sup>
+
+We already worked through this exact request earlier in this conversation — I researched the field mappings, confirmed the gender gap (which we just fixed), and you approved the plan with "yes. go." Here's the plan as finalized, updated to reflect that gender is now available:
+
+## Plan: Admin export of a machine's data as an Android-app-importable backup zip
+
+**New backend route** `admin.machines.$id.export-backup.tsx` — builds a zip matching the Android app's exact import format (`manifest.json` + `sessions.json`/`therapists.json`/`patients.json`/`settings.json`/`reminder_logs.json`, using the *local* Dexie field names). Streams it back as a file download. Requires adding `jszip` as a new backend dependency (currently frontend-only).
+
+**Field mapping**:
+- **Patients/Therapists**: map 1:1 including `gender` (now that it's persisted server-side); `server_id` = Mongo `_id`; no local `id` (Dexie auto-assigns on import); reminder-override fields omitted (no server source).
+- **Sessions**: map via `*_server_id` fields; `water_temp_log`/`water_level_log` flattened from `{time, temp}` objects to plain `number[]`; `created_at` approximated from `start_time`.
+- **Settings**: assembled from *both* the `Settings` collection and the `Machine` document (mode, demo limits, SSID/password, lock-screen contact live on `Machine`). Local-only settings (reminder templates, auto-backup prefs, flush/blower granular config) omitted.
+- **`reminder_logs.json`**: always empty — local-only, never synced.
+- **`manifest.json`**: uses the same Machine `_id` the app already stores locally, avoiding the "different machine" mismatch prompt on restore.
+
+**UI**: a 6th tab "Export Backup" on the machine detail page, with a short explainer + download button, noting what won't carry over.
+
+Should I proceed with implementation now?
+
+
+---
+
+## User <sup>8/10/2026, 7:07:36 PM</sup>
+
+go
+
+
+---
+
+## Assistant <sup>8/10/2026, 7:07:39 PM</sup>
+
+
+---
+
+## Assistant <sup>8/10/2026, 7:07:41 PM</sup>
+
+<details>
+<summary>Tool: <code>Bash</code></summary>
+
+```json
+{
+  "command": "cd \"d:/projects/production-hydro-colon-therapy/backend\" && npm install jszip 2>&1 | tail -20",
+  "description": "Install jszip in backend",
+  "timeout": 120000
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 7:08:04 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+added 12 packages, and audited 520 packages in 14s
+
+132 packages are looking for funding
+  run `npm fund` for details
+
+24 vulnerabilities (2 low, 8 moderate, 14 high)
+
+To address issues that do not require attention, run:
+  npm audit fix
+
+To address all issues, run:
+  npm audit fix --force
+
+Run `npm audit` for details.
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 7:08:08 PM</sup>
+
+jszip installed. Now checking `routes.ts` and existing `@types` handling for jszip.
+
+
+---
+
+## Assistant <sup>8/10/2026, 7:08:09 PM</sup>
+
+<details>
+<summary>Tool: <code>Bash</code></summary>
+
+```json
+{
+  "command": "grep -n \"\\\"jszip\\\"\" \"d:/projects/production-hydro-colon-therapy/backend/package.json\"; ls \"d:/projects/production-hydro-colon-therapy/backend/node_modules/jszip\" 2>&1 | head -5",
+  "description": "Confirm jszip added to package.json and installed"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 7:08:09 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+23:    "jszip": "^3.10.1",
+CHANGES.md
+LICENSE.markdown
+README.markdown
+deps.js
+dist
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 7:08:13 PM</sup>
+
+Good, JSZip has its own bundled types. Now let's create the export-backup resource route.
+
+
+---
+
+## Assistant <sup>8/10/2026, 7:08:14 PM</sup>
+
+<details>
+<summary>Tool: <code>TodoWrite</code></summary>
+
+```json
+{
+  "todos": [
+    {
+      "content": "Install jszip in backend",
+      "status": "completed",
+      "activeForm": "Installing jszip in backend"
+    },
+    {
+      "content": "Create admin.machines.$id.export-backup.tsx resource route",
+      "status": "in_progress",
+      "activeForm": "Creating export-backup resource route"
+    },
+    {
+      "content": "Register route in routes.ts",
+      "status": "pending",
+      "activeForm": "Registering route in routes.ts"
+    },
+    {
+      "content": "Add Export Backup tab to admin.machines.$id.tsx",
+      "status": "pending",
+      "activeForm": "Adding Export Backup tab"
+    },
+    {
+      "content": "Verify with tsc",
+      "status": "pending",
+      "activeForm": "Verifying with tsc"
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 7:08:14 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Todos have been modified successfully. Ensure that you continue to use the todo list to track your progress. Please proceed with the current tasks if applicable
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 7:09:00 PM</sup>
+
+
+---
+
+## Assistant <sup>8/10/2026, 7:09:10 PM</sup>
+
+<details>
+<summary>Tool: <code>Write</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.machines.$id.export-backup.tsx",
+  "content": "import JSZip from \"jszip\";\nimport { requireAdmin } from \"../lib/auth.server\";\nimport { connectDB } from \"../lib/db\";\nimport Machine from \"../models/Machine\";\nimport Patient from \"../models/Patient\";\nimport Therapist from \"../models/Therapist\";\nimport Session from \"../models/Session\";\nimport Settings from \"../models/Settings\";\n\nconst BACKUP_SCHEMA_VERSION = 1;\n\n// Resource route (no default export) — GET returns a zip file matching the shape the\n// Android app's Import Backup feature expects (frontend/src/services/backupService.ts).\nexport async function loader({ request, params }: { request: Request; params: any }) {\n  await requireAdmin(request);\n  await connectDB();\n\n  const { id } = params;\n\n  const machine = await Machine.findById(id).lean() as any;\n  if (!machine) throw new Response(\"Not Found\", { status: 404 });\n\n  const [rawPatients, rawTherapists, rawSessions, settingsDoc] = await Promise.all([\n    Patient.find({ machine_id: id }).lean(),\n    Therapist.find({ machine_id: id }).lean(),\n    Session.find({ machine_id: id }).lean(),\n    Settings.findOne({ machine_id: id }).lean(),\n  ]);\n\n  const patients = (rawPatients as any[]).map((p) => ({\n    server_id: p._id.toString(),\n    machine_id: id,\n    first_name: p.first_name,\n    last_name: p.last_name,\n    phone: p.phone,\n    email: p.email,\n    gender: p.gender,\n    dob: p.dob,\n    notes: p.notes,\n    is_active: p.is_active,\n    synced: 1,\n  }));\n\n  const therapists = (rawTherapists as any[]).map((t) => ({\n    server_id: t._id.toString(),\n    machine_id: id,\n    first_name: t.first_name,\n    last_name: t.last_name,\n    phone: t.phone,\n    email: t.email,\n    gender: t.gender,\n    is_active: t.is_active,\n    synced: 1,\n  }));\n\n  const sessions = (rawSessions as any[]).map((s) => ({\n    server_id: s._id.t
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 7:09:11 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+File created successfully at: d:\projects\production-hydro-colon-therapy\backend\app\routes\admin.machines.$id.export-backup.tsx (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 7:09:17 PM</sup>
+
+Now register the route in `routes.ts`.
+
+
+---
+
+## Assistant <sup>8/10/2026, 7:09:17 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes.ts"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 7:09:17 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+1	import { type RouteConfig, index, route, layout, prefix } from "@react-router/dev/routes";
+2	
+3	export default [
+4	  index("routes/home.tsx"),
+5	
+6	  // Health
+7	  route("api/health", "routes/api/health.ts"),
+8	
+9	  // Auth
+10	  route("api/auth/login", "routes/api/auth.login.ts"),
+11	  route("api/auth/logout", "routes/api/auth.logout.ts"),
+12	  route("api/auth/me", "routes/api/auth.me.ts"),
+13	  route("api/auth/change-password", "routes/api/auth.change-password.ts"),
+14	  
+15	  // Users
+16	  route("api/users", "routes/api/users.ts"),
+17	  route("api/users/:id", "routes/api/users.$id.ts"),
+18	
+19	  // User Types
+20	  route("api/user-types", "routes/api/user-types.ts"),
+21	
+22	  // Machines
+23	  route("api/machines", "routes/api/machines.ts"),
+24	  route("api/machines/:id", "routes/api/machines.$id.ts"),
+25	  route("api/machines/:id/mode-status", "routes/api/machines.$id.mode-status.ts"),
+26	  route("api/machines/:id/activate-full-mode", "routes/api/machines.$id.activate-full-mode.ts")
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 7:09:23 PM</sup>
+
+
+---
+
+## Assistant <sup>8/10/2026, 7:09:24 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes.ts",
+  "old_string": "      route(\"machines/:id\", \"routes/admin.machines.$id.tsx\"),",
+  "new_string": "      route(\"machines/:id\", \"routes/admin.machines.$id.tsx\"),\n      route(\"machines/:id/export-backup\", \"routes/admin.machines.$id.export-backup.tsx\"),"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 7:09:25 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes.ts has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 7:09:29 PM</sup>
+
+Now the 6th tab in `admin.machines.$id.tsx`.
+
+
+---
+
+## Assistant <sup>8/10/2026, 7:09:30 PM</sup>
+
+<details>
+<summary>Tool: <code>TodoWrite</code></summary>
+
+```json
+{
+  "todos": [
+    {
+      "content": "Install jszip in backend",
+      "status": "completed",
+      "activeForm": "Installing jszip in backend"
+    },
+    {
+      "content": "Create admin.machines.$id.export-backup.tsx resource route",
+      "status": "completed",
+      "activeForm": "Creating export-backup resource route"
+    },
+    {
+      "content": "Register route in routes.ts",
+      "status": "completed",
+      "activeForm": "Registering route in routes.ts"
+    },
+    {
+      "content": "Add Export Backup tab to admin.machines.$id.tsx",
+      "status": "in_progress",
+      "activeForm": "Adding Export Backup tab"
+    },
+    {
+      "content": "Verify with tsc",
+      "status": "pending",
+      "activeForm": "Verifying with tsc"
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 7:09:30 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Todos have been modified successfully. Ensure that you continue to use the todo list to track your progress. Please proceed with the current tasks if applicable
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 7:09:35 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.machines.$id.tsx",
+  "old_string": "type Tab = \"patients\" | \"therapists\" | \"sessions\" | \"demo_history\" | \"login_history\";",
+  "new_string": "type Tab = \"patients\" | \"therapists\" | \"sessions\" | \"demo_history\" | \"login_history\" | \"export_backup\";"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 7:09:36 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\admin.machines.$id.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 7:09:42 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.machines.$id.tsx",
+  "old_string": "          <button className={tabClass(\"login_history\")} onClick={() => setActiveTab(\"login_history\")}>\n            Login Extensions <span className=\"ml-1 text-xs text-gray-400\">({loginHistory.length})</span>\n          </button>\n        </nav>\n      </div>",
+  "new_string": "          <button className={tabClass(\"login_history\")} onClick={() => setActiveTab(\"login_history\")}>\n            Login Extensions <span className=\"ml-1 text-xs text-gray-400\">({loginHistory.length})</span>\n          </button>\n          <button className={tabClass(\"export_backup\")} onClick={() => setActiveTab(\"export_backup\")}>\n            Export Backup\n          </button>\n        </nav>\n      </div>"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 7:09:43 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\admin.machines.$id.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 7:09:47 PM</sup>
+
+Now add the tab panel content, right before the closing `</div>` of the component (after the Session Logs tab block).
+
+
+---
+
+## Assistant <sup>8/10/2026, 7:09:52 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.machines.$id.tsx",
+  "old_string": "          </div>\n        </div>\n      )}\n    </div>\n  );\n}",
+  "new_string": "          </div>\n        </div>\n      )}\n\n      {/* Export Backup Tab */}\n      {activeTab === \"export_backup\" && (\n        <div className=\"bg-white rounded-lg border border-gray-200 shadow-sm p-6 max-w-2xl\">\n          <h2 className=\"text-lg font-semibold text-gray-800 mb-2\">Export Backup</h2>\n          <p className=\"text-sm text-gray-600 mb-4\">\n            Download this machine's server-side data (patients, therapists, sessions, and settings) as a\n            backup .zip file. This file can be restored directly on the tablet via the Android app's{\" \"}\n            <strong>Data Export / Import → Import Backup</strong> feature — useful for setting up a\n            replacement or freshly wiped tablet from the server's records.\n          </p>\n          <div className=\"p-3 bg-yellow-50 border border-yellow-200 text-yellow-800 rounded text-sm mb-4\">\n            Some local-only preferences aren't stored on the server and won't be included: reminder\n            message templates, reminder-day overrides, auto-backup settings, and detailed flush/blower\n            timing. These will need to be reconfigured on the tablet after restoring.\n          </div>\n          <a\n            href={`/admin/machines/${machine._id}/export-backup`}\n            download\n            className=\"inline-block px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-800 text-sm font-medium\"\n          >\n            Download Backup (.zip)\n          </a>\n        </div>\n      )}\n    </div>\n  );\n}"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 7:09:53 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\admin.machines.$id.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 7:09:56 PM</sup>
+
+Now type-check.
+
+
+---
+
+## Assistant <sup>8/10/2026, 7:09:58 PM</sup>
+
+<details>
+<summary>Tool: <code>TodoWrite</code></summary>
+
+```json
+{
+  "todos": [
+    {
+      "content": "Install jszip in backend",
+      "status": "completed",
+      "activeForm": "Installing jszip in backend"
+    },
+    {
+      "content": "Create admin.machines.$id.export-backup.tsx resource route",
+      "status": "completed",
+      "activeForm": "Creating export-backup resource route"
+    },
+    {
+      "content": "Register route in routes.ts",
+      "status": "completed",
+      "activeForm": "Registering route in routes.ts"
+    },
+    {
+      "content": "Add Export Backup tab to admin.machines.$id.tsx",
+      "status": "completed",
+      "activeForm": "Adding Export Backup tab"
+    },
+    {
+      "content": "Verify with tsc",
+      "status": "in_progress",
+      "activeForm": "Verifying with tsc"
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 7:09:58 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Todos have been modified successfully. Ensure that you continue to use the todo list to track your progress. Please proceed with the current tasks if applicable
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 7:10:03 PM</sup>
+
+<details>
+<summary>Tool: <code>Bash</code></summary>
+
+```json
+{
+  "command": "cd \"d:/projects/production-hydro-colon-therapy/backend\" && npx tsc --noEmit 2>&1",
+  "description": "Type-check backend after export-backup feature",
+  "timeout": 120000
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 7:10:14 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Exit code 2
+app/routes/admin.machines.$id.export-backup.tsx(109,23): error TS2345: Argument of type 'Buffer<ArrayBufferLike>' is not assignable to parameter of type 'BodyInit | null | undefined'.
+  Type 'Buffer<ArrayBufferLike>' is missing the following properties from type 'URLSearchParams': size, append, delete, get, and 2 more.
+app/routes/api/auth.login.ts(34,36): error TS2339: Property 'userId' does not exist on type 'string | JwtPayload'.
+  Property 'userId' does not exist on type 'string'.
+app/routes/api/auth.login.ts(36,77): error TS2339: Property 'userId' does not exist on type 'string | JwtPayload'.
+  Property 'userId' does not exist on type 'string'.
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 7:10:22 PM</sup>
+
+
+---
+
+## Assistant <sup>8/10/2026, 7:10:23 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.machines.$id.export-backup.tsx",
+  "old_string": "  return new Response(buffer, {",
+  "new_string": "  return new Response(new Uint8Array(buffer), {"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 7:10:24 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\admin.machines.$id.export-backup.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 7:10:28 PM</sup>
+
+<details>
+<summary>Tool: <code>Bash</code></summary>
+
+```json
+{
+  "command": "cd \"d:/projects/production-hydro-colon-therapy/backend\" && npx tsc --noEmit 2>&1",
+  "description": "Re-check backend types after Buffer fix",
+  "timeout": 120000
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 7:10:39 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Exit code 2
+app/routes/api/auth.login.ts(34,36): error TS2339: Property 'userId' does not exist on type 'string | JwtPayload'.
+  Property 'userId' does not exist on type 'string'.
+app/routes/api/auth.login.ts(36,77): error TS2339: Property 'userId' does not exist on type 'string | JwtPayload'.
+  Property 'userId' does not exist on type 'string'.
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 7:10:51 PM</sup>
+
+Only the same pre-existing, unrelated error remains.
+
+
+---
+
+## Assistant <sup>8/10/2026, 7:10:53 PM</sup>
+
+<details>
+<summary>Tool: <code>TodoWrite</code></summary>
+
+```json
+{
+  "todos": [
+    {
+      "content": "Install jszip in backend",
+      "status": "completed",
+      "activeForm": "Installing jszip in backend"
+    },
+    {
+      "content": "Create admin.machines.$id.export-backup.tsx resource route",
+      "status": "completed",
+      "activeForm": "Creating export-backup resource route"
+    },
+    {
+      "content": "Register route in routes.ts",
+      "status": "completed",
+      "activeForm": "Registering route in routes.ts"
+    },
+    {
+      "content": "Add Export Backup tab to admin.machines.$id.tsx",
+      "status": "completed",
+      "activeForm": "Adding Export Backup tab"
+    },
+    {
+      "content": "Verify with tsc",
+      "status": "completed",
+      "activeForm": "Verifying with tsc"
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 7:10:53 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Todos have been modified successfully. Ensure that you continue to use the todo list to track your progress. Please proceed with the current tasks if applicable
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 7:11:08 PM</sup>
+
+Done. Summary:
+
+- **`jszip`** added as a backend dependency.
+- **New resource route** `backend/app/routes/admin.machines.$id.export-backup.tsx` (registered at `/admin/machines/:id/export-backup`) — guarded by `requireAdmin`, builds a zip with `manifest.json`/`sessions.json`/`therapists.json`/`patients.json`/`settings.json`/`reminder_logs.json` matching the Android app's import format, and returns it as a downloadable file.
+- **`admin.machines.$id.tsx`**: added a 6th "Export Backup" tab with an explainer of what won't carry over and a download button linking to the new route.
+
+`npx tsc --noEmit` passes clean (only the same pre-existing, unrelated error in `auth.login.ts`).
+
+This needs a real run to verify end-to-end — worth downloading a zip from a machine with actual patients/therapists/sessions and running it through the Android app's Import Backup flow to confirm the data lands correctly (especially the flattened `water_temp_log`/`water_level_log` and the `server_id` population).
 
 
 ---
