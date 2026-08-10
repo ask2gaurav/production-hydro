@@ -6,6 +6,7 @@ const TherapistSchema = new mongoose.Schema({
   last_name: { type: String, required: true },
   phone: { type: String, required: true },
   email: { type: String, required: true },
+  gender: { type: String },
   is_active: { type: Boolean, default: true }
 });
 

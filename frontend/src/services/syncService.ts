@@ -18,6 +18,7 @@ export async function fetchAndCacheTherapists(machineId: string): Promise<void> 
           last_name: s.last_name,
           phone: s.phone,
           email: s.email,
+          gender: s.gender,
           is_active: s.is_active,
           synced: 1,
         });
@@ -29,6 +30,7 @@ export async function fetchAndCacheTherapists(machineId: string): Promise<void> 
           last_name: s.last_name,
           phone: s.phone ?? '',
           email: s.email ?? '',
+          gender: s.gender,
           is_active: s.is_active ?? true,
           synced: 1,
         });
@@ -55,6 +57,7 @@ export async function fetchAndCachePatients(machineId: string): Promise<void> {
           last_name: s.last_name,
           phone: s.phone,
           email: s.email,
+          gender: s.gender,
           dob: s.dob,
           notes: s.notes,
           is_active: s.is_active,
@@ -68,6 +71,7 @@ export async function fetchAndCachePatients(machineId: string): Promise<void> {
           last_name: s.last_name,
           phone: s.phone ?? '',
           email: s.email ?? '',
+          gender: s.gender,
           dob: s.dob ?? '',
           notes: s.notes ?? '',
           is_active: s.is_active ?? true,
@@ -94,6 +98,7 @@ export async function syncPendingTherapists(machineId: string): Promise<void> {
         last_name: therapist.last_name,
         phone: therapist.phone,
         email: therapist.email,
+        gender: therapist.gender,
       });
       await localDB.therapists.update(therapist.id!, {
         server_id: res.data._id,
@@ -120,6 +125,7 @@ export async function syncPendingPatients(machineId: string): Promise<void> {
         last_name: patient.last_name,
         phone: patient.phone,
         email: patient.email,
+        gender: patient.gender,
         dob: patient.dob,
         notes: patient.notes,
       });
