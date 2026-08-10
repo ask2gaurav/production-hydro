@@ -23,11 +23,13 @@ type TableName = typeof TABLE_NAMES[number];
 
 const EXPORT_TABLE_NAMES = TABLE_NAMES;
 
-interface BackupManifest {
+export interface BackupManifest {
   schema_version: number;
   exported_at: string;
   machine_id: string;
 }
+
+export type MachineMismatchAction = 'discard' | 'reassign';
 
 interface BackupPayload {
   manifest: BackupManifest;
@@ -58,6 +60,18 @@ async function writeAndShare(fileName: string, base64Data: string) {
     directory: Directory.Data,
     recursive: true,
   });
+
+  try {
+    await Filesystem.writeFile({
+      path: fileName,
+      data: base64Data,
+      directory: Directory.Documents,
+      recursive: true,
+    });
+  } catch {
+    // Non-fatal — the file is still safely stored under Directory.Data and can be
+    // copied to Documents later from the Saved Backups page.
+  }
 
   await Share.share({
     title: fileName,
@@ -172,7 +186,7 @@ export async function copyLocalFileToDownloads(name: string): Promise<void> {
   });
 }
 
-async function restoreFromZip(zip: JSZip, mode: ImportMode): Promise<ImportResult> {
+async function readManifest(zip: JSZip): Promise<BackupManifest> {
   const manifestEntry = zip.file('manifest.json');
   if (!manifestEntry) {
     throw new Error('Not a valid backup file: manifest.json is missing.');
@@ -181,11 +195,41 @@ async function restoreFromZip(zip: JSZip, mode: ImportMode): Promise<ImportResul
   if (manifest.schema_version > BACKUP_SCHEMA_VERSION) {
     throw new Error(`Backup was created by a newer app version (schema v${manifest.schema_version}) and cannot be imported.`);
   }
+  return manifest;
+}
+
+export async function peekBackupManifest(file: File): Promise<BackupManifest> {
+  const zip = await JSZip.loadAsync(file);
+  return readManifest(zip);
+}
+
+export async function peekLocalBackupManifest(name: string): Promise<BackupManifest> {
+  const read = await Filesystem.readFile({ path: `${BACKUPS_DIR}/${name}`, directory: Directory.Data });
+  const zip = await JSZip.loadAsync(read.data as string, { base64: true });
+  return readManifest(zip);
+}
+
+async function restoreFromZip(
+  zip: JSZip,
+  mode: ImportMode,
+  currentMachineId: string,
+  mismatchAction?: MachineMismatchAction
+): Promise<ImportResult> {
+  const manifest = await readManifest(zip);
+  const mismatched = manifest.machine_id !== currentMachineId;
 
   const data = {} as Record<TableName, unknown[]>;
   for (const table of TABLE_NAMES) {
     const entry = zip.file(`${table}.json`);
-    data[table] = entry ? JSON.parse(await entry.async('string')) : [];
+    let rows: Array<Record<string, unknown>> = entry ? JSON.parse(await entry.async('string')) : [];
+
+    if (mismatched && mismatchAction === 'discard') {
+      rows = rows.filter((r) => r.machine_id === currentMachineId);
+    } else if (mismatched && mismatchAction === 'reassign') {
+      rows = rows.map((r) => ({ ...r, machine_id: currentMachineId }));
+    }
+
+    data[table] = rows;
   }
 
   const counts: Record<TableName, number> = { sessions: 0, therapists: 0, patients: 0, settings: 0, reminder_logs: 0 };
@@ -205,13 +249,23 @@ async function restoreFromZip(zip: JSZip, mode: ImportMode): Promise<ImportResul
   return { counts };
 }
 
-export async function importFromBackupZip(file: File, mode: ImportMode): Promise<ImportResult> {
+export async function importFromBackupZip(
+  file: File,
+  mode: ImportMode,
+  currentMachineId: string,
+  mismatchAction?: MachineMismatchAction
+): Promise<ImportResult> {
   const zip = await JSZip.loadAsync(file);
-  return restoreFromZip(zip, mode);
+  return restoreFromZip(zip, mode, currentMachineId, mismatchAction);
 }
 
-export async function restoreFromLocalBackup(name: string, mode: ImportMode): Promise<ImportResult> {
+export async function restoreFromLocalBackup(
+  name: string,
+  mode: ImportMode,
+  currentMachineId: string,
+  mismatchAction?: MachineMismatchAction
+): Promise<ImportResult> {
   const read = await Filesystem.readFile({ path: `${BACKUPS_DIR}/${name}`, directory: Directory.Data });
   const zip = await JSZip.loadAsync(read.data as string, { base64: true });
-  return restoreFromZip(zip, mode);
+  return restoreFromZip(zip, mode, currentMachineId, mismatchAction);
 }

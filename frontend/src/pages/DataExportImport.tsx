@@ -6,7 +6,10 @@ import {
 import { arrowBack, documentTextOutline, archiveOutline, cloudUploadOutline, folderOpenOutline } from 'ionicons/icons';
 import { useHistory } from 'react-router';
 import { useStore } from '../store/useStore';
-import { exportToExcel, exportToBackupZip, importFromBackupZip, type ImportMode } from '../services/backupService';
+import {
+  exportToExcel, exportToBackupZip, importFromBackupZip, peekBackupManifest,
+  type ImportMode, type MachineMismatchAction,
+} from '../services/backupService';
 
 const DataExportImport: React.FC = () => {
   const history = useHistory();
@@ -48,10 +51,10 @@ const DataExportImport: React.FC = () => {
     fileInputRef.current?.click();
   };
 
-  const runImport = async (file: File, mode: ImportMode) => {
+  const runImport = async (file: File, mode: ImportMode, mismatchAction?: MachineMismatchAction) => {
     setBusy('Importing backup...');
     try {
-      const result = await importFromBackupZip(file, mode);
+      const result = await importFromBackupZip(file, mode, machineId, mismatchAction);
       const summary = Object.entries(result.counts)
         .map(([table, count]) => `${table}: ${count}`)
         .join(', ');
@@ -63,20 +66,44 @@ const DataExportImport: React.FC = () => {
     }
   };
 
-  const handleFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = '';
-    if (!file) return;
-
+  const promptImportMode = (file: File, mismatchAction?: MachineMismatchAction) => {
     presentAlert({
       header: 'Import Backup',
       message: 'Overwrite replaces all existing local data with the backup. Merge keeps existing records and adds/updates from the backup.',
       buttons: [
         { text: 'Cancel', role: 'cancel' },
-        { text: 'Merge', handler: () => runImport(file, 'merge') },
-        { text: 'Overwrite', role: 'destructive', handler: () => runImport(file, 'overwrite') },
+        { text: 'Merge', handler: () => runImport(file, 'merge', mismatchAction) },
+        { text: 'Overwrite', role: 'destructive', handler: () => runImport(file, 'overwrite', mismatchAction) },
       ],
     });
+  };
+
+  const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+
+    let manifest;
+    try {
+      manifest = await peekBackupManifest(file);
+    } catch (err) {
+      showError(err instanceof Error ? err.message : 'Failed to read backup file.');
+      return;
+    }
+
+    if (manifest.machine_id !== machineId) {
+      presentAlert({
+        header: 'Different Machine Backup',
+        message: `This backup was exported from a different machine (ID: ${manifest.machine_id}). How would you like to handle the mismatched records?`,
+        buttons: [
+          { text: 'Cancel', role: 'cancel' },
+          { text: 'Discard Mismatched Records', handler: () => promptImportMode(file, 'discard') },
+          { text: 'Reassign to This Machine', handler: () => promptImportMode(file, 'reassign') },
+        ],
+      });
+    } else {
+      promptImportMode(file);
+    }
   };
 
   return (

@@ -6,8 +6,8 @@
 | **Session ID** | `5529d2b3-4ebf-4965-aa06-df984f081bd8` |
 | **Working Dir** | `d:\projects\production-hydro-colon-therapy` |
 | **Started** | 8/6/2026, 11:50:49 AM |
-| **Last Updated** | 8/8/2026, 4:12:53 PM |
-| **Messages** | 1131 |
+| **Last Updated** | 8/10/2026, 6:07:26 PM |
+| **Messages** | 1199 |
 
 ---
 
@@ -18159,6 +18159,1120 @@ Now type-check.
 ## Assistant <sup>8/8/2026, 4:12:53 PM</sup>
 
 Clean. Done — the eye (view) icon now also appears in the Actions column (kept in the Message column too), both opening the same full-message modal.
+
+
+---
+
+## User <sup>8/10/2026, 5:30:37 PM</sup>
+
+<ide_opened_file>The user opened the file d:\projects\production-hydro-colon-therapy\frontend\src\services\backupService.ts in the IDE. This may or may not be related to the current task.</ide_opened_file>
+
+@frontend/src/pages/DataExportImport.tsx if we import zip file of differnt machine that is with different machine_id would it import data as it is or change the machine_id according to the current machine_id? Just check don't update any file.
+
+
+---
+
+## Assistant <sup>8/10/2026, 5:30:37 PM</sup>
+
+Failed to authenticate: OAuth session expired and could not be refreshed
+
+
+---
+
+## User <sup>8/10/2026, 5:31:45 PM</sup>
+
+@frontend/src/pages/DataExportImport.tsx  if we import zip file of differnt machine that is with different machine_id would it import data as it is or change the machine_id according to the current machine_id? Just check don't update any file.
+
+
+---
+
+## Assistant <sup>8/10/2026, 5:31:56 PM</sup>
+
+
+---
+
+## Assistant <sup>8/10/2026, 5:31:56 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\services\\backupService.ts"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 5:31:57 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+1	import { Filesystem, Directory } from '@capacitor/filesystem';
+2	import { Share } from '@capacitor/share';
+3	import { FileOpener } from '@capacitor-community/file-opener';
+4	import JSZip from 'jszip';
+5	import * as XLSX from 'xlsx';
+6	import { localDB } from '../db/localDB';
+7	
+8	const BACKUP_SCHEMA_VERSION = 1;
+9	const BACKUPS_DIR = 'backups';
+10	
+11	const MIME_TYPES: Record<string, string> = {
+12	  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+13	  zip: 'application/zip',
+14	};
+15	
+16	function mimeTypeFor(name: string): string {
+17	  const ext = name.split('.').pop()?.toLowerCase() ?? '';
+18	  return MIME_TYPES[ext] ?? 'application/octet-stream';
+19	}
+20	
+21	const TABLE_NAMES = ['sessions', 'therapists', 'patients', 'settings', 'reminder_logs'] as const;
+22	type TableName = typeof TABLE_NAMES[number];
+23	
+24	const EXPORT_TABLE_NAMES = TABLE_NAMES;
+25	
+26	interface BackupManifest {
+27	  schema_version: number;
+28	  exported_at: string;
+29	  machine_id: s
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 5:32:04 PM</sup>
+
+
+---
+
+## Assistant <sup>8/10/2026, 5:32:09 PM</sup>
+
+No — the import does **not** remap the `machine_id`. Looking at `restoreFromZip` in `backupService.ts` (lines 175-206):
+
+- It reads `manifest.machine_id` only to check the schema version (line 180-182) — it's never used to filter or rewrite anything.
+- Each table's rows are taken straight from the zip's JSON and written via `dexieTable.bulkPut(rows)` (line 200) — untouched, including whatever `machine_id` field each record already carries.
+- `importFromBackupZip`/`restoreFromLocalBackup` never even read the *current* `machineId` from the app — it's not passed into `restoreFromZip` at all.
+
+So if you import a `.zip` backed up from a different machine, the sessions/therapists/patients/settings/reminder_logs get written into local storage still tagged with the **original** machine's `machine_id`, not the currently active one. Since every other screen in the app queries `localDB.<table>.where('machine_id').equals(machineId)` against the *current* machine, those imported rows would silently not show up anywhere in the UI (they'd exist in IndexedDB but be invisible/orphaned relative to the active machine) — unless the current device's `machineId` happens to already match the backup's.
+
+
+---
+
+## User <sup>8/10/2026, 5:45:00 PM</sup>
+
+@frontend/src/pages/DataExportImport.tsx when importing data from zip backup, add check on machine_id, if machine_id in backup data is different than current machine's machine_id show modal popup mentioning that data is exported through other machine, and give them two options, 1. discard records with mismatched machine_id or insert it with correct machine_id that is change the machine_id to current machine's machine_id. Understood? Confirm before updating any file.
+
+
+---
+
+## Assistant <sup>8/10/2026, 5:45:47 PM</sup>
+
+
+---
+
+## Assistant <sup>8/10/2026, 5:45:52 PM</sup>
+
+Understood. Plan:
+
+1. **`backupService.ts`**: add a way to peek the backup's `manifest.json` (specifically `machine_id`) before committing the import, and extend the restore logic to accept the current machine's ID plus an action (`discard` | `reassign`) that applies only when they differ:
+   - **Discard**: drop every record whose `machine_id` doesn't match the current machine (so mismatched data is simply not imported).
+   - **Reassign**: overwrite `machine_id` on every imported record to the current machine's ID before writing them in.
+2. **`DataExportImport.tsx`**: after a file is picked, check the backup's `machine_id` against the current machine. If it differs, show a popup ("This backup was exported from a different machine") with two choices — **Discard mismatched records** or **Reassign to this machine** — before proceeding to the existing Merge/Overwrite choice. If it matches, behave exactly as today (no extra prompt).
+
+One scope question: `restoreFromLocalBackup` (used by the **Restore** action on the Saved Backups page, `SavedBackups.tsx`) shares the exact same underlying restore logic and has the identical risk — a saved backup from a different machine could get silently imported with the wrong `machine_id` today. Should I apply this same mismatch check/prompt there too, or keep this change scoped to just the file-picker import in `DataExportImport.tsx` as you specified?
+
+
+---
+
+## Assistant <sup>8/10/2026, 5:45:54 PM</sup>
+
+<details>
+<summary>Tool: <code>AskUserQuestion</code></summary>
+
+```json
+{
+  "questions": [
+    {
+      "question": "Should the machine_id mismatch check/prompt also apply to the \"Restore\" action on the Saved Backups page (SavedBackups.tsx), which uses the same underlying restore logic?",
+      "header": "Scope",
+      "options": [
+        {
+          "label": "Yes, apply to both (Recommended)",
+          "description": "Both the file-picker import (DataExportImport.tsx) and the Saved Backups Restore action get the same mismatch check, since they share identical risk and the same service function."
+        },
+        {
+          "label": "No, only DataExportImport.tsx",
+          "description": "Scope this strictly to the file-picker import flow you specified; leave SavedBackups.tsx's Restore action as-is for now."
+        }
+      ]
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 5:48:01 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Your questions have been answered: "Should the machine_id mismatch check/prompt also apply to the "Restore" action on the Saved Backups page (SavedBackups.tsx), which uses the same underlying restore logic?"="Yes, apply to both (Recommended)". You can now continue with these answers in mind.
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 5:48:11 PM</sup>
+
+
+---
+
+## Assistant <sup>8/10/2026, 5:48:14 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\SavedBackups.tsx"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 5:48:14 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+1	import React, { useCallback, useEffect, useMemo, useState } from 'react';
+2	import {
+3	  IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonButton, IonIcon,
+4	  IonNote, IonLoading, useIonAlert, useIonToast,
+5	} from '@ionic/react';
+6	import {
+7	  arrowBack, refreshOutline, trashOutline, cloudUploadOutline,
+8	  chevronBackOutline, chevronForwardOutline, eyeOutline, shareSocialOutline, downloadOutline,
+9	} from 'ionicons/icons';
+10	import { useHistory } from 'react-router';
+11	import {
+12	  listLocalBackups, deleteLocalBackup, restoreFromLocalBackup, viewLocalFile, shareLocalFile,
+13	  copyLocalFileToDownloads, type ImportMode, type LocalBackupFile,
+14	} from '../services/backupService';
+15	
+16	const PAGE_SIZE = 20;
+17	
+18	const thStyle: React.CSSProperties = {
+19	  padding: '0.6rem 0.75rem', textAlign: 'left', fontWeight: 600,
+20	  color: '#555', whiteSpace: 'nowrap', fontSize: '0.8rem',
+21	  backgroundColor: '#f4f5f8', borderBottom: '2px solid #ddd',
+22	};
+23	
+24	const tdStyle
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 5:48:18 PM</sup>
+
+
+---
+
+## Assistant <sup>8/10/2026, 5:48:19 PM</sup>
+
+<details>
+<summary>Tool: <code>TodoWrite</code></summary>
+
+```json
+{
+  "todos": [
+    {
+      "content": "Add manifest peek + mismatch-aware restore logic in backupService.ts",
+      "status": "in_progress",
+      "activeForm": "Adding manifest peek + mismatch-aware restore logic"
+    },
+    {
+      "content": "Wire mismatch prompt into DataExportImport.tsx",
+      "status": "pending",
+      "activeForm": "Wiring mismatch prompt into DataExportImport.tsx"
+    },
+    {
+      "content": "Wire mismatch prompt into SavedBackups.tsx",
+      "status": "pending",
+      "activeForm": "Wiring mismatch prompt into SavedBackups.tsx"
+    },
+    {
+      "content": "Verify with tsc",
+      "status": "pending",
+      "activeForm": "Verifying with tsc"
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 5:48:19 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Todos have been modified successfully. Ensure that you continue to use the todo list to track your progress. Please proceed with the current tasks if applicable
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 5:48:24 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\services\\backupService.ts",
+  "old_string": "interface BackupManifest {\n  schema_version: number;\n  exported_at: string;\n  machine_id: string;\n}",
+  "new_string": "export interface BackupManifest {\n  schema_version: number;\n  exported_at: string;\n  machine_id: string;\n}\n\nexport type MachineMismatchAction = 'discard' | 'reassign';"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 5:49:20 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\services\backupService.ts has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 5:49:23 PM</sup>
+
+Now add the peek functions and update `restoreFromZip`/`importFromBackupZip`/`restoreFromLocalBackup`.
+
+
+---
+
+## Assistant <sup>8/10/2026, 5:49:36 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\services\\backupService.ts",
+  "old_string": "async function restoreFromZip(zip: JSZip, mode: ImportMode): Promise<ImportResult> {\n  const manifestEntry = zip.file('manifest.json');\n  if (!manifestEntry) {\n    throw new Error('Not a valid backup file: manifest.json is missing.');\n  }\n  const manifest: BackupManifest = JSON.parse(await manifestEntry.async('string'));\n  if (manifest.schema_version > BACKUP_SCHEMA_VERSION) {\n    throw new Error(`Backup was created by a newer app version (schema v${manifest.schema_version}) and cannot be imported.`);\n  }\n\n  const data = {} as Record<TableName, unknown[]>;\n  for (const table of TABLE_NAMES) {\n    const entry = zip.file(`${table}.json`);\n    data[table] = entry ? JSON.parse(await entry.async('string')) : [];\n  }\n\n  const counts: Record<TableName, number> = { sessions: 0, therapists: 0, patients: 0, settings: 0, reminder_logs: 0 };\n\n  await localDB.transaction('rw', localDB.tables, async () => {\n    for (const table of TABLE_NAMES) {\n      const rows = data[table];\n      const dexieTable = localDB[table] as unknown as { clear: () => Promise<void>; bulkPut: (items: unknown[]) => Promise<unknown> };\n      if (mode === 'overwrite') {\n        await dexieTable.clear();\n      }\n      await dexieTable.bulkPut(rows);\n      counts[table] = rows.length;\n    }\n  });\n\n  return { counts };\n}\n\nexport async function importFromBackupZip(file: File, mode: ImportMode): Promise<ImportResult> {\n  const zip = await JSZip.loadAsync(file);\n  return restoreFromZip(zip, mode);\n}\n\nexport async function restoreFromLocalBackup(name: string, mode: ImportMode): Promise<ImportResult> {\n  const read = await Filesystem.readFile({ path: `${BACKUPS_DIR}/${name}`, directory: Directory.Data });\n  const zip = await JSZip.loadAsync(read.data as string, { base64: true });\n  return restoreFromZip(zip, mode);\n}",
+  "new_s
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 5:49:37 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\services\backupService.ts has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 5:49:42 PM</sup>
+
+
+---
+
+## Assistant <sup>8/10/2026, 5:49:43 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\services\\backupService.ts",
+  "offset": 205,
+  "limit": 15
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 5:49:43 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+205	): Promise<ImportResult> {
+206	  const manifest = await readManifest(zip);
+207	  const mismatched = manifest.machine_id !== currentMachineId;
+208	
+209	  const data = {} as Record<TableName, unknown[]>;
+210	  for (const table of TABLE_NAMES) {
+211	    const entry = zip.file(`${table}.json`);
+212	    let rows: any[] = entry ? JSON.parse(await entry.async('string')) : [];
+213	
+214	    if (mismatched && mismatchAction === 'discard') {
+215	      rows = rows.filter((r) => r.machine_id === currentMachineId);
+216	    } else if (mismatched && mismatchAction === 'reassign') {
+217	      rows = rows.map((r) => ({ ...r, machine_id: currentMachineId }));
+218	    }
+219
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 5:49:47 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\services\\backupService.ts",
+  "old_string": "    let rows: any[] = entry ? JSON.parse(await entry.async('string')) : [];",
+  "new_string": "    let rows: Array<Record<string, unknown>> = entry ? JSON.parse(await entry.async('string')) : [];"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 5:49:48 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\services\backupService.ts has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 5:49:53 PM</sup>
+
+<details>
+<summary>Tool: <code>TodoWrite</code></summary>
+
+```json
+{
+  "todos": [
+    {
+      "content": "Add manifest peek + mismatch-aware restore logic in backupService.ts",
+      "status": "completed",
+      "activeForm": "Adding manifest peek + mismatch-aware restore logic"
+    },
+    {
+      "content": "Wire mismatch prompt into DataExportImport.tsx",
+      "status": "in_progress",
+      "activeForm": "Wiring mismatch prompt into DataExportImport.tsx"
+    },
+    {
+      "content": "Wire mismatch prompt into SavedBackups.tsx",
+      "status": "pending",
+      "activeForm": "Wiring mismatch prompt into SavedBackups.tsx"
+    },
+    {
+      "content": "Verify with tsc",
+      "status": "pending",
+      "activeForm": "Verifying with tsc"
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 5:49:53 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Todos have been modified successfully. Ensure that you continue to use the todo list to track your progress. Please proceed with the current tasks if applicable
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 5:49:57 PM</sup>
+
+Now updating `DataExportImport.tsx`.
+
+
+---
+
+## Assistant <sup>8/10/2026, 5:49:58 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\DataExportImport.tsx",
+  "old_string": "import { exportToExcel, exportToBackupZip, importFromBackupZip, type ImportMode } from '../services/backupService';",
+  "new_string": "import {\n  exportToExcel, exportToBackupZip, importFromBackupZip, peekBackupManifest,\n  type ImportMode, type MachineMismatchAction,\n} from '../services/backupService';"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 5:49:59 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\DataExportImport.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 5:50:11 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\DataExportImport.tsx",
+  "old_string": "  const runImport = async (file: File, mode: ImportMode) => {\n    setBusy('Importing backup...');\n    try {\n      const result = await importFromBackupZip(file, mode);\n      const summary = Object.entries(result.counts)\n        .map(([table, count]) => `${table}: ${count}`)\n        .join(', ');\n      presentToast({ message: `Import complete (${summary}).`, duration: 3500, color: 'success' });\n    } catch (err) {\n      showError(err instanceof Error ? err.message : 'Failed to import backup file.');\n    } finally {\n      setBusy(null);\n    }\n  };\n\n  const handleFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {\n    const file = e.target.files?.[0];\n    e.target.value = '';\n    if (!file) return;\n\n    presentAlert({\n      header: 'Import Backup',\n      message: 'Overwrite replaces all existing local data with the backup. Merge keeps existing records and adds/updates from the backup.',\n      buttons: [\n        { text: 'Cancel', role: 'cancel' },\n        { text: 'Merge', handler: () => runImport(file, 'merge') },\n        { text: 'Overwrite', role: 'destructive', handler: () => runImport(file, 'overwrite') },\n      ],\n    });\n  };",
+  "new_string": "  const runImport = async (file: File, mode: ImportMode, mismatchAction?: MachineMismatchAction) => {\n    setBusy('Importing backup...');\n    try {\n      const result = await importFromBackupZip(file, mode, machineId, mismatchAction);\n      const summary = Object.entries(result.counts)\n        .map(([table, count]) => `${table}: ${count}`)\n        .join(', ');\n      presentToast({ message: `Import complete (${summary}).`, duration: 3500, color: 'success' });\n    } catch (err) {\n      showError(err instanceof Error ? err.message : 'Failed to import backup file.');\n    } finally {\n      setBusy(null);\n    }\n  };\n\n  const promptI
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 5:50:12 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\DataExportImport.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 5:50:16 PM</sup>
+
+<details>
+<summary>Tool: <code>TodoWrite</code></summary>
+
+```json
+{
+  "todos": [
+    {
+      "content": "Add manifest peek + mismatch-aware restore logic in backupService.ts",
+      "status": "completed",
+      "activeForm": "Adding manifest peek + mismatch-aware restore logic"
+    },
+    {
+      "content": "Wire mismatch prompt into DataExportImport.tsx",
+      "status": "completed",
+      "activeForm": "Wiring mismatch prompt into DataExportImport.tsx"
+    },
+    {
+      "content": "Wire mismatch prompt into SavedBackups.tsx",
+      "status": "in_progress",
+      "activeForm": "Wiring mismatch prompt into SavedBackups.tsx"
+    },
+    {
+      "content": "Verify with tsc",
+      "status": "pending",
+      "activeForm": "Verifying with tsc"
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 5:50:16 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Todos have been modified successfully. Ensure that you continue to use the todo list to track your progress. Please proceed with the current tasks if applicable
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 5:50:21 PM</sup>
+
+Now `SavedBackups.tsx` — needs `machineId` from the store plus the same mismatch-check flow.
+
+
+---
+
+## Assistant <sup>8/10/2026, 5:50:25 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\SavedBackups.tsx",
+  "old_string": "import { useHistory } from 'react-router';\nimport {\n  listLocalBackups, deleteLocalBackup, restoreFromLocalBackup, viewLocalFile, shareLocalFile,\n  copyLocalFileToDownloads, type ImportMode, type LocalBackupFile,\n} from '../services/backupService';",
+  "new_string": "import { useHistory } from 'react-router';\nimport { useStore } from '../store/useStore';\nimport {\n  listLocalBackups, deleteLocalBackup, restoreFromLocalBackup, viewLocalFile, shareLocalFile,\n  copyLocalFileToDownloads, peekLocalBackupManifest,\n  type ImportMode, type LocalBackupFile, type MachineMismatchAction,\n} from '../services/backupService';"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 5:50:26 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\SavedBackups.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 5:50:33 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\SavedBackups.tsx",
+  "old_string": "const SavedBackups: React.FC = () => {\n  const history = useHistory();\n  const [presentAlert] = useIonAlert();",
+  "new_string": "const SavedBackups: React.FC = () => {\n  const history = useHistory();\n  const { machineId } = useStore();\n  const [presentAlert] = useIonAlert();"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 5:50:34 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\SavedBackups.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 5:50:45 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\SavedBackups.tsx",
+  "old_string": "  const runRestoreLocal = async (name: string, mode: ImportMode) => {\n    setBusy('Restoring backup...');\n    try {\n      const result = await restoreFromLocalBackup(name, mode);\n      const summary = Object.entries(result.counts)\n        .map(([table, count]) => `${table}: ${count}`)\n        .join(', ');\n      presentToast({ message: `Restore complete (${summary}).`, duration: 3500, color: 'success' });\n    } catch (err) {\n      showError(err instanceof Error ? err.message : 'Failed to restore backup.');\n    } finally {\n      setBusy(null);\n      await refreshBackups();\n    }\n  };\n\n  const handleRestoreLocal = (backup: LocalBackupFile) => {\n    presentAlert({\n      header: 'Restore Backup',\n      message: `Restore \"${backup.name}\"? Overwrite replaces all existing local data with the backup. Merge keeps existing records and adds/updates from the backup.`,\n      buttons: [\n        { text: 'Cancel', role: 'cancel' },\n        { text: 'Merge', handler: () => runRestoreLocal(backup.name, 'merge') },\n        { text: 'Overwrite', role: 'destructive', handler: () => runRestoreLocal(backup.name, 'overwrite') },\n      ],\n    });\n  };",
+  "new_string": "  const runRestoreLocal = async (name: string, mode: ImportMode, mismatchAction?: MachineMismatchAction) => {\n    setBusy('Restoring backup...');\n    try {\n      const result = await restoreFromLocalBackup(name, mode, machineId, mismatchAction);\n      const summary = Object.entries(result.counts)\n        .map(([table, count]) => `${table}: ${count}`)\n        .join(', ');\n      presentToast({ message: `Restore complete (${summary}).`, duration: 3500, color: 'success' });\n    } catch (err) {\n      showError(err instanceof Error ? err.message : 'Failed to restore backup.');\n    } finally {\n      setBusy(null);\n      await refreshBackups();\n    }\n
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 5:50:46 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\SavedBackups.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 5:50:51 PM</sup>
+
+Now type-check.
+
+
+---
+
+## Assistant <sup>8/10/2026, 5:50:52 PM</sup>
+
+<details>
+<summary>Tool: <code>TodoWrite</code></summary>
+
+```json
+{
+  "todos": [
+    {
+      "content": "Add manifest peek + mismatch-aware restore logic in backupService.ts",
+      "status": "completed",
+      "activeForm": "Adding manifest peek + mismatch-aware restore logic"
+    },
+    {
+      "content": "Wire mismatch prompt into DataExportImport.tsx",
+      "status": "completed",
+      "activeForm": "Wiring mismatch prompt into DataExportImport.tsx"
+    },
+    {
+      "content": "Wire mismatch prompt into SavedBackups.tsx",
+      "status": "completed",
+      "activeForm": "Wiring mismatch prompt into SavedBackups.tsx"
+    },
+    {
+      "content": "Verify with tsc",
+      "status": "in_progress",
+      "activeForm": "Verifying with tsc"
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 5:50:52 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Todos have been modified successfully. Ensure that you continue to use the todo list to track your progress. Please proceed with the current tasks if applicable
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 5:50:55 PM</sup>
+
+<details>
+<summary>Tool: <code>Bash</code></summary>
+
+```json
+{
+  "command": "cd \"d:/projects/production-hydro-colon-therapy/frontend\" && npx tsc --noEmit -p . 2>&1",
+  "description": "Type-check frontend after machine_id mismatch import handling",
+  "timeout": 120000
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 5:51:17 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+(Bash completed with no output)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 5:51:20 PM</sup>
+
+Clean. Done.
+
+
+---
+
+## Assistant <sup>8/10/2026, 5:51:21 PM</sup>
+
+<details>
+<summary>Tool: <code>TodoWrite</code></summary>
+
+```json
+{
+  "todos": [
+    {
+      "content": "Add manifest peek + mismatch-aware restore logic in backupService.ts",
+      "status": "completed",
+      "activeForm": "Adding manifest peek + mismatch-aware restore logic"
+    },
+    {
+      "content": "Wire mismatch prompt into DataExportImport.tsx",
+      "status": "completed",
+      "activeForm": "Wiring mismatch prompt into DataExportImport.tsx"
+    },
+    {
+      "content": "Wire mismatch prompt into SavedBackups.tsx",
+      "status": "completed",
+      "activeForm": "Wiring mismatch prompt into SavedBackups.tsx"
+    },
+    {
+      "content": "Verify with tsc",
+      "status": "completed",
+      "activeForm": "Verifying with tsc"
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 5:51:21 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Todos have been modified successfully. Ensure that you continue to use the todo list to track your progress. Please proceed with the current tasks if applicable
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 5:51:27 PM</sup>
+
+Summary:
+
+- **`backupService.ts`**: added `peekBackupManifest`/`peekLocalBackupManifest` to read a backup's `manifest.json` without importing, and extended `restoreFromZip`/`importFromBackupZip`/`restoreFromLocalBackup` to take the current machine's ID plus an optional `mismatchAction: 'discard' | 'reassign'`. When the backup's `machine_id` differs from the current machine, every table's rows are either filtered out (`discard`) or have their `machine_id` overwritten to the current machine (`reassign`) before being written in.
+- **`DataExportImport.tsx`**: `handleFileSelected` now peeks the picked file's manifest first; if the machine ID differs, a popup asks the user to choose Discard or Reassign before proceeding to the existing Merge/Overwrite choice. If it matches, behavior is unchanged.
+- **`SavedBackups.tsx`**: the same mismatch check/prompt was added to the Restore action on saved zip backups, per your choice to cover both entry points.
+
+`npx tsc --noEmit` passes clean.
+
+
+---
+
+## User <sup>8/10/2026, 6:05:41 PM</sup>
+
+<ide_opened_file>The user opened the file d:\projects\production-hydro-colon-therapy\frontend\src\pages\DataExportImport.tsx in the IDE. This may or may not be related to the current task.</ide_opened_file>
+
+@frontend/src/pages/DataExportImport.tsx when we export data, it is storing the backup in local app chace and we can access it through the view saved backup, from where we can download it to Document. Can we copy it to Document directory of the android device directly when we first time expoert it? Understood? Confirm before editing any file.
+
+
+---
+
+## Assistant <sup>8/10/2026, 6:05:57 PM</sup>
+
+
+---
+
+## Assistant <sup>8/10/2026, 6:05:59 PM</sup>
+
+Understood — right now `exportToExcel`/`exportToBackupZip` (via `writeAndShare` in `backupService.ts`) only write to the app's private `Directory.Data/backups/` folder and open the Share sheet; copying to the public Documents folder currently requires a manual step from Saved Backups → download icon.
+
+You want: on every export, automatically copy the file into `Directory.Documents` too, right at export time, so it lands in Documents without needing that manual step afterward.
+
+A couple of things to confirm:
+
+
+---
+
+## Assistant <sup>8/10/2026, 6:06:02 PM</sup>
+
+<details>
+<summary>Tool: <code>AskUserQuestion</code></summary>
+
+```json
+{
+  "questions": [
+    {
+      "question": "Should the automatic copy-to-Documents happen for both export types, or just one?",
+      "header": "Scope",
+      "options": [
+        {
+          "label": "Both Excel and Backup zip exports (Recommended)",
+          "description": "Every export action (Export to Excel, Export Backup zip) automatically copies to Documents, matching what Saved Backups already lets you do manually for either file type."
+        },
+        {
+          "label": "Only Backup zip exports",
+          "description": "Excel exports stay Data-only + Share sheet; only the restorable .zip backups get auto-copied to Documents."
+        }
+      ]
+    },
+    {
+      "question": "Should the existing Share sheet still open after export, alongside the new auto-copy to Documents?",
+      "header": "Keep Share sheet",
+      "options": [
+        {
+          "label": "Yes, keep both (Recommended)",
+          "description": "Export still opens the Share sheet as it does today, and additionally the file is copied to Documents automatically — no existing behavior is removed."
+        },
+        {
+          "label": "No, replace Share sheet with auto-copy",
+          "description": "Stop opening the Share sheet on export; the file is just silently copied to Documents instead."
+        }
+      ]
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 6:06:55 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Your questions have been answered: "Should the automatic copy-to-Documents happen for both export types, or just one?"="Both Excel and Backup zip exports (Recommended)", "Should the existing Share sheet still open after export, alongside the new auto-copy to Documents?"="Yes, keep both (Recommended)". You can now continue with these answers in mind.
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 6:07:01 PM</sup>
+
+
+---
+
+## Assistant <sup>8/10/2026, 6:07:01 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\services\\backupService.ts",
+  "offset": 50,
+  "limit": 25
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 6:07:01 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+50	}
+51	
+52	function timestamp(): string {
+53	  return new Date().toISOString().replace(/[:.]/g, '-');
+54	}
+55	
+56	async function writeAndShare(fileName: string, base64Data: string) {
+57	  const written = await Filesystem.writeFile({
+58	    path: `${BACKUPS_DIR}/${fileName}`,
+59	    data: base64Data,
+60	    directory: Directory.Data,
+61	    recursive: true,
+62	  });
+63	
+64	  await Share.share({
+65	    title: fileName,
+66	    url: written.uri,
+67	    dialogTitle: 'Save or share backup file',
+68	  });
+69	
+70	  return written.uri;
+71	}
+72	
+73	function arrayBufferToBase64(buffer: ArrayBuffer): string {
+74	  let binary = '';
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 6:07:08 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\services\\backupService.ts",
+  "old_string": "async function writeAndShare(fileName: string, base64Data: string) {\n  const written = await Filesystem.writeFile({\n    path: `${BACKUPS_DIR}/${fileName}`,\n    data: base64Data,\n    directory: Directory.Data,\n    recursive: true,\n  });\n\n  await Share.share({\n    title: fileName,\n    url: written.uri,\n    dialogTitle: 'Save or share backup file',\n  });\n\n  return written.uri;\n}",
+  "new_string": "async function writeAndShare(fileName: string, base64Data: string) {\n  const written = await Filesystem.writeFile({\n    path: `${BACKUPS_DIR}/${fileName}`,\n    data: base64Data,\n    directory: Directory.Data,\n    recursive: true,\n  });\n\n  try {\n    await Filesystem.writeFile({\n      path: fileName,\n      data: base64Data,\n      directory: Directory.Documents,\n      recursive: true,\n    });\n  } catch {\n    // Non-fatal — the file is still safely stored under Directory.Data and can be\n    // copied to Documents later from the Saved Backups page.\n  }\n\n  await Share.share({\n    title: fileName,\n    url: written.uri,\n    dialogTitle: 'Save or share backup file',\n  });\n\n  return written.uri;\n}"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 6:07:10 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\services\backupService.ts has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 6:07:13 PM</sup>
+
+Now type-check.
+
+
+---
+
+## Assistant <sup>8/10/2026, 6:07:15 PM</sup>
+
+<details>
+<summary>Tool: <code>Bash</code></summary>
+
+```json
+{
+  "command": "cd \"d:/projects/production-hydro-colon-therapy/frontend\" && npx tsc --noEmit -p . 2>&1",
+  "description": "Type-check frontend after auto-copy-to-Documents change",
+  "timeout": 120000
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 6:07:23 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+(Bash completed with no output)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 6:07:26 PM</sup>
+
+Clean. Done. `writeAndShare` in `backupService.ts` now also writes a copy to `Directory.Documents` (best-effort, non-fatal if it fails) immediately after saving to `Directory.Data`, before opening the Share sheet — so both Excel and Backup zip exports land in the public Documents folder automatically at export time, no manual "Copy to Downloads" step needed afterward.
 
 
 ---

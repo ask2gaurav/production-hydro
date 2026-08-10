@@ -8,9 +8,11 @@ import {
   chevronBackOutline, chevronForwardOutline, eyeOutline, shareSocialOutline, downloadOutline,
 } from 'ionicons/icons';
 import { useHistory } from 'react-router';
+import { useStore } from '../store/useStore';
 import {
   listLocalBackups, deleteLocalBackup, restoreFromLocalBackup, viewLocalFile, shareLocalFile,
-  copyLocalFileToDownloads, type ImportMode, type LocalBackupFile,
+  copyLocalFileToDownloads, peekLocalBackupManifest,
+  type ImportMode, type LocalBackupFile, type MachineMismatchAction,
 } from '../services/backupService';
 
 const PAGE_SIZE = 20;
@@ -153,6 +155,7 @@ const BackupTable: React.FC<BackupTableProps> = ({ title, items, showRestore, sh
 
 const SavedBackups: React.FC = () => {
   const history = useHistory();
+  const { machineId } = useStore();
   const [presentAlert] = useIonAlert();
   const [presentToast] = useIonToast();
   const [busy, setBusy] = useState<string | null>(null);
@@ -177,10 +180,10 @@ const SavedBackups: React.FC = () => {
   const zipBackups = useMemo(() => backups.filter((b) => b.type === 'zip'), [backups]);
   const excelBackups = useMemo(() => backups.filter((b) => b.type === 'excel'), [backups]);
 
-  const runRestoreLocal = async (name: string, mode: ImportMode) => {
+  const runRestoreLocal = async (name: string, mode: ImportMode, mismatchAction?: MachineMismatchAction) => {
     setBusy('Restoring backup...');
     try {
-      const result = await restoreFromLocalBackup(name, mode);
+      const result = await restoreFromLocalBackup(name, mode, machineId, mismatchAction);
       const summary = Object.entries(result.counts)
         .map(([table, count]) => `${table}: ${count}`)
         .join(', ');
@@ -193,16 +196,40 @@ const SavedBackups: React.FC = () => {
     }
   };
 
-  const handleRestoreLocal = (backup: LocalBackupFile) => {
+  const promptRestoreMode = (backup: LocalBackupFile, mismatchAction?: MachineMismatchAction) => {
     presentAlert({
       header: 'Restore Backup',
       message: `Restore "${backup.name}"? Overwrite replaces all existing local data with the backup. Merge keeps existing records and adds/updates from the backup.`,
       buttons: [
         { text: 'Cancel', role: 'cancel' },
-        { text: 'Merge', handler: () => runRestoreLocal(backup.name, 'merge') },
-        { text: 'Overwrite', role: 'destructive', handler: () => runRestoreLocal(backup.name, 'overwrite') },
+        { text: 'Merge', handler: () => runRestoreLocal(backup.name, 'merge', mismatchAction) },
+        { text: 'Overwrite', role: 'destructive', handler: () => runRestoreLocal(backup.name, 'overwrite', mismatchAction) },
       ],
     });
+  };
+
+  const handleRestoreLocal = async (backup: LocalBackupFile) => {
+    let manifest;
+    try {
+      manifest = await peekLocalBackupManifest(backup.name);
+    } catch (err) {
+      showError(err instanceof Error ? err.message : 'Failed to read backup file.');
+      return;
+    }
+
+    if (manifest.machine_id !== machineId) {
+      presentAlert({
+        header: 'Different Machine Backup',
+        message: `This backup was exported from a different machine (ID: ${manifest.machine_id}). How would you like to handle the mismatched records?`,
+        buttons: [
+          { text: 'Cancel', role: 'cancel' },
+          { text: 'Discard Mismatched Records', handler: () => promptRestoreMode(backup, 'discard') },
+          { text: 'Reassign to This Machine', handler: () => promptRestoreMode(backup, 'reassign') },
+        ],
+      });
+    } else {
+      promptRestoreMode(backup);
+    }
   };
 
   const handleViewLocal = async (backup: LocalBackupFile) => {
