@@ -6,8 +6,8 @@
 | **Session ID** | `5529d2b3-4ebf-4965-aa06-df984f081bd8` |
 | **Working Dir** | `d:\projects\production-hydro-colon-therapy` |
 | **Started** | 8/6/2026, 11:50:49 AM |
-| **Last Updated** | 8/10/2026, 6:07:26 PM |
-| **Messages** | 1199 |
+| **Last Updated** | 8/10/2026, 6:33:12 PM |
+| **Messages** | 1287 |
 
 ---
 
@@ -19273,6 +19273,1586 @@ Now type-check.
 ## Assistant <sup>8/10/2026, 6:07:26 PM</sup>
 
 Clean. Done. `writeAndShare` in `backupService.ts` now also writes a copy to `Directory.Documents` (best-effort, non-fatal if it fails) immediately after saving to `Directory.Data`, before opening the Share sheet — so both Excel and Backup zip exports land in the public Documents folder automatically at export time, no manual "Copy to Downloads" step needed afterward.
+
+
+---
+
+## User <sup>8/10/2026, 6:17:00 PM</sup>
+
+@frontend/src/pages/DataExportImport.tsx Can we add auto backup setting in settings tab with number of old backup option. If auto backup is On, it would take backup after each Therapy session and @frontend/src/pages/NextTherapyNotification.tsx module changes any data. One day would have one file, so on same day if there are 5 changes made in database it would overwrite same backup file 5 time with same day in filename. On new day, the backup file name would be changed. Also, when we create a backup file for first time for the day, do cleanup also, so if number of old backups is set to 3, we will keep 3 latest backup files and remove old ones. Let me know if you understand the requirements clearly and ask question for clarification if any confusion.
+
+
+---
+
+## Assistant <sup>8/10/2026, 6:17:49 PM</sup>
+
+
+---
+
+## Assistant <sup>8/10/2026, 6:17:50 PM</sup>
+
+This is a new, sizeable feature — before planning I need to research the exact data-mutation points in `Therapy.tsx` and confirm several design decisions with you (as you invited). Let me ask the key clarifying questions first.
+
+
+---
+
+## Assistant <sup>8/10/2026, 6:17:59 PM</sup>
+
+<details>
+<summary>Tool: <code>AskUserQuestion</code></summary>
+
+```json
+{
+  "questions": [
+    {
+      "question": "Where should the \"Auto Backup\" toggle + \"number of old backups to keep\" setting live?",
+      "header": "Settings location",
+      "options": [
+        {
+          "label": "New Settings tab inside DataExportImport.tsx (Recommended)",
+          "description": "Convert the current flat list page into tabs (Backups / Settings), mirroring the pattern already used in NextTherapyNotification.tsx. Keeps the setting co-located with the backup feature itself."
+        },
+        {
+          "label": "The existing global Settings.tsx page",
+          "description": "Add it alongside the other machine/therapy settings (Min Temp, Max Temp, etc.) on the app's main Settings screen instead."
+        }
+      ]
+    },
+    {
+      "question": "Should each auto-backup also be auto-copied to the public Documents folder (like manual exports currently do), or stay private to the app's storage (only visible/downloadable via the Saved Backups page)?",
+      "header": "Documents copy",
+      "options": [
+        {
+          "label": "Keep private to app storage (Recommended)",
+          "description": "Auto-backups only go to the app's private backups folder, silently, with no OS-level file writes to Documents multiple times a day. User can still manually download any of them to Documents later from Saved Backups."
+        },
+        {
+          "label": "Also copy to Documents each time",
+          "description": "Every auto-backup (on overwrite too) also gets copied to the public Documents folder automatically, same as manual exports."
+        }
+      ]
+    },
+    {
+      "question": "In Therapy.tsx, should an auto-backup fire after every session end (including abandoned or hardware-forced endings), or only after a normally/successfully completed session?",
+      "header": "Session trigger",
+      "options": [
+        {
+          "label": "Every session end, any reason (Recommended)",
+          "description": "Fires whenever a session recor
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 6:21:34 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Your questions have been answered: "Where should the "Auto Backup" toggle + "number of old backups to keep" setting live?"="New Settings tab inside DataExportImport.tsx (Recommended)", "Should each auto-backup also be auto-copied to the public Documents folder (like manual exports currently do), or stay private to the app's storage (only visible/downloadable via the Saved Backups page)?"="Also copy to Documents each time", "In Therapy.tsx, should an auto-backup fire after every session end (including abandoned or hardware-forced endings), or only after a normally/successfully completed session?"="Every session end, any reason (Recommended)", "What should the default "number of old backups to keep" be, and does the rotation/cleanup only ever delete auto-backup files (never touching manually-created "Export Backup" zip files)?"="Default 5, auto-backups only (Recommended)". You can now continue with these answers in mind.
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 6:21:41 PM</sup>
+
+
+---
+
+## Assistant <sup>8/10/2026, 6:21:49 PM</sup>
+
+<details>
+<summary>Tool: <code>Agent</code></summary>
+
+```json
+{
+  "description": "Find session-end code paths in Therapy.tsx",
+  "subagent_type": "Explore",
+  "prompt": "In this Ionic/React frontend at d:\\projects\\production-hydro-colon-therapy\\frontend, I'm planning to add an \"auto backup after each therapy session ends\" feature. I need to know exactly where a therapy session gets finalized in `frontend/src/pages/Therapy.tsx`.\n\nPlease investigate and report back (under 300 words):\n\n1. Find the `endSession` function (a `useCallback`) in Therapy.tsx — read it in full and report what it does: does it update/save the local Dexie session record (localDB.sessions), what fields it sets (status, end_time, duration_minutes etc.), and what React state it resets afterward.\n\n2. Find every call site that triggers ending a session — I recall there's a manual \"End Therapy\" button flow (via a confirm alert calling something like `handleEndSession`), and also a hardware-triggered end (`info.hes === 1` via `endSessionRef.current()`) inside the ESP32 polling effect, and possibly other auto-scenarios (e.g. session ends when app goes to background, or `hes` hardware end signal). List every code path that ultimately calls `endSession()`, with file:line references.\n\n3. Check whether `endSession` is truly the single terminal point after which the local `sessions` Dexie record write is complete and won't be touched again for that session (i.e. a safe place to trigger a side-effect like \"queue an auto-backup\"), or whether there's a later async step (like a sync-to-server call) that also matters.\n\n4. Check `frontend/src/store/useStore.ts` (or wherever `machineId` comes from) briefly to confirm how Therapy.tsx currently obtains `machineId`, since a new auto-backup call in Therapy.tsx will need this same value.\n\nReport exact file paths, line numbers, and relevant code snippets for all of the above so a plan can be written without re-exploring."
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 6:21:49 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Async agent launched successfully. (This tool result is internal metadata — never quote or paste any part of it, including the agentId below, into a user-facing reply.)
+agentId: a3c9f15af76f63228 (internal ID - do not mention to user. Use SendMessage with to: 'a3c9f15af76f63228', summary: '<5-10 word recap>' to continue this agent.)
+The agent is working in the background. You will be notified automatically when it completes. You know nothing about its results until that notification arrives — do not report, assume, or predict them; continue other work or respond to the user in the meantime.
+Do not duplicate this agent's work — avoid working with the same files or topics it is using.
+output_file: C:\Users\Gaurav\AppData\Local\Temp\claude\d--projects-production-hydro-colon-therapy\5529d2b3-4ebf-4965-aa06-df984f081bd8\tasks\a3c9f15af76f63228.output
+Do NOT Read or tail this file via the shell tool — it is the full subagent JSONL transcript and reading it will overflow your context. If the 
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 6:21:52 PM</sup>
+
+Researching exactly where sessions get finalized in `Therapy.tsx` (the `endSession` function and all its call sites) so the auto-backup hook lands in the right place. I'll report back once that's done, then write the plan.
+
+
+---
+
+## User <sup>8/10/2026, 6:22:16 PM</sup>
+
+<task-notification>
+<task-id>a3c9f15af76f63228</task-id>
+<tool-use-id>toolu_01TREX3xME4Gw3nABoyBfPvZ</tool-use-id>
+<output-file>C:\Users\Gaurav\AppData\Local\Temp\claude\d--projects-production-hydro-colon-therapy\5529d2b3-4ebf-4965-aa06-df984f081bd8\tasks\a3c9f15af76f63228.output</output-file>
+<status>completed</status>
+<summary>Agent "Find session-end code paths in Therapy.tsx" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>Now I have all the pieces. Let me write up the findings.
+
+## Findings
+
+**1. `endSession` (Therapy.tsx:551-583)**
+```js
+const endSession = useCallback(async () =&gt; {
+  const now = new Date();
+  const elapsed = totalSeconds - timeLeft;
+  const duration = Math.round(elapsed / 60);
+
+  if (activeSessionLocalId.current !== null) {
+    await localDB.sessions.update(activeSessionLocalId.current, {
+      end_time: now, duration_minutes: duration, status: 'completed', synced: 0,
+    });
+    await runSync(machineId);          // pushes/pulls server data, syncs sessions
+  }
+  await onSessionComplete(machineId);  // refreshes mode/demo-lock status
+
+  activeSessionLocalId.current = null;
+  sessionStartTime.current = null;
+  setState('READY');
+  setTimeLeft(totalSeconds);
+  setSelectedTherapistId(null);
+  setSelectedPatientId(null);
+  setSessionNotes('');
+  setSessionError('');
+}, [timeLeft, machineId, totalSeconds]);
+endSessionRef.current = endSession;   // line 584
+```
+It updates the local Dexie session row (`end_time`, `duration_minutes`, `status: 'completed'`, `synced: 0`), then awaits `runSync(machineId)` (syncService.ts:307) which pushes pending sessions/therapists/patients, pulls fresh caches, and re-checks mode status — then awaits `onSessionComplete(machineId)` (modeCheck.ts:23). Only after both complete does it null out refs and reset UI state (`READY`, timer, selections, notes, error).
+
+**2. Call sites** — all funnel through `endSession`/`endSessionRef.current`:
+- Therapy.tsx:527 — hardware end: `if ((state === 'ACTIVE'||'PAUSED') &amp;&amp; info.hes === 1) endSessionRef.current();` inside ESP32 polling effect.
+- Therapy.tsx:590 — timer expiry effect (`timeLeft &lt;= 0` while `state==='ACTIVE'`) calls `endSession()` directly (after sending `end_session:1` to machine).
+- Therapy.tsx:695-705 — `handleEndSession` (manual button flow), sends `end_session:1` command then `await endSession()`.
+- Therapy.tsx:1004 — confirm alert "End &amp; Go Back" → `handleEndSession().then(...)`.
+- Therapy.tsx:1134 — confirm alert "End Session" → `handler: handleEndSession`.
+
+No background/app-hide path calls `endSession` — the visibility-change effect (598-623) only *pauses* (`setState('PAUSED')`), it never ends the session.
+
+**3. Is `endSession` the terminal point?** Yes for the local Dexie write itself — `sessions.update` (line 557) is the last write to that record inside `endSession`, and nothing downstream touches it again. However `endSession` doesn't return until `runSync` and `onSessionComplete` (both async, network calls) finish, and `runSync` internally calls `syncPendingSessions` which pushes that record and presumably flips `synced` server-side. So the row write is final at line 557-562, but the function as a whole is asynchronous — an auto-backup side effect should be placed either right after the `sessions.update` call (before/independent of `runSync`) or at the end of `endSession` after `onSessionComplete`, depending on whether you want backup to include synced status.
+
+**4. `machineId` source** — `frontend/src/store/useStore.ts:21` — Zustand store field `machineId: localStorage.getItem('machine_id') || ''`, set via `setMachineId` (line 35). In Therapy.tsx it's presumably pulled via `const { machineId } = useStore()` (already used throughout `endSession`, `handleStart`, etc.), so a new auto-backup call can reuse the same `machineId` variable already in scope.</result>
+<usage><subagent_tokens>23473</subagent_tokens><tool_uses>7</tool_uses><duration_ms>26863</duration_ms></usage>
+</task-notification>
+
+
+---
+
+## Assistant <sup>8/10/2026, 6:22:48 PM</sup>
+
+
+---
+
+## Assistant <sup>8/10/2026, 6:23:13 PM</sup>
+
+<details>
+<summary>Tool: <code>Write</code></summary>
+
+```json
+{
+  "file_path": "C:\\Users\\Gaurav\\.claude\\plans\\frontend-src-pages-nexttherapynotificat-glittery-beacon.md",
+  "content": "# Auto Backup: settings tab, daily rotating backup file, triggered on data changes\n\n## Context\nToday, backups (`exportToBackupZip` in `frontend/src/services/backupService.ts`) are entirely manual — the admin must open Data Export/Import and tap \"Export Backup\". The user wants an opt-in **Auto Backup** that silently keeps a backup current without manual action: triggered after every therapy session ends (`Therapy.tsx`) and after any data-changing action in the Next Therapy Notification module (`NextTherapyNotification.tsx`), writing to **one file per day** (repeated triggers the same day overwrite that file), and — the first time a new day's file is created — cleaning up old auto-backup files down to a configurable retention count.\n\nConfirmed via research: `Therapy.tsx`'s `endSession` (`Therapy.tsx:551-583`) is the single terminal point where the local `sessions` Dexie row is finalized (`localDB.sessions.update(..., { end_time, duration_minutes, status: 'completed', synced: 0 })` at line ~557), reached from every ending path (manual \"End Therapy\" button, timer expiry, hardware `hes` signal) via `endSession()`/`endSessionRef.current()`. `NextTherapyNotification.tsx` has 7 distinct mutation points, all already read in full this session: `markAsReminded`, `sendVia`, `saveLogMessage`, `saveOverride`, `clearOverride`, `handleGlobalBlur`, `handleMessageBlur`.\n\n## Data model — `frontend/src/db/localDB.ts`\nAdd two optional fields to `LocalSettings`:\n```ts\nauto_backup_enabled?: boolean;\nauto_backup_retention_count?: number; // default 5 when unset\n```\n\n## `frontend/src/services/backupService.ts` changes\n- Extract the zip-building body currently inside `exportToBackupZip` (manifest + per-table JSON entries + `zip.generateAsync`) into a shared `buildBackupZipBase64(machineId): Promise<string>`. `exportToBackupZip` becomes a thin wrap
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 6:23:14 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file C:\Users\Gaurav\.claude\plans\frontend-src-pages-nexttherapynotificat-glittery-beacon.md has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 6:23:17 PM</sup>
+
+<details>
+<summary>Tool: <code>ExitPlanMode</code></summary>
+
+```json
+{
+  "plan": "# Auto Backup: settings tab, daily rotating backup file, triggered on data changes\n\n## Context\nToday, backups (`exportToBackupZip` in `frontend/src/services/backupService.ts`) are entirely manual — the admin must open Data Export/Import and tap \"Export Backup\". The user wants an opt-in **Auto Backup** that silently keeps a backup current without manual action: triggered after every therapy session ends (`Therapy.tsx`) and after any data-changing action in the Next Therapy Notification module (`NextTherapyNotification.tsx`), writing to **one file per day** (repeated triggers the same day overwrite that file), and — the first time a new day's file is created — cleaning up old auto-backup files down to a configurable retention count.\n\nConfirmed via research: `Therapy.tsx`'s `endSession` (`Therapy.tsx:551-583`) is the single terminal point where the local `sessions` Dexie row is finalized (`localDB.sessions.update(..., { end_time, duration_minutes, status: 'completed', synced: 0 })` at line ~557), reached from every ending path (manual \"End Therapy\" button, timer expiry, hardware `hes` signal) via `endSession()`/`endSessionRef.current()`. `NextTherapyNotification.tsx` has 7 distinct mutation points, all already read in full this session: `markAsReminded`, `sendVia`, `saveLogMessage`, `saveOverride`, `clearOverride`, `handleGlobalBlur`, `handleMessageBlur`.\n\n## Data model — `frontend/src/db/localDB.ts`\nAdd two optional fields to `LocalSettings`:\n```ts\nauto_backup_enabled?: boolean;\nauto_backup_retention_count?: number; // default 5 when unset\n```\n\n## `frontend/src/services/backupService.ts` changes\n- Extract the zip-building body currently inside `exportToBackupZip` (manifest + per-table JSON entries + `zip.generateAsync`) into a shared `buildBackupZipBase64(machineId): Promise<string>`. `exportToBackupZip` becomes a thin wrapper calling it then `writeAndShare(...)` — no behavior change for manual export.\n- Add a date-stamped auto-backup 
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 6:29:00 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+User has approved your plan. You can now start coding. Start with updating your todo list if applicable
+
+Your plan has been saved to: C:\Users\Gaurav\.claude\plans\frontend-src-pages-nexttherapynotificat-glittery-beacon.md
+You can refer back to it if needed during implementation.
+
+## Approved Plan:
+# Auto Backup: settings tab, daily rotating backup file, triggered on data changes
+
+## Context
+Today, backups (`exportToBackupZip` in `frontend/src/services/backupService.ts`) are entirely manual — the admin must open Data Export/Import and tap "Export Backup". The user wants an opt-in **Auto Backup** that silently keeps a backup current without manual action: triggered after every therapy session ends (`Therapy.tsx`) and after any data-changing action in the Next Therapy Notification module (`NextTherapyNotification.tsx`), writing to **one file per day** (repeated triggers the same day overwrite that file), and — the first time a new day's file is created — cleaning up old auto-backup files
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 6:29:06 PM</sup>
+
+<details>
+<summary>Tool: <code>TodoWrite</code></summary>
+
+```json
+{
+  "todos": [
+    {
+      "content": "Add auto_backup fields to LocalSettings in localDB.ts",
+      "status": "pending",
+      "activeForm": "Adding auto_backup fields to LocalSettings"
+    },
+    {
+      "content": "Add triggerAutoBackup + helpers to backupService.ts",
+      "status": "pending",
+      "activeForm": "Adding triggerAutoBackup to backupService.ts"
+    },
+    {
+      "content": "Add Settings tab to DataExportImport.tsx",
+      "status": "pending",
+      "activeForm": "Adding Settings tab to DataExportImport.tsx"
+    },
+    {
+      "content": "Wire triggerAutoBackup into Therapy.tsx endSession",
+      "status": "pending",
+      "activeForm": "Wiring triggerAutoBackup into Therapy.tsx"
+    },
+    {
+      "content": "Wire triggerAutoBackup into NextTherapyNotification.tsx mutation handlers",
+      "status": "pending",
+      "activeForm": "Wiring triggerAutoBackup into NextTherapyNotification.tsx"
+    },
+    {
+      "content": "Verify with tsc",
+      "status": "pending",
+      "activeForm": "Verifying with tsc"
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 6:29:06 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Todos have been modified successfully. Ensure that you continue to use the todo list to track your progress. Please proceed with the current tasks if applicable
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 6:29:10 PM</sup>
+
+Starting implementation. First, `localDB.ts`.
+
+
+---
+
+## Assistant <sup>8/10/2026, 6:29:10 PM</sup>
+
+<details>
+<summary>Tool: <code>Grep</code></summary>
+
+```json
+{
+  "pattern": "next_therapy_reminder_message_hi",
+  "path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\db\\localDB.ts",
+  "output_mode": "content",
+  "-n": true,
+  "-C": 3
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 6:29:11 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+56-  next_therapy_alert_lead_days?: number;
+57-  next_therapy_reminder_message_en?: string;
+58-  next_therapy_reminder_message_gu?: string;
+59:  next_therapy_reminder_message_hi?: string;
+60-}
+61-
+62-export interface LocalTherapist {
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 6:29:16 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\db\\localDB.ts",
+  "old_string": "  next_therapy_reminder_message_hi?: string;\n}",
+  "new_string": "  next_therapy_reminder_message_hi?: string;\n\n  // Auto Backup\n  auto_backup_enabled?: boolean;\n  auto_backup_retention_count?: number;\n}"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 6:29:17 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\db\localDB.ts has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 6:29:27 PM</sup>
+
+
+---
+
+## Assistant <sup>8/10/2026, 6:29:29 PM</sup>
+
+<details>
+<summary>Tool: <code>TodoWrite</code></summary>
+
+```json
+{
+  "todos": [
+    {
+      "content": "Add auto_backup fields to LocalSettings in localDB.ts",
+      "status": "completed",
+      "activeForm": "Adding auto_backup fields to LocalSettings"
+    },
+    {
+      "content": "Add triggerAutoBackup + helpers to backupService.ts",
+      "status": "in_progress",
+      "activeForm": "Adding triggerAutoBackup to backupService.ts"
+    },
+    {
+      "content": "Add Settings tab to DataExportImport.tsx",
+      "status": "pending",
+      "activeForm": "Adding Settings tab to DataExportImport.tsx"
+    },
+    {
+      "content": "Wire triggerAutoBackup into Therapy.tsx endSession",
+      "status": "pending",
+      "activeForm": "Wiring triggerAutoBackup into Therapy.tsx"
+    },
+    {
+      "content": "Wire triggerAutoBackup into NextTherapyNotification.tsx mutation handlers",
+      "status": "pending",
+      "activeForm": "Wiring triggerAutoBackup into NextTherapyNotification.tsx"
+    },
+    {
+      "content": "Verify with tsc",
+      "status": "pending",
+      "activeForm": "Verifying with tsc"
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 6:29:29 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Todos have been modified successfully. Ensure that you continue to use the todo list to track your progress. Please proceed with the current tasks if applicable
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 6:29:32 PM</sup>
+
+Now `backupService.ts`. Let's view the current export/write section precisely.
+
+
+---
+
+## Assistant <sup>8/10/2026, 6:29:32 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\services\\backupService.ts",
+  "offset": 1,
+  "limit": 140
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 6:29:32 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+1	import { Filesystem, Directory } from '@capacitor/filesystem';
+2	import { Share } from '@capacitor/share';
+3	import { FileOpener } from '@capacitor-community/file-opener';
+4	import JSZip from 'jszip';
+5	import * as XLSX from 'xlsx';
+6	import { localDB } from '../db/localDB';
+7	
+8	const BACKUP_SCHEMA_VERSION = 1;
+9	const BACKUPS_DIR = 'backups';
+10	
+11	const MIME_TYPES: Record<string, string> = {
+12	  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+13	  zip: 'application/zip',
+14	};
+15	
+16	function mimeTypeFor(name: string): string {
+17	  const ext = name.split('.').pop()?.toLowerCase() ?? '';
+18	  return MIME_TYPES[ext] ?? 'application/octet-stream';
+19	}
+20	
+21	const TABLE_NAMES = ['sessions', 'therapists', 'patients', 'settings', 'reminder_logs'] as const;
+22	type TableName = typeof TABLE_NAMES[number];
+23	
+24	const EXPORT_TABLE_NAMES = TABLE_NAMES;
+25	
+26	export interface BackupManifest {
+27	  schema_version: number;
+28	  exported_at: string;
+29	  machin
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 6:29:42 PM</sup>
+
+Now refactoring `exportToBackupZip` to extract `buildBackupZipBase64`, and adding `triggerAutoBackup`.
+
+
+---
+
+## Assistant <sup>8/10/2026, 6:29:48 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\services\\backupService.ts",
+  "old_string": "export async function exportToBackupZip(machineId: string): Promise<string> {\n  const data = {} as Record<TableName, unknown[]>;\n  for (const table of EXPORT_TABLE_NAMES) {\n    const dexieTable = localDB[table] as unknown as { toArray: () => Promise<unknown[]> };\n    data[table] = await dexieTable.toArray();\n  }\n\n  const payload: BackupPayload = {\n    manifest: {\n      schema_version: BACKUP_SCHEMA_VERSION,\n      exported_at: new Date().toISOString(),\n      machine_id: machineId,\n    },\n    data,\n  };\n\n  const zip = new JSZip();\n  zip.file('manifest.json', JSON.stringify(payload.manifest, null, 2));\n  for (const table of EXPORT_TABLE_NAMES) {\n    zip.file(`${table}.json`, JSON.stringify(payload.data[table], null, 2));\n  }\n\n  const base64 = await zip.generateAsync({ type: 'base64' });\n  const fileName = `hydrotherapy-backup-${machineId}-${timestamp()}.zip`;\n\n  return writeAndShare(fileName, base64);\n}",
+  "new_string": "async function buildBackupZipBase64(machineId: string): Promise<string> {\n  const data = {} as Record<TableName, unknown[]>;\n  for (const table of EXPORT_TABLE_NAMES) {\n    const dexieTable = localDB[table] as unknown as { toArray: () => Promise<unknown[]> };\n    data[table] = await dexieTable.toArray();\n  }\n\n  const payload: BackupPayload = {\n    manifest: {\n      schema_version: BACKUP_SCHEMA_VERSION,\n      exported_at: new Date().toISOString(),\n      machine_id: machineId,\n    },\n    data,\n  };\n\n  const zip = new JSZip();\n  zip.file('manifest.json', JSON.stringify(payload.manifest, null, 2));\n  for (const table of EXPORT_TABLE_NAMES) {\n    zip.file(`${table}.json`, JSON.stringify(payload.data[table], null, 2));\n  }\n\n  return zip.generateAsync({ type: 'base64' });\n}\n\nexport async function exportToBackupZip(machineId: string): Promise<string> {\n  const 
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 6:29:49 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\services\backupService.ts has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 6:29:53 PM</sup>
+
+Now add the auto-backup filename helper and `triggerAutoBackup`/cleanup functions.
+
+
+---
+
+## Assistant <sup>8/10/2026, 6:29:56 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\services\\backupService.ts",
+  "old_string": "function timestamp(): string {\n  return new Date().toISOString().replace(/[:.]/g, '-');\n}",
+  "new_string": "function timestamp(): string {\n  return new Date().toISOString().replace(/[:.]/g, '-');\n}\n\nconst AUTO_BACKUP_PREFIX = 'hydrotherapy-auto-backup-';\nconst DEFAULT_AUTO_BACKUP_RETENTION = 5;\n\nfunction todayDateStamp(): string {\n  const d = new Date();\n  const yyyy = d.getFullYear();\n  const mm = String(d.getMonth() + 1).padStart(2, '0');\n  const dd = String(d.getDate()).padStart(2, '0');\n  return `${yyyy}-${mm}-${dd}`;\n}\n\nfunction autoBackupFileName(machineId: string): string {\n  return `${AUTO_BACKUP_PREFIX}${machineId}-${todayDateStamp()}.zip`;\n}"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 6:29:57 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\services\backupService.ts has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 6:30:02 PM</sup>
+
+Continuing — adding `triggerAutoBackup` and the cleanup helper now.
+
+
+---
+
+## Assistant <sup>8/10/2026, 6:30:02 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\services\\backupService.ts",
+  "offset": 150,
+  "limit": 40
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 6:30:02 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+150	
+151	export async function exportToBackupZip(machineId: string): Promise<string> {
+152	  const base64 = await buildBackupZipBase64(machineId);
+153	  const fileName = `hydrotherapy-backup-${machineId}-${timestamp()}.zip`;
+154	
+155	  return writeAndShare(fileName, base64);
+156	}
+157	
+158	export async function listLocalBackups(): Promise<LocalBackupFile[]> {
+159	  try {
+160	    const res = await Filesystem.readdir({ path: BACKUPS_DIR, directory: Directory.Data });
+161	    const files = await Promise.all(res.files.map(async (f) => {
+162	      const stat = await Filesystem.stat({ path: `${BACKUPS_DIR}/${f.name}`, directory: Directory.Data });
+163	      return {
+164	        name: f.name,
+165	        type: f.name.toLowerCase().endsWith('.zip') ? 'zip' as const : 'excel' as const,
+166	        size: stat.size,
+167	        modifiedAt: new Date(stat.mtime).toISOString(),
+168	      };
+169	    }));
+170	    files.sort((a, b) => b.modifiedAt.localeCompare(a.modifiedAt));
+171	    return files;
+172
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 6:30:05 PM</sup>
+
+Adding `triggerAutoBackup` right after `exportToBackupZip`.
+
+
+---
+
+## Assistant <sup>8/10/2026, 6:30:13 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\services\\backupService.ts",
+  "old_string": "export async function exportToBackupZip(machineId: string): Promise<string> {\n  const base64 = await buildBackupZipBase64(machineId);\n  const fileName = `hydrotherapy-backup-${machineId}-${timestamp()}.zip`;\n\n  return writeAndShare(fileName, base64);\n}",
+  "new_string": "export async function exportToBackupZip(machineId: string): Promise<string> {\n  const base64 = await buildBackupZipBase64(machineId);\n  const fileName = `hydrotherapy-backup-${machineId}-${timestamp()}.zip`;\n\n  return writeAndShare(fileName, base64);\n}\n\nasync function cleanupOldAutoBackups(machineId: string, retention: number): Promise<void> {\n  try {\n    const res = await Filesystem.readdir({ path: BACKUPS_DIR, directory: Directory.Data });\n    const prefix = `${AUTO_BACKUP_PREFIX}${machineId}-`;\n    const autoFiles = res.files\n      .map((f) => f.name)\n      .filter((name) => name.startsWith(prefix) && name.toLowerCase().endsWith('.zip'))\n      .sort()\n      .reverse(); // newest first — the embedded YYYY-MM-DD sorts chronologically as a string\n\n    const toDelete = autoFiles.slice(Math.max(0, retention));\n    for (const name of toDelete) {\n      try {\n        await Filesystem.deleteFile({ path: `${BACKUPS_DIR}/${name}`, directory: Directory.Data });\n      } catch {\n        // Best effort — leave it for the next cleanup pass if deletion fails.\n      }\n    }\n  } catch {\n    // Backups folder doesn't exist yet — nothing to clean up.\n  }\n}\n\n// Silently writes/overwrites today's auto-backup file (one per day, per machine) when the\n// \"Auto Backup\" setting is enabled. Never throws — a failure here must not interrupt the\n// therapy session or reminder action that triggered it.\nexport async function triggerAutoBackup(machineId: string): Promise<void> {\n  try {\n    const settings = await localDB.settings.get(machineId
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 6:30:14 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\services\backupService.ts has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 6:30:19 PM</sup>
+
+Now let's mark todo done and move to `DataExportImport.tsx`.
+
+
+---
+
+## Assistant <sup>8/10/2026, 6:30:21 PM</sup>
+
+<details>
+<summary>Tool: <code>TodoWrite</code></summary>
+
+```json
+{
+  "todos": [
+    {
+      "content": "Add auto_backup fields to LocalSettings in localDB.ts",
+      "status": "completed",
+      "activeForm": "Adding auto_backup fields to LocalSettings"
+    },
+    {
+      "content": "Add triggerAutoBackup + helpers to backupService.ts",
+      "status": "completed",
+      "activeForm": "Adding triggerAutoBackup to backupService.ts"
+    },
+    {
+      "content": "Add Settings tab to DataExportImport.tsx",
+      "status": "in_progress",
+      "activeForm": "Adding Settings tab to DataExportImport.tsx"
+    },
+    {
+      "content": "Wire triggerAutoBackup into Therapy.tsx endSession",
+      "status": "pending",
+      "activeForm": "Wiring triggerAutoBackup into Therapy.tsx"
+    },
+    {
+      "content": "Wire triggerAutoBackup into NextTherapyNotification.tsx mutation handlers",
+      "status": "pending",
+      "activeForm": "Wiring triggerAutoBackup into NextTherapyNotification.tsx"
+    },
+    {
+      "content": "Verify with tsc",
+      "status": "pending",
+      "activeForm": "Verifying with tsc"
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 6:30:21 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Todos have been modified successfully. Ensure that you continue to use the todo list to track your progress. Please proceed with the current tasks if applicable
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 6:30:26 PM</sup>
+
+
+---
+
+## Assistant <sup>8/10/2026, 6:30:51 PM</sup>
+
+<details>
+<summary>Tool: <code>Write</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\DataExportImport.tsx",
+  "content": "import React, { useEffect, useRef, useState } from 'react';\nimport {\n  IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonButton, IonIcon,\n  IonList, IonItem, IonLabel, IonNote, IonLoading, IonSegment, IonSegmentButton, IonToggle,\n  useIonAlert, useIonToast,\n} from '@ionic/react';\nimport { arrowBack, documentTextOutline, archiveOutline, cloudUploadOutline, folderOpenOutline } from 'ionicons/icons';\nimport { useHistory } from 'react-router';\nimport { useStore } from '../store/useStore';\nimport { localDB } from '../db/localDB';\nimport {\n  exportToExcel, exportToBackupZip, importFromBackupZip, peekBackupManifest,\n  type ImportMode, type MachineMismatchAction,\n} from '../services/backupService';\n\nconst rowStyle: React.CSSProperties = {\n  display: 'flex',\n  justifyContent: 'space-between',\n  alignItems: 'center',\n  padding: '0.75rem 1rem',\n  borderBottom: '1px solid #f5f5f5',\n  fontSize: '0.95rem',\n};\n\nconst labelStyle: React.CSSProperties = { color: '#333', fontWeight: 500 };\n\nconst inputStyle: React.CSSProperties = {\n  width: '70px', padding: '0.3rem 0.5rem', border: '1px solid #ccc',\n  borderRadius: '6px', fontSize: '0.9rem', textAlign: 'right', outline: 'none',\n};\n\nconst DEFAULT_RETENTION = 5;\n\nconst DataExportImport: React.FC = () => {\n  const history = useHistory();\n  const { machineId } = useStore();\n  const [presentAlert] = useIonAlert();\n  const [presentToast] = useIonToast();\n  const [busy, setBusy] = useState<string | null>(null);\n  const fileInputRef = useRef<HTMLInputElement>(null);\n\n  const [tab, setTab] = useState<'backups' | 'settings'>('backups');\n  const [autoBackupEnabled, setAutoBackupEnabled] = useState(false);\n  const [retentionInput, setRetentionInput] = useState(String(DEFAULT_RETENTION));\n\n  useEffect(() => {\n    if (!machineId) return;\n    localDB.settings.get(machineId).t
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 6:30:53 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\DataExportImport.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 6:30:55 PM</sup>
+
+Now `Therapy.tsx` — wire the fire-and-forget call into `endSession`.
+
+
+---
+
+## Assistant <sup>8/10/2026, 6:30:58 PM</sup>
+
+<details>
+<summary>Tool: <code>TodoWrite</code></summary>
+
+```json
+{
+  "todos": [
+    {
+      "content": "Add auto_backup fields to LocalSettings in localDB.ts",
+      "status": "completed",
+      "activeForm": "Adding auto_backup fields to LocalSettings"
+    },
+    {
+      "content": "Add triggerAutoBackup + helpers to backupService.ts",
+      "status": "completed",
+      "activeForm": "Adding triggerAutoBackup to backupService.ts"
+    },
+    {
+      "content": "Add Settings tab to DataExportImport.tsx",
+      "status": "completed",
+      "activeForm": "Adding Settings tab to DataExportImport.tsx"
+    },
+    {
+      "content": "Wire triggerAutoBackup into Therapy.tsx endSession",
+      "status": "in_progress",
+      "activeForm": "Wiring triggerAutoBackup into Therapy.tsx"
+    },
+    {
+      "content": "Wire triggerAutoBackup into NextTherapyNotification.tsx mutation handlers",
+      "status": "pending",
+      "activeForm": "Wiring triggerAutoBackup into NextTherapyNotification.tsx"
+    },
+    {
+      "content": "Verify with tsc",
+      "status": "pending",
+      "activeForm": "Verifying with tsc"
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 6:30:58 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Todos have been modified successfully. Ensure that you continue to use the todo list to track your progress. Please proceed with the current tasks if applicable
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 6:31:10 PM</sup>
+
+<details>
+<summary>Tool: <code>Grep</code></summary>
+
+```json
+{
+  "pattern": "const endSession = useCallback",
+  "path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Therapy.tsx",
+  "output_mode": "content",
+  "-n": true,
+  "-A": 15
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 6:31:10 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+551:  const endSession = useCallback(async () => {
+552-    const now = new Date();
+553-    const elapsed = totalSeconds - timeLeft;
+554-    const duration = Math.round(elapsed / 60);
+555-
+556-    if (activeSessionLocalId.current !== null) {
+557-      await localDB.sessions.update(activeSessionLocalId.current, {
+558-        end_time: now,
+559-        duration_minutes: duration,
+560-        status: 'completed',
+561-        synced: 0,
+562-      });
+563-      await runSync(machineId);
+564-    }
+565-
+566-    await onSessionComplete(machineId);
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 6:31:15 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Therapy.tsx",
+  "old_string": "    if (activeSessionLocalId.current !== null) {\n      await localDB.sessions.update(activeSessionLocalId.current, {\n        end_time: now,\n        duration_minutes: duration,\n        status: 'completed',\n        synced: 0,\n      });\n      await runSync(machineId);\n    }",
+  "new_string": "    if (activeSessionLocalId.current !== null) {\n      await localDB.sessions.update(activeSessionLocalId.current, {\n        end_time: now,\n        duration_minutes: duration,\n        status: 'completed',\n        synced: 0,\n      });\n      void triggerAutoBackup(machineId);\n      await runSync(machineId);\n    }"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 6:31:17 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\Therapy.tsx has been updated successfully. (note: the file had been modified on disk since you last read it — the edit applied cleanly, but the file contains other changes not in your context. Read it before edits that depend on surrounding content.)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 6:31:21 PM</sup>
+
+
+---
+
+## Assistant <sup>8/10/2026, 6:31:22 PM</sup>
+
+<details>
+<summary>Tool: <code>Grep</code></summary>
+
+```json
+{
+  "pattern": "^import.*from '../services",
+  "path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Therapy.tsx",
+  "output_mode": "content",
+  "-n": true
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 6:31:22 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+17:import { runSync } from '../services/syncService';
+18:import { onSessionComplete } from '../services/modeCheck';
+19:import { fetchMachineInfo, sendPrepareParams/* , sendCommand */ } from '../services/esp32Service';
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 6:31:28 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Therapy.tsx",
+  "old_string": "import { fetchMachineInfo, sendPrepareParams/* , sendCommand */ } from '../services/esp32Service';",
+  "new_string": "import { fetchMachineInfo, sendPrepareParams/* , sendCommand */ } from '../services/esp32Service';\nimport { triggerAutoBackup } from '../services/backupService';"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 6:31:29 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\Therapy.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 6:31:34 PM</sup>
+
+
+---
+
+## Assistant <sup>8/10/2026, 6:31:36 PM</sup>
+
+<details>
+<summary>Tool: <code>TodoWrite</code></summary>
+
+```json
+{
+  "todos": [
+    {
+      "content": "Add auto_backup fields to LocalSettings in localDB.ts",
+      "status": "completed",
+      "activeForm": "Adding auto_backup fields to LocalSettings"
+    },
+    {
+      "content": "Add triggerAutoBackup + helpers to backupService.ts",
+      "status": "completed",
+      "activeForm": "Adding triggerAutoBackup to backupService.ts"
+    },
+    {
+      "content": "Add Settings tab to DataExportImport.tsx",
+      "status": "completed",
+      "activeForm": "Adding Settings tab to DataExportImport.tsx"
+    },
+    {
+      "content": "Wire triggerAutoBackup into Therapy.tsx endSession",
+      "status": "completed",
+      "activeForm": "Wiring triggerAutoBackup into Therapy.tsx"
+    },
+    {
+      "content": "Wire triggerAutoBackup into NextTherapyNotification.tsx mutation handlers",
+      "status": "in_progress",
+      "activeForm": "Wiring triggerAutoBackup into NextTherapyNotification.tsx"
+    },
+    {
+      "content": "Verify with tsc",
+      "status": "pending",
+      "activeForm": "Verifying with tsc"
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 6:31:36 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Todos have been modified successfully. Ensure that you continue to use the todo list to track your progress. Please proceed with the current tasks if applicable
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 6:31:44 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\NextTherapyNotification.tsx",
+  "old_string": "import { localDB, type LocalPatient, type LocalReminderLog } from '../db/localDB';",
+  "new_string": "import { localDB, type LocalPatient, type LocalReminderLog } from '../db/localDB';\nimport { triggerAutoBackup } from '../services/backupService';"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 6:31:45 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\NextTherapyNotification.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 6:31:49 PM</sup>
+
+Now wiring each of the 7 mutation handlers.
+
+
+---
+
+## Assistant <sup>8/10/2026, 6:31:51 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\NextTherapyNotification.tsx",
+  "old_string": "  const markAsReminded = async (patient: LocalPatient) => {\n    if (!patient.id) return;\n    await localDB.patients.update(patient.id, { last_reminded_at: new Date().toISOString() });\n    await loadData();\n  };",
+  "new_string": "  const markAsReminded = async (patient: LocalPatient) => {\n    if (!patient.id) return;\n    await localDB.patients.update(patient.id, { last_reminded_at: new Date().toISOString() });\n    void triggerAutoBackup(machineId);\n    await loadData();\n  };"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 6:31:52 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\NextTherapyNotification.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 6:31:58 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\NextTherapyNotification.tsx",
+  "old_string": "    if (patient.id) {\n      await localDB.patients.update(patient.id, { last_reminded_at: new Date().toISOString() });\n    }\n\n    closeSendModal();\n    await loadData();\n  };",
+  "new_string": "    if (patient.id) {\n      await localDB.patients.update(patient.id, { last_reminded_at: new Date().toISOString() });\n    }\n\n    void triggerAutoBackup(machineId);\n    closeSendModal();\n    await loadData();\n  };"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 6:31:59 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\NextTherapyNotification.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 6:32:07 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\NextTherapyNotification.tsx",
+  "old_string": "  const saveLogMessage = async (log: LocalReminderLog) => {\n    if (!log.id) return;\n    await localDB.reminder_logs.update(log.id, { message: logMessageDraft.trim() || undefined });\n    setEditingLogId(null);\n    await loadData();\n  };",
+  "new_string": "  const saveLogMessage = async (log: LocalReminderLog) => {\n    if (!log.id) return;\n    await localDB.reminder_logs.update(log.id, { message: logMessageDraft.trim() || undefined });\n    void triggerAutoBackup(machineId);\n    setEditingLogId(null);\n    await loadData();\n  };"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 6:32:08 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\NextTherapyNotification.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 6:32:16 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\NextTherapyNotification.tsx",
+  "old_string": "  const saveOverride = async (patient: LocalPatient) => {\n    if (!patient.id) return;\n    const reminderDays = parseInt(reminderDaysDraft, 10);\n    const leadDays = parseInt(leadDaysDraft, 10);\n    await localDB.patients.update(patient.id, {\n      reminder_days_override: isNaN(reminderDays) ? undefined : reminderDays,\n      alert_lead_days_override: isNaN(leadDays) ? undefined : leadDays,\n    });\n    setEditingPatientId(null);\n    await loadData();\n  };\n\n  const clearOverride = async (patient: LocalPatient) => {\n    if (!patient.id) return;\n    await localDB.patients.update(patient.id, {\n      reminder_days_override: undefined,\n      alert_lead_days_override: undefined,\n    });\n    setEditingPatientId(null);\n    await loadData();\n  };",
+  "new_string": "  const saveOverride = async (patient: LocalPatient) => {\n    if (!patient.id) return;\n    const reminderDays = parseInt(reminderDaysDraft, 10);\n    const leadDays = parseInt(leadDaysDraft, 10);\n    await localDB.patients.update(patient.id, {\n      reminder_days_override: isNaN(reminderDays) ? undefined : reminderDays,\n      alert_lead_days_override: isNaN(leadDays) ? undefined : leadDays,\n    });\n    void triggerAutoBackup(machineId);\n    setEditingPatientId(null);\n    await loadData();\n  };\n\n  const clearOverride = async (patient: LocalPatient) => {\n    if (!patient.id) return;\n    await localDB.patients.update(patient.id, {\n      reminder_days_override: undefined,\n      alert_lead_days_override: undefined,\n    });\n    void triggerAutoBackup(machineId);\n    setEditingPatientId(null);\n    await loadData();\n  };"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 6:32:17 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\NextTherapyNotification.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 6:32:21 PM</sup>
+
+Now `handleGlobalBlur` (2 branches) and `handleMessageBlur`.
+
+
+---
+
+## Assistant <sup>8/10/2026, 6:32:23 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\NextTherapyNotification.tsx",
+  "old_string": "      const existing = await localDB.settings.get(machineId);\n      await localDB.settings.put({ ...existing, machine_id: machineId, next_therapy_reminder_days: value });\n    } else {",
+  "new_string": "      const existing = await localDB.settings.get(machineId);\n      await localDB.settings.put({ ...existing, machine_id: machineId, next_therapy_reminder_days: value });\n      void triggerAutoBackup(machineId);\n    } else {"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 6:32:24 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\NextTherapyNotification.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 6:32:29 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\NextTherapyNotification.tsx",
+  "old_string": "      const existing = await localDB.settings.get(machineId);\n      await localDB.settings.put({ ...existing, machine_id: machineId, next_therapy_alert_lead_days: value });\n    }\n  };",
+  "new_string": "      const existing = await localDB.settings.get(machineId);\n      await localDB.settings.put({ ...existing, machine_id: machineId, next_therapy_alert_lead_days: value });\n      void triggerAutoBackup(machineId);\n    }\n  };"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 6:32:30 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\NextTherapyNotification.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 6:32:38 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\NextTherapyNotification.tsx",
+  "old_string": "    const key = lang === 'en' ? 'next_therapy_reminder_message_en' : lang === 'gu' ? 'next_therapy_reminder_message_gu' : 'next_therapy_reminder_message_hi';\n    await localDB.settings.put({ ...existing, machine_id: machineId, [key]: value });\n  };",
+  "new_string": "    const key = lang === 'en' ? 'next_therapy_reminder_message_en' : lang === 'gu' ? 'next_therapy_reminder_message_gu' : 'next_therapy_reminder_message_hi';\n    await localDB.settings.put({ ...existing, machine_id: machineId, [key]: value });\n    void triggerAutoBackup(machineId);\n  };"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 6:32:39 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\NextTherapyNotification.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 6:32:42 PM</sup>
+
+All 7 mutation points wired. Now type-check.
+
+
+---
+
+## Assistant <sup>8/10/2026, 6:32:44 PM</sup>
+
+<details>
+<summary>Tool: <code>TodoWrite</code></summary>
+
+```json
+{
+  "todos": [
+    {
+      "content": "Add auto_backup fields to LocalSettings in localDB.ts",
+      "status": "completed",
+      "activeForm": "Adding auto_backup fields to LocalSettings"
+    },
+    {
+      "content": "Add triggerAutoBackup + helpers to backupService.ts",
+      "status": "completed",
+      "activeForm": "Adding triggerAutoBackup to backupService.ts"
+    },
+    {
+      "content": "Add Settings tab to DataExportImport.tsx",
+      "status": "completed",
+      "activeForm": "Adding Settings tab to DataExportImport.tsx"
+    },
+    {
+      "content": "Wire triggerAutoBackup into Therapy.tsx endSession",
+      "status": "completed",
+      "activeForm": "Wiring triggerAutoBackup into Therapy.tsx"
+    },
+    {
+      "content": "Wire triggerAutoBackup into NextTherapyNotification.tsx mutation handlers",
+      "status": "completed",
+      "activeForm": "Wiring triggerAutoBackup into NextTherapyNotification.tsx"
+    },
+    {
+      "content": "Verify with tsc",
+      "status": "in_progress",
+      "activeForm": "Verifying with tsc"
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 6:32:44 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Todos have been modified successfully. Ensure that you continue to use the todo list to track your progress. Please proceed with the current tasks if applicable
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 6:32:48 PM</sup>
+
+<details>
+<summary>Tool: <code>Bash</code></summary>
+
+```json
+{
+  "command": "cd \"d:/projects/production-hydro-colon-therapy/frontend\" && npx tsc --noEmit -p . 2>&1",
+  "description": "Type-check frontend after auto backup feature",
+  "timeout": 120000
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 6:32:57 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+(Bash completed with no output)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 6:33:01 PM</sup>
+
+Clean.
+
+
+---
+
+## Assistant <sup>8/10/2026, 6:33:03 PM</sup>
+
+<details>
+<summary>Tool: <code>TodoWrite</code></summary>
+
+```json
+{
+  "todos": [
+    {
+      "content": "Add auto_backup fields to LocalSettings in localDB.ts",
+      "status": "completed",
+      "activeForm": "Adding auto_backup fields to LocalSettings"
+    },
+    {
+      "content": "Add triggerAutoBackup + helpers to backupService.ts",
+      "status": "completed",
+      "activeForm": "Adding triggerAutoBackup to backupService.ts"
+    },
+    {
+      "content": "Add Settings tab to DataExportImport.tsx",
+      "status": "completed",
+      "activeForm": "Adding Settings tab to DataExportImport.tsx"
+    },
+    {
+      "content": "Wire triggerAutoBackup into Therapy.tsx endSession",
+      "status": "completed",
+      "activeForm": "Wiring triggerAutoBackup into Therapy.tsx"
+    },
+    {
+      "content": "Wire triggerAutoBackup into NextTherapyNotification.tsx mutation handlers",
+      "status": "completed",
+      "activeForm": "Wiring triggerAutoBackup into NextTherapyNotification.tsx"
+    },
+    {
+      "content": "Verify with tsc",
+      "status": "completed",
+      "activeForm": "Verifying with tsc"
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/10/2026, 6:33:03 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Todos have been modified successfully. Ensure that you continue to use the todo list to track your progress. Please proceed with the current tasks if applicable
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/10/2026, 6:33:12 PM</sup>
+
+Done. Summary:
+
+- **`localDB.ts`**: added `auto_backup_enabled` and `auto_backup_retention_count` to `LocalSettings`.
+- **`backupService.ts`**: extracted `buildBackupZipBase64` out of `exportToBackupZip` (no behavior change for manual export); added `triggerAutoBackup(machineId)` — a silent, fully try/catch-wrapped function that: no-ops if the setting is off, writes/overwrites one file per day (`hydrotherapy-auto-backup-<machineId>-<YYYY-MM-DD>.zip`) to both app storage and Documents, and — only on the day's first write — deletes old auto-backup files beyond the configured retention count (manual `hydrotherapy-backup-...` exports are never touched, different prefix).
+- **`DataExportImport.tsx`**: now has a Backups/Settings tab layout; the new Settings tab has the Auto Backup toggle and the retention-count input, persisted to `localDB.settings`.
+- **`Therapy.tsx`**: `endSession` fires `void triggerAutoBackup(machineId)` right after the session's local DB write, covering every ending path (manual, timer expiry, hardware signal).
+- **`NextTherapyNotification.tsx`**: all 7 data-mutation handlers (`markAsReminded`, `sendVia`, `saveLogMessage`, `saveOverride`, `clearOverride`, both `handleGlobalBlur` branches, `handleMessageBlur`) now fire the same call after their write succeeds.
+
+`npx tsc --noEmit` passes clean. Since this touches native Filesystem calls and date-based file rotation, it's worth a real device run to confirm: toggling Auto Backup on, ending a session, seeing the dated zip appear in Saved Backups and Documents, triggering a same-day reminder action and confirming the file is overwritten (not duplicated), and — if practical — checking the retention cleanup on a new day.
 
 
 ---

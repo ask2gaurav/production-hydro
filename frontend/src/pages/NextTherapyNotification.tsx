@@ -10,6 +10,7 @@ import {
 import { useHistory } from 'react-router';
 import { useStore } from '../store/useStore';
 import { localDB, type LocalPatient, type LocalReminderLog } from '../db/localDB';
+import { triggerAutoBackup } from '../services/backupService';
 
 const DEFAULT_REMINDER_DAYS = 15;
 const DEFAULT_LEAD_DAYS = 2;
@@ -238,6 +239,7 @@ const NextTherapyNotification: React.FC = () => {
   const markAsReminded = async (patient: LocalPatient) => {
     if (!patient.id) return;
     await localDB.patients.update(patient.id, { last_reminded_at: new Date().toISOString() });
+    void triggerAutoBackup(machineId);
     await loadData();
   };
 
@@ -290,6 +292,7 @@ const NextTherapyNotification: React.FC = () => {
       await localDB.patients.update(patient.id, { last_reminded_at: new Date().toISOString() });
     }
 
+    void triggerAutoBackup(machineId);
     closeSendModal();
     await loadData();
   };
@@ -302,6 +305,7 @@ const NextTherapyNotification: React.FC = () => {
   const saveLogMessage = async (log: LocalReminderLog) => {
     if (!log.id) return;
     await localDB.reminder_logs.update(log.id, { message: logMessageDraft.trim() || undefined });
+    void triggerAutoBackup(machineId);
     setEditingLogId(null);
     await loadData();
   };
@@ -320,6 +324,7 @@ const NextTherapyNotification: React.FC = () => {
       reminder_days_override: isNaN(reminderDays) ? undefined : reminderDays,
       alert_lead_days_override: isNaN(leadDays) ? undefined : leadDays,
     });
+    void triggerAutoBackup(machineId);
     setEditingPatientId(null);
     await loadData();
   };
@@ -330,6 +335,7 @@ const NextTherapyNotification: React.FC = () => {
       reminder_days_override: undefined,
       alert_lead_days_override: undefined,
     });
+    void triggerAutoBackup(machineId);
     setEditingPatientId(null);
     await loadData();
   };
@@ -343,6 +349,7 @@ const NextTherapyNotification: React.FC = () => {
       setGlobalReminderDays(value);
       const existing = await localDB.settings.get(machineId);
       await localDB.settings.put({ ...existing, machine_id: machineId, next_therapy_reminder_days: value });
+      void triggerAutoBackup(machineId);
     } else {
       const parsed = parseInt(leadDaysInput, 10);
       const valid = !isNaN(parsed) && parsed >= 0;
@@ -351,6 +358,7 @@ const NextTherapyNotification: React.FC = () => {
       setGlobalLeadDays(value);
       const existing = await localDB.settings.get(machineId);
       await localDB.settings.put({ ...existing, machine_id: machineId, next_therapy_alert_lead_days: value });
+      void triggerAutoBackup(machineId);
     }
   };
 
@@ -359,6 +367,7 @@ const NextTherapyNotification: React.FC = () => {
     const existing = await localDB.settings.get(machineId);
     const key = lang === 'en' ? 'next_therapy_reminder_message_en' : lang === 'gu' ? 'next_therapy_reminder_message_gu' : 'next_therapy_reminder_message_hi';
     await localDB.settings.put({ ...existing, machine_id: machineId, [key]: value });
+    void triggerAutoBackup(machineId);
   };
 
   return (

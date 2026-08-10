@@ -17,6 +17,7 @@ import { localDB, type LocalTherapist, type LocalPatient } from '../db/localDB';
 import { runSync } from '../services/syncService';
 import { onSessionComplete } from '../services/modeCheck';
 import { fetchMachineInfo, sendPrepareParams/* , sendCommand */ } from '../services/esp32Service';
+import { triggerAutoBackup } from '../services/backupService';
 import MachineInfoModal from '../components/MachineInfoModal';
 import DobPicker from '../components/DobPicker';
 
@@ -560,6 +561,7 @@ const Therapy: React.FC = () => {
         status: 'completed',
         synced: 0,
       });
+      void triggerAutoBackup(machineId);
       await runSync(machineId);
     }
 

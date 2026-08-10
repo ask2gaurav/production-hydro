@@ -53,6 +53,21 @@ function timestamp(): string {
   return new Date().toISOString().replace(/[:.]/g, '-');
 }
 
+const AUTO_BACKUP_PREFIX = 'hydrotherapy-auto-backup-';
+const DEFAULT_AUTO_BACKUP_RETENTION = 5;
+
+function todayDateStamp(): string {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function autoBackupFileName(machineId: string): string {
+  return `${AUTO_BACKUP_PREFIX}${machineId}-${todayDateStamp()}.zip`;
+}
+
 async function writeAndShare(fileName: string, base64Data: string) {
   const written = await Filesystem.writeFile({
     path: `${BACKUPS_DIR}/${fileName}`,
@@ -108,7 +123,7 @@ export async function exportToExcel(machineId: string): Promise<string> {
   return writeAndShare(fileName, base64);
 }
 
-export async function exportToBackupZip(machineId: string): Promise<string> {
+async function buildBackupZipBase64(machineId: string): Promise<string> {
   const data = {} as Record<TableName, unknown[]>;
   for (const table of EXPORT_TABLE_NAMES) {
     const dexieTable = localDB[table] as unknown as { toArray: () => Promise<unknown[]> };
@@ -130,10 +145,74 @@ export async function exportToBackupZip(machineId: string): Promise<string> {
     zip.file(`${table}.json`, JSON.stringify(payload.data[table], null, 2));
   }
 
-  const base64 = await zip.generateAsync({ type: 'base64' });
+  return zip.generateAsync({ type: 'base64' });
+}
+
+export async function exportToBackupZip(machineId: string): Promise<string> {
+  const base64 = await buildBackupZipBase64(machineId);
   const fileName = `hydrotherapy-backup-${machineId}-${timestamp()}.zip`;
 
   return writeAndShare(fileName, base64);
+}
+
+async function cleanupOldAutoBackups(machineId: string, retention: number): Promise<void> {
+  try {
+    const res = await Filesystem.readdir({ path: BACKUPS_DIR, directory: Directory.Data });
+    const prefix = `${AUTO_BACKUP_PREFIX}${machineId}-`;
+    const autoFiles = res.files
+      .map((f) => f.name)
+      .filter((name) => name.startsWith(prefix) && name.toLowerCase().endsWith('.zip'))
+      .sort()
+      .reverse(); // newest first — the embedded YYYY-MM-DD sorts chronologically as a string
+
+    const toDelete = autoFiles.slice(Math.max(0, retention));
+    for (const name of toDelete) {
+      try {
+        await Filesystem.deleteFile({ path: `${BACKUPS_DIR}/${name}`, directory: Directory.Data });
+      } catch {
+        // Best effort — leave it for the next cleanup pass if deletion fails.
+      }
+    }
+  } catch {
+    // Backups folder doesn't exist yet — nothing to clean up.
+  }
+}
+
+// Silently writes/overwrites today's auto-backup file (one per day, per machine) when the
+// "Auto Backup" setting is enabled. Never throws — a failure here must not interrupt the
+// therapy session or reminder action that triggered it.
+export async function triggerAutoBackup(machineId: string): Promise<void> {
+  try {
+    const settings = await localDB.settings.get(machineId);
+    if (!settings?.auto_backup_enabled) return;
+
+    const retention = settings.auto_backup_retention_count ?? DEFAULT_AUTO_BACKUP_RETENTION;
+    const fileName = autoBackupFileName(machineId);
+    const relPath = `${BACKUPS_DIR}/${fileName}`;
+
+    let isFirstToday = false;
+    try {
+      await Filesystem.stat({ path: relPath, directory: Directory.Data });
+    } catch {
+      isFirstToday = true;
+    }
+
+    const base64 = await buildBackupZipBase64(machineId);
+
+    await Filesystem.writeFile({ path: relPath, data: base64, directory: Directory.Data, recursive: true });
+
+    try {
+      await Filesystem.writeFile({ path: fileName, data: base64, directory: Directory.Documents, recursive: true });
+    } catch {
+      // Non-fatal — the file is still safely stored under Directory.Data.
+    }
+
+    if (isFirstToday) {
+      await cleanupOldAutoBackups(machineId, retention);
+    }
+  } catch {
+    // Swallow all errors — auto backup is a best-effort background action.
+  }
 }
 
 export async function listLocalBackups(): Promise<LocalBackupFile[]> {

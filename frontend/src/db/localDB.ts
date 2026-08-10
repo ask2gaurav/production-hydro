@@ -57,6 +57,10 @@ export interface LocalSettings {
   next_therapy_reminder_message_en?: string;
   next_therapy_reminder_message_gu?: string;
   next_therapy_reminder_message_hi?: string;
+
+  // Auto Backup
+  auto_backup_enabled?: boolean;
+  auto_backup_retention_count?: number;
 }
 
 export interface LocalTherapist {
