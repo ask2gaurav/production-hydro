@@ -6,8 +6,8 @@
 | **Session ID** | `5529d2b3-4ebf-4965-aa06-df984f081bd8` |
 | **Working Dir** | `d:\projects\production-hydro-colon-therapy` |
 | **Started** | 8/6/2026, 11:50:49 AM |
-| **Last Updated** | 8/10/2026, 7:11:08 PM |
-| **Messages** | 1400 |
+| **Last Updated** | 8/12/2026, 1:13:09 PM |
+| **Messages** | 1481 |
 
 ---
 
@@ -22655,6 +22655,1240 @@ Done. Summary:
 `npx tsc --noEmit` passes clean (only the same pre-existing, unrelated error in `auth.login.ts`).
 
 This needs a real run to verify end-to-end — worth downloading a zip from a machine with actual patients/therapists/sessions and running it through the Android app's Import Backup flow to confirm the data lands correctly (especially the flattened `water_temp_log`/`water_level_log` and the `server_id` population).
+
+
+---
+
+## User <sup>8/12/2026, 12:53:37 PM</sup>
+
+<ide_selection>The user selected the lines 805 to 805 from d:\projects\production-hydro-colon-therapy\frontend\src\pages\Therapy.tsx:
+Patient
+
+This may or may not be related to the current task.</ide_selection>
+
+@frontend/src/pages/NextTherapyNotification.tsx in reminded  tab for same Patient it opens multiple forms when clicked on Set custom reminder days for this patient icon. Understood? Confirm before editing.
+
+
+---
+
+## Assistant <sup>8/12/2026, 12:54:17 PM</sup>
+
+
+---
+
+## Assistant <sup>8/12/2026, 12:54:21 PM</sup>
+
+Understood — confirmed root cause. In the Reminded tab, `filteredRemindedEntries` has **one row per reminder log**, not one row per patient. If a patient has multiple log entries (e.g. sent via SMS, then later via Call), the inline editor's visibility check is only `editingPatientId === entry.patient.id` — so clicking the alarm icon on any one of that patient's rows makes the condition true for **all** of that patient's rows, opening the form under every one of them simultaneously.
+
+Fix: track which specific row triggered it (via the log's id), not just the patient id. I'll add a second piece of state (`editingOverrideLogId`), thread an optional `logId` param through `openOverrideEditor` (Due List calls it without one, Reminded tab passes `entry.log.id`), and require both the patient-id match *and* the log-id match before rendering the editor in the Reminded tab. Due List tab is unaffected (one row per patient there already).
+
+Confirm and I'll implement.
+
+
+---
+
+## User <sup>8/12/2026, 12:56:19 PM</sup>
+
+<ide_opened_file>The user opened the file d:\projects\production-hydro-colon-therapy\frontend\src\pages\Therapy.tsx in the IDE. This may or may not be related to the current task.</ide_opened_file>
+
+go
+
+
+---
+
+## Assistant <sup>8/12/2026, 12:56:22 PM</sup>
+
+Implementing the fix now.
+
+
+---
+
+## Assistant <sup>8/12/2026, 12:56:24 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\NextTherapyNotification.tsx",
+  "old_string": "  const [editingPatientId, setEditingPatientId] = useState<number | null>(null);",
+  "new_string": "  const [editingPatientId, setEditingPatientId] = useState<number | null>(null);\n  const [editingOverrideLogId, setEditingOverrideLogId] = useState<number | null>(null);"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/12/2026, 12:56:25 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\NextTherapyNotification.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/12/2026, 12:56:28 PM</sup>
+
+Now update `openOverrideEditor`, `saveOverride`, and `clearOverride`.
+
+
+---
+
+## Assistant <sup>8/12/2026, 12:56:34 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\NextTherapyNotification.tsx",
+  "old_string": "  const openOverrideEditor = (patient: LocalPatient, reminderDays: number, leadDays: number) => {\n    setEditingPatientId(patient.id!);\n    setReminderDaysDraft(String(reminderDays));\n    setLeadDaysDraft(String(leadDays));\n  };\n\n  const saveOverride = async (patient: LocalPatient) => {\n    if (!patient.id) return;\n    const reminderDays = parseInt(reminderDaysDraft, 10);\n    const leadDays = parseInt(leadDaysDraft, 10);\n    await localDB.patients.update(patient.id, {\n      reminder_days_override: isNaN(reminderDays) ? undefined : reminderDays,\n      alert_lead_days_override: isNaN(leadDays) ? undefined : leadDays,\n    });\n    void triggerAutoBackup(machineId);\n    setEditingPatientId(null);\n    await loadData();\n  };\n\n  const clearOverride = async (patient: LocalPatient) => {\n    if (!patient.id) return;\n    await localDB.patients.update(patient.id, {\n      reminder_days_override: undefined,\n      alert_lead_days_override: undefined,\n    });\n    void triggerAutoBackup(machineId);\n    setEditingPatientId(null);\n    await loadData();\n  };",
+  "new_string": "  const openOverrideEditor = (patient: LocalPatient, reminderDays: number, leadDays: number, logId?: number) => {\n    setEditingPatientId(patient.id!);\n    setEditingOverrideLogId(logId ?? null);\n    setReminderDaysDraft(String(reminderDays));\n    setLeadDaysDraft(String(leadDays));\n  };\n\n  const saveOverride = async (patient: LocalPatient) => {\n    if (!patient.id) return;\n    const reminderDays = parseInt(reminderDaysDraft, 10);\n    const leadDays = parseInt(leadDaysDraft, 10);\n    await localDB.patients.update(patient.id, {\n      reminder_days_override: isNaN(reminderDays) ? undefined : reminderDays,\n      alert_lead_days_override: isNaN(leadDays) ? undefined : leadDays,\n    });\n    void triggerAutoBackup(machineId
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/12/2026, 12:56:35 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\NextTherapyNotification.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/12/2026, 12:56:39 PM</sup>
+
+Now update the Reminded tab's call site, render condition, and its Cancel button.
+
+
+---
+
+## Assistant <sup>8/12/2026, 12:56:41 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\NextTherapyNotification.tsx",
+  "old_string": "                            onClick={() => openOverrideEditor(entry.patient, entry.reminderDays, entry.leadDays)}\n                          />\n                          {entry.status ? (\n                            <IonIcon\n                              icon={paperPlaneOutline}\n                              title=\"Resend reminder\"",
+  "new_string": "                            onClick={() => openOverrideEditor(entry.patient, entry.reminderDays, entry.leadDays, entry.log.id)}\n                          />\n                          {entry.status ? (\n                            <IonIcon\n                              icon={paperPlaneOutline}\n                              title=\"Resend reminder\""
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/12/2026, 12:56:42 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\NextTherapyNotification.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/12/2026, 12:56:47 PM</sup>
+
+
+---
+
+## Assistant <sup>8/12/2026, 12:56:56 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\NextTherapyNotification.tsx",
+  "old_string": "                      {editingPatientId === entry.patient.id && (\n                        <tr>\n                          <td colSpan={7} style={{ ...tdStyle, backgroundColor: '#f9f9f9' }}>\n                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>\n                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>\n                                <span style={{ fontSize: '0.82rem', color: '#555' }}>Remind after</span>\n                                <input\n                                  type=\"number\" min={1} style={inputStyle}\n                                  value={reminderDaysDraft}\n                                  onChange={(e) => setReminderDaysDraft(e.target.value)}\n                                />\n                                <span style={{ fontSize: '0.8rem', color: '#888' }}>days</span>\n                              </div>\n                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>\n                                <span style={{ fontSize: '0.82rem', color: '#555' }}>Alert lead</span>\n                                <input\n                                  type=\"number\" min={0} style={inputStyle}\n                                  value={leadDaysDraft}\n                                  onChange={(e) => setLeadDaysDraft(e.target.value)}\n                                />\n                                <span style={{ fontSize: '0.8rem', color: '#888' }}>days</span>\n                              </div>\n                              <IonButton size=\"small\" onClick={() => saveOverride(entry.patient)}>Save</IonButton>\n                              <IonButton size=\"small\" fill=\"outline\" onClick={() => clearOverride(entry.patient)}>Use Global De
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/12/2026, 12:56:57 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\NextTherapyNotification.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/12/2026, 12:57:02 PM</sup>
+
+
+---
+
+## Assistant <sup>8/12/2026, 12:57:03 PM</sup>
+
+Let's also clear `editingOverrideLogId` in the Due List tab's Cancel button for consistency (not required for correctness there, but keeps state tidy).
+
+
+---
+
+## Assistant <sup>8/12/2026, 12:57:04 PM</sup>
+
+<details>
+<summary>Tool: <code>Grep</code></summary>
+
+```json
+{
+  "pattern": "fill=\"clear\" onClick={() => setEditingPatientId(null)}",
+  "path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\NextTherapyNotification.tsx",
+  "output_mode": "content",
+  "-n": true
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/12/2026, 12:57:04 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Search failed — ripgrep rejected the pattern, glob, or file type without searching:
+rg: regex parse error:
+    (?:fill="clear" onClick={() => setEditingPatientId(null)})
+                             ^
+error: repetition quantifier expects a valid decimal
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/12/2026, 12:57:08 PM</sup>
+
+<details>
+<summary>Tool: <code>Grep</code></summary>
+
+```json
+{
+  "pattern": "setEditingPatientId\\(null\\)",
+  "path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\NextTherapyNotification.tsx",
+  "output_mode": "content",
+  "-n": true
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/12/2026, 12:57:08 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+330:    setEditingPatientId(null);
+342:    setEditingPatientId(null);
+487:                              <IonButton size="small" fill="clear" onClick={() => setEditingPatientId(null)}>Cancel</IonButton>
+615:                              <IonButton size="small" fill="clear" onClick={() => { setEditingPatientId(null); setEditingOverrideLogId(null); }}>Cancel</IonButton>
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/12/2026, 12:57:11 PM</sup>
+
+Line 487 is the Due List tab's Cancel button — leaving it as-is is fine since it doesn't need `editingOverrideLogId` (Due List's condition never checks it), but let's tidy it anyway for consistency.
+
+
+---
+
+## Assistant <sup>8/12/2026, 12:57:12 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\NextTherapyNotification.tsx",
+  "offset": 483,
+  "limit": 6
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/12/2026, 12:57:12 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+483	                                <span style={{ fontSize: '0.8rem', color: '#888' }}>days</span>
+484	                              </div>
+485	                              <IonButton size="small" onClick={() => saveOverride(entry.patient)}>Save</IonButton>
+486	                              <IonButton size="small" fill="outline" onClick={() => clearOverride(entry.patient)}>Use Global Default</IonButton>
+487	                              <IonButton size="small" fill="clear" onClick={() => setEditingPatientId(null)}>Cancel</IonButton>
+488	                            </div>
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/12/2026, 12:57:17 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\NextTherapyNotification.tsx",
+  "old_string": "                              <IonButton size=\"small\" onClick={() => saveOverride(entry.patient)}>Save</IonButton>\n                              <IonButton size=\"small\" fill=\"outline\" onClick={() => clearOverride(entry.patient)}>Use Global Default</IonButton>\n                              <IonButton size=\"small\" fill=\"clear\" onClick={() => setEditingPatientId(null)}>Cancel</IonButton>\n                            </div>",
+  "new_string": "                              <IonButton size=\"small\" onClick={() => saveOverride(entry.patient)}>Save</IonButton>\n                              <IonButton size=\"small\" fill=\"outline\" onClick={() => clearOverride(entry.patient)}>Use Global Default</IonButton>\n                              <IonButton size=\"small\" fill=\"clear\" onClick={() => { setEditingPatientId(null); setEditingOverrideLogId(null); }}>Cancel</IonButton>\n                            </div>"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/12/2026, 12:57:18 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\NextTherapyNotification.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/12/2026, 12:57:21 PM</sup>
+
+Now type-check.
+
+
+---
+
+## Assistant <sup>8/12/2026, 12:57:22 PM</sup>
+
+<details>
+<summary>Tool: <code>Bash</code></summary>
+
+```json
+{
+  "command": "cd \"d:/projects/production-hydro-colon-therapy/frontend\" && npx tsc --noEmit -p . 2>&1",
+  "description": "Type-check frontend after fixing multi-form bug in Reminded tab",
+  "timeout": 120000
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/12/2026, 12:57:46 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+npm notice
+npm notice New minor version of npm available! 11.7.0 -> 11.19.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.19.0
+npm notice To update run: npm install -g npm@11.19.0
+npm notice
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/12/2026, 12:57:50 PM</sup>
+
+Clean (only an unrelated npm update notice). Done. Summary:
+
+- Added `editingOverrideLogId` state to disambiguate which specific row in the Reminded tab opened the "custom reminder days" editor, since that table has one row per reminder log (a patient can appear multiple times).
+- `openOverrideEditor` now takes an optional `logId` — Due List passes none (unaffected, one row per patient there), Reminded tab passes `entry.log.id`.
+- The Reminded tab's inline editor now renders only when **both** `editingPatientId` and `editingOverrideLogId` match the clicked row, instead of just the patient id.
+- Both Cancel buttons and `saveOverride`/`clearOverride` now reset `editingOverrideLogId` alongside `editingPatientId`.
+
+`npx tsc --noEmit` passes clean.
+
+
+---
+
+## User <sup>8/12/2026, 1:06:09 PM</sup>
+
+<ide_opened_file>The user opened the file d:\projects\production-hydro-colon-therapy\frontend\src\pages\Therapy.tsx in the IDE. This may or may not be related to the current task.</ide_opened_file>
+
+@frontend/src/pages/NextTherapyNotification.tsx  in reminded  tab can we add action to reschedue the next therapy session. It may have new next therapy date and number of days before we need to remind. Understood? Ask clarification if not clear or have confusion or have better way to do it.
+
+
+---
+
+## Assistant <sup>8/12/2026, 1:06:30 PM</sup>
+
+
+---
+
+## Assistant <sup>8/12/2026, 1:06:31 PM</sup>
+
+Good idea, and I want to make sure I model it right against the existing due-date logic. Right now there's no "next therapy date" field anywhere — the due date is always *computed* as `last completed session + reminder days`. Adding a reschedule action means introducing a new override: an explicit target date that takes priority over that calculation. A few things to pin down:
+
+
+---
+
+## Assistant <sup>8/12/2026, 1:06:38 PM</sup>
+
+<details>
+<summary>Tool: <code>AskUserQuestion</code></summary>
+
+```json
+{
+  "questions": [
+    {
+      "question": "Should rescheduling set an absolute calendar date for the next therapy session (overriding the \"last session + reminder days\" calculation entirely for that patient), with lead-days still editable alongside it?",
+      "header": "Reschedule model",
+      "options": [
+        {
+          "label": "Yes — absolute date + lead days (Recommended)",
+          "description": "New fields: an explicit next-therapy-date override and the existing lead-days override. When the date override is set, it replaces the computed due date until cleared or the patient completes a new session."
+        },
+        {
+          "label": "Something simpler — just adjust days from today",
+          "description": "Instead of a calendar date, let them enter \"remind again in N days from today\" — conceptually similar to the existing day-count override but re-anchored to today instead of last session."
+        }
+      ]
+    },
+    {
+      "question": "Should this reschedule action also be available on the Due List tab, or strictly only in the Reminded tab as you specified?",
+      "header": "Scope",
+      "options": [
+        {
+          "label": "Reminded tab only, as requested",
+          "description": "Add it strictly where you asked — keeps the change scoped and simple."
+        },
+        {
+          "label": "Also add to Due List tab",
+          "description": "Rescheduling arguably makes just as much sense for patients who are currently due/upcoming, not just already-reminded ones — add the same action there too."
+        }
+      ]
+    },
+    {
+      "question": "If a rescheduled patient later completes an actual new therapy session (a fresh session gets recorded), should the reschedule override automatically clear (reverting to the normal last-session+days calculation), or persist until manually cleared?",
+      "header": "Auto-clear on session",
+      "options": [
+        {
+          "label": "Auto-clear on new session (Recommended)",
+     
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/12/2026, 1:10:25 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Your questions have been answered: "Should rescheduling set an absolute calendar date for the next therapy session (overriding the "last session + reminder days" calculation entirely for that patient), with lead-days still editable alongside it?"="Yes — absolute date + lead days (Recommended)", "Should this reschedule action also be available on the Due List tab, or strictly only in the Reminded tab as you specified?"="Also add to Due List tab", "If a rescheduled patient later completes an actual new therapy session (a fresh session gets recorded), should the reschedule override automatically clear (reverting to the normal last-session+days calculation), or persist until manually cleared?"="Auto-clear on new session (Recommended)". You can now continue with these answers in mind.
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/12/2026, 1:11:05 PM</sup>
+
+
+---
+
+## Assistant <sup>8/12/2026, 1:11:06 PM</sup>
+
+Implementing now based on your answers: absolute-date reschedule + lead days, available on both tabs, auto-clearing when a new session starts.
+
+
+---
+
+## Assistant <sup>8/12/2026, 1:11:07 PM</sup>
+
+<details>
+<summary>Tool: <code>TodoWrite</code></summary>
+
+```json
+{
+  "todos": [
+    {
+      "content": "Add next_therapy_date_override field to LocalPatient",
+      "status": "in_progress",
+      "activeForm": "Adding next_therapy_date_override field"
+    },
+    {
+      "content": "Update computeDueStatus to prioritize date override",
+      "status": "pending",
+      "activeForm": "Updating computeDueStatus"
+    },
+    {
+      "content": "Add Reschedule modal + handlers to NextTherapyNotification.tsx",
+      "status": "pending",
+      "activeForm": "Adding Reschedule modal + handlers"
+    },
+    {
+      "content": "Add Reschedule icon to Due List and Reminded tabs",
+      "status": "pending",
+      "activeForm": "Adding Reschedule icon to both tabs"
+    },
+    {
+      "content": "Auto-clear override on new session in Therapy.tsx",
+      "status": "pending",
+      "activeForm": "Auto-clearing override on new session"
+    },
+    {
+      "content": "Verify with tsc",
+      "status": "pending",
+      "activeForm": "Verifying with tsc"
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/12/2026, 1:11:07 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Todos have been modified successfully. Ensure that you continue to use the todo list to track your progress. Please proceed with the current tasks if applicable
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/12/2026, 1:11:13 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\db\\localDB.ts",
+  "old_string": "  // Next therapy reminder overrides\n  reminder_days_override?: number;\n  alert_lead_days_override?: number;\n  last_reminded_at?: string;",
+  "new_string": "  // Next therapy reminder overrides\n  reminder_days_override?: number;\n  alert_lead_days_override?: number;\n  last_reminded_at?: string;\n  next_therapy_date_override?: string; // ISO date (YYYY-MM-DD) — explicit reschedule, takes priority over the computed due date"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/12/2026, 1:11:16 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\db\localDB.ts has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/12/2026, 1:11:19 PM</sup>
+
+Now update `computeDueStatus` in `NextTherapyNotification.tsx`.
+
+
+---
+
+## Assistant <sup>8/12/2026, 1:11:25 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\NextTherapyNotification.tsx",
+  "old_string": "const computeDueStatus = (\n  patient: LocalPatient,\n  lastSession: Date,\n  globalReminderDays: number,\n  globalLeadDays: number\n): DueStatusInfo => {\n  const today = startOfDay(new Date());\n  const reminderDays = patient.reminder_days_override ?? globalReminderDays;\n  const leadDays = patient.alert_lead_days_override ?? globalLeadDays;\n  const dueDate = startOfDay(new Date(lastSession.getTime() + reminderDays * MS_PER_DAY));\n  const windowStart = startOfDay(new Date(dueDate.getTime() - leadDays * MS_PER_DAY));\n  const status: DueStatus = dueDate < today ? 'Overdue' : dueDate.getTime() === today.getTime() ? 'Due Today' : 'Upcoming';\n  return { reminderDays, leadDays, dueDate, windowStart, status };\n};",
+  "new_string": "const computeDueStatus = (\n  patient: LocalPatient,\n  lastSession: Date,\n  globalReminderDays: number,\n  globalLeadDays: number\n): DueStatusInfo => {\n  const today = startOfDay(new Date());\n  const reminderDays = patient.reminder_days_override ?? globalReminderDays;\n  const leadDays = patient.alert_lead_days_override ?? globalLeadDays;\n  const dueDate = patient.next_therapy_date_override\n    ? startOfDay(new Date(patient.next_therapy_date_override))\n    : startOfDay(new Date(lastSession.getTime() + reminderDays * MS_PER_DAY));\n  const windowStart = startOfDay(new Date(dueDate.getTime() - leadDays * MS_PER_DAY));\n  const status: DueStatus = dueDate < today ? 'Overdue' : dueDate.getTime() === today.getTime() ? 'Due Today' : 'Upcoming';\n  return { reminderDays, leadDays, dueDate, windowStart, status };\n};\n\nconst toInputDateString = (d: Date): string => {\n  const yyyy = d.getFullYear();\n  const mm = String(d.getMonth() + 1).padStart(2, '0');\n  const dd = String(d.getDate()).padStart(2, '0');\n  return `${yyyy}-${mm}-${dd}`;\n};"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/12/2026, 1:11:26 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\NextTherapyNotification.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/12/2026, 1:11:29 PM</sup>
+
+Now add the `calendarOutline` icon import, modal state, and handlers.
+
+
+---
+
+## Assistant <sup>8/12/2026, 1:11:32 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\NextTherapyNotification.tsx",
+  "old_string": "  arrowBack, searchOutline, alarmOutline, checkmarkDoneOutline, paperPlaneOutline, closeOutline,\n  chatbubbleOutline, logoWhatsapp, mailOutline, callOutline, createOutline, eyeOutline,\n} from 'ionicons/icons';",
+  "new_string": "  arrowBack, searchOutline, alarmOutline, checkmarkDoneOutline, paperPlaneOutline, closeOutline,\n  chatbubbleOutline, logoWhatsapp, mailOutline, callOutline, createOutline, eyeOutline, calendarOutline,\n} from 'ionicons/icons';"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/12/2026, 1:11:33 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\NextTherapyNotification.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/12/2026, 1:11:38 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\NextTherapyNotification.tsx",
+  "old_string": "  const [sendTarget, setSendTarget] = useState<LocalPatient | null>(null);\n  const [selectedLang, setSelectedLang] = useState<'en' | 'gu' | 'hi'>('en');\n  const [draftMessage, setDraftMessage] = useState('');",
+  "new_string": "  const [sendTarget, setSendTarget] = useState<LocalPatient | null>(null);\n  const [selectedLang, setSelectedLang] = useState<'en' | 'gu' | 'hi'>('en');\n  const [draftMessage, setDraftMessage] = useState('');\n\n  const [rescheduleTarget, setRescheduleTarget] = useState<LocalPatient | null>(null);\n  const [rescheduleDateDraft, setRescheduleDateDraft] = useState('');\n  const [rescheduleLeadDaysDraft, setRescheduleLeadDaysDraft] = useState('');"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/12/2026, 1:11:39 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\NextTherapyNotification.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/12/2026, 1:11:43 PM</sup>
+
+Now add the handler functions, near `openOverrideEditor`.
+
+
+---
+
+## Assistant <sup>8/12/2026, 1:11:48 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\NextTherapyNotification.tsx",
+  "old_string": "  const openOverrideEditor = (patient: LocalPatient, reminderDays: number, leadDays: number, logId?: number) => {",
+  "new_string": "  const openRescheduleModal = (patient: LocalPatient, currentDueDate: Date | undefined, currentLeadDays: number) => {\n    setRescheduleTarget(patient);\n    setRescheduleDateDraft(patient.next_therapy_date_override ?? (currentDueDate ? toInputDateString(currentDueDate) : ''));\n    setRescheduleLeadDaysDraft(String(patient.alert_lead_days_override ?? currentLeadDays));\n  };\n\n  const closeRescheduleModal = () => {\n    setRescheduleTarget(null);\n    setRescheduleDateDraft('');\n    setRescheduleLeadDaysDraft('');\n  };\n\n  const saveReschedule = async () => {\n    const patient = rescheduleTarget;\n    if (!patient?.id || !rescheduleDateDraft) return;\n    const leadDays = parseInt(rescheduleLeadDaysDraft, 10);\n    await localDB.patients.update(patient.id, {\n      next_therapy_date_override: rescheduleDateDraft,\n      alert_lead_days_override: isNaN(leadDays) ? undefined : leadDays,\n    });\n    void triggerAutoBackup(machineId);\n    closeRescheduleModal();\n    await loadData();\n  };\n\n  const clearReschedule = async () => {\n    const patient = rescheduleTarget;\n    if (!patient?.id) return;\n    await localDB.patients.update(patient.id, { next_therapy_date_override: undefined });\n    void triggerAutoBackup(machineId);\n    closeRescheduleModal();\n    await loadData();\n  };\n\n  const openOverrideEditor = (patient: LocalPatient, reminderDays: number, leadDays: number, logId?: number) => {"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/12/2026, 1:11:49 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\NextTherapyNotification.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/12/2026, 1:11:52 PM</sup>
+
+Now add the "Reschedule" icon to the Due List tab's Actions column.
+
+
+---
+
+## Assistant <sup>8/12/2026, 1:11:58 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\NextTherapyNotification.tsx",
+  "old_string": "                        <td style={tdStyle}>\n                          <IonIcon\n                            icon={alarmOutline}\n                            title=\"Set custom reminder days for this patient\"\n                            style={{ color: '#0a5c99', cursor: 'pointer', fontSize: '1.2rem', marginRight: '0.75rem' }}\n                            onClick={() => openOverrideEditor(entry.patient, entry.reminderDays, entry.leadDays)}\n                          />\n                          <IonIcon\n                            icon={paperPlaneOutline}\n                            title=\"Send reminder\"\n                            style={{ color: '#0a5c99', cursor: 'pointer', fontSize: '1.2rem', marginRight: '0.75rem' }}\n                            onClick={() => openSendModal(entry.patient)}\n                          />\n                          <IonIcon\n                            icon={checkmarkDoneOutline}\n                            title=\"Mark as reminded\"\n                            style={{display:'none', color: '#2dd36f', cursor: 'pointer', fontSize: '1.2rem' }}\n                            onClick={() => markAsReminded(entry.patient)}\n                          />\n                        </td>",
+  "new_string": "                        <td style={tdStyle}>\n                          <IonIcon\n                            icon={calendarOutline}\n                            title=\"Reschedule next therapy session\"\n                            style={{ color: '#0a5c99', cursor: 'pointer', fontSize: '1.2rem', marginRight: '0.75rem' }}\n                            onClick={() => openRescheduleModal(entry.patient, entry.dueDate, entry.leadDays)}\n                          />\n                          <IonIcon\n                            icon={alarmOutline}\n                            ti
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/12/2026, 1:11:59 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\NextTherapyNotification.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/12/2026, 1:12:02 PM</sup>
+
+Now the Reminded tab's Actions column.
+
+
+---
+
+## Assistant <sup>8/12/2026, 1:12:06 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\NextTherapyNotification.tsx",
+  "old_string": "                          <IonIcon\n                            icon={alarmOutline}\n                            title=\"Set custom reminder days for this patient\"\n                            style={{ color: '#0a5c99', cursor: 'pointer', fontSize: '1.2rem', marginRight: '0.75rem' }}\n                            onClick={() => openOverrideEditor(entry.patient, entry.reminderDays, entry.leadDays, entry.log.id)}\n                          />\n                          {entry.status ? (\n                            <IonIcon\n                              icon={paperPlaneOutline}\n                              title=\"Resend reminder\"",
+  "new_string": "                          <IonIcon\n                            icon={calendarOutline}\n                            title=\"Reschedule next therapy session\"\n                            style={{ color: '#0a5c99', cursor: 'pointer', fontSize: '1.2rem', marginRight: '0.75rem' }}\n                            onClick={() => openRescheduleModal(entry.patient, undefined, entry.leadDays)}\n                          />\n                          <IonIcon\n                            icon={alarmOutline}\n                            title=\"Set custom reminder days for this patient\"\n                            style={{ color: '#0a5c99', cursor: 'pointer', fontSize: '1.2rem', marginRight: '0.75rem' }}\n                            onClick={() => openOverrideEditor(entry.patient, entry.reminderDays, entry.leadDays, entry.log.id)}\n                          />\n                          {entry.status ? (\n                            <IonIcon\n                              icon={paperPlaneOutline}\n                              title=\"Resend reminder\""
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/12/2026, 1:12:07 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\NextTherapyNotification.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/12/2026, 1:12:13 PM</sup>
+
+
+---
+
+## Assistant <sup>8/12/2026, 1:12:13 PM</sup>
+
+Now add the Reschedule modal, alongside the other modals.
+
+
+---
+
+## Assistant <sup>8/12/2026, 1:12:21 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\NextTherapyNotification.tsx",
+  "old_string": "      <IonModal isOpen={!!viewMessageEntry} onDidDismiss={() => setViewMessageEntry(null)} style={{ '--width': '460px', '--height': '340px', '--border-radius': '12px' } as React.CSSProperties}>",
+  "new_string": "      <IonModal isOpen={!!rescheduleTarget} onDidDismiss={closeRescheduleModal} style={{ '--width': '440px', '--height': '380px', '--border-radius': '12px' } as React.CSSProperties}>\n        <IonHeader>\n          <IonToolbar color=\"primary\">\n            <IonTitle>Reschedule{rescheduleTarget ? ` — ${rescheduleTarget.first_name} ${rescheduleTarget.last_name}` : ''}</IonTitle>\n            <IonButton slot=\"end\" fill=\"clear\" color=\"light\" onClick={closeRescheduleModal}>\n              <IonIcon icon={closeOutline} />\n            </IonButton>\n          </IonToolbar>\n        </IonHeader>\n        <IonContent className=\"ion-padding\">\n          <div style={{ marginBottom: '1.25rem' }}>\n            <div style={{ ...labelStyle, marginBottom: '0.5rem' }}>Next Therapy Date</div>\n            <input\n              type=\"date\"\n              value={rescheduleDateDraft}\n              onChange={(e) => setRescheduleDateDraft(e.target.value)}\n              style={{ width: '100%', padding: '0.5rem 0.65rem', border: '1px solid #ccc', borderRadius: '6px', fontSize: '0.9rem', outline: 'none' }}\n            />\n          </div>\n\n          <div style={{ marginBottom: '1.5rem' }}>\n            <div style={{ ...labelStyle, marginBottom: '0.5rem' }}>Alert lead time (days before due)</div>\n            <input\n              type=\"number\" min={0}\n              value={rescheduleLeadDaysDraft}\n              onChange={(e) => setRescheduleLeadDaysDraft(e.target.value)}\n              style={{ width: '100px', padding: '0.4rem 0.6rem', border: '1px solid #ccc', borderRadius: '6px', fontSize: '0.9rem', outline:
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/12/2026, 1:12:22 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\NextTherapyNotification.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/12/2026, 1:12:25 PM</sup>
+
+Now onto `Therapy.tsx` — auto-clear the override when a new session starts.
+
+
+---
+
+## Assistant <sup>8/12/2026, 1:12:28 PM</sup>
+
+<details>
+<summary>Tool: <code>TodoWrite</code></summary>
+
+```json
+{
+  "todos": [
+    {
+      "content": "Add next_therapy_date_override field to LocalPatient",
+      "status": "completed",
+      "activeForm": "Adding next_therapy_date_override field"
+    },
+    {
+      "content": "Update computeDueStatus to prioritize date override",
+      "status": "completed",
+      "activeForm": "Updating computeDueStatus"
+    },
+    {
+      "content": "Add Reschedule modal + handlers to NextTherapyNotification.tsx",
+      "status": "completed",
+      "activeForm": "Adding Reschedule modal + handlers"
+    },
+    {
+      "content": "Add Reschedule icon to Due List and Reminded tabs",
+      "status": "completed",
+      "activeForm": "Adding Reschedule icon to both tabs"
+    },
+    {
+      "content": "Auto-clear override on new session in Therapy.tsx",
+      "status": "in_progress",
+      "activeForm": "Auto-clearing override on new session"
+    },
+    {
+      "content": "Verify with tsc",
+      "status": "pending",
+      "activeForm": "Verifying with tsc"
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/12/2026, 1:12:28 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Todos have been modified successfully. Ensure that you continue to use the todo list to track your progress. Please proceed with the current tasks if applicable
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/12/2026, 1:12:33 PM</sup>
+
+<details>
+<summary>Tool: <code>Grep</code></summary>
+
+```json
+{
+  "pattern": "const handleStart = async",
+  "path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Therapy.tsx",
+  "output_mode": "content",
+  "-n": true,
+  "-A": 40
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/12/2026, 1:12:33 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+626:  const handleStart = async () => {
+627-    setSessionError('');
+628-    if (!selectedTherapistId) { setSessionError('Please select a therapist.'); return; }
+629-    if (!selectedPatientId) { setSessionError('Please select a patient.'); return; }
+630-    if (!sessionNotes.trim()) { setSessionError('Session notes are required.'); return; }
+631-
+632-    try {
+633-      const params = await buildAllParams();
+634-      const updated = await sendPrepareParams({ ...params, start_session: 1 });
+635-      setMachineInfo(updated);
+636-    } catch {
+637-      presentAlert({ header: 'Command Failed', message: 'Could not start session on the machine. Check the connection.', buttons: ['OK'] });
+638-      return;
+639-    }
+640-
+641-    const therapist = therapists.find((t) => t.id === selectedTherapistId);
+642-    const patient = patients.find((p) => p.id === selectedPatientId);
+643-
+644-    const now = new Date();
+645-    sessionStartTime.current = now;
+646-
+647-    const localId = await localD
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/12/2026, 1:12:37 PM</sup>
+
+Adding the auto-clear right after the session is added.
+
+
+---
+
+## Assistant <sup>8/12/2026, 1:12:39 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Therapy.tsx",
+  "old_string": "    activeSessionLocalId.current = localId as number;\n    setState('ACTIVE');\n  };",
+  "new_string": "    activeSessionLocalId.current = localId as number;\n\n    // A new session has started, so any manual \"reschedule\" override for this patient is now stale.\n    if (selectedPatientId != null) {\n      await localDB.patients.update(selectedPatientId, { next_therapy_date_override: undefined });\n    }\n\n    setState('ACTIVE');\n  };"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/12/2026, 1:12:40 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\Therapy.tsx has been updated successfully. (note: the file had been modified on disk since you last read it — the edit applied cleanly, but the file contains other changes not in your context. Read it before edits that depend on surrounding content.)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/12/2026, 1:12:45 PM</sup>
+
+
+---
+
+## Assistant <sup>8/12/2026, 1:12:45 PM</sup>
+
+Now type-check.
+
+
+---
+
+## Assistant <sup>8/12/2026, 1:12:47 PM</sup>
+
+<details>
+<summary>Tool: <code>TodoWrite</code></summary>
+
+```json
+{
+  "todos": [
+    {
+      "content": "Add next_therapy_date_override field to LocalPatient",
+      "status": "completed",
+      "activeForm": "Adding next_therapy_date_override field"
+    },
+    {
+      "content": "Update computeDueStatus to prioritize date override",
+      "status": "completed",
+      "activeForm": "Updating computeDueStatus"
+    },
+    {
+      "content": "Add Reschedule modal + handlers to NextTherapyNotification.tsx",
+      "status": "completed",
+      "activeForm": "Adding Reschedule modal + handlers"
+    },
+    {
+      "content": "Add Reschedule icon to Due List and Reminded tabs",
+      "status": "completed",
+      "activeForm": "Adding Reschedule icon to both tabs"
+    },
+    {
+      "content": "Auto-clear override on new session in Therapy.tsx",
+      "status": "completed",
+      "activeForm": "Auto-clearing override on new session"
+    },
+    {
+      "content": "Verify with tsc",
+      "status": "in_progress",
+      "activeForm": "Verifying with tsc"
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/12/2026, 1:12:47 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Todos have been modified successfully. Ensure that you continue to use the todo list to track your progress. Please proceed with the current tasks if applicable
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/12/2026, 1:12:51 PM</sup>
+
+<details>
+<summary>Tool: <code>Bash</code></summary>
+
+```json
+{
+  "command": "cd \"d:/projects/production-hydro-colon-therapy/frontend\" && npx tsc --noEmit -p . 2>&1",
+  "description": "Type-check frontend after reschedule feature",
+  "timeout": 120000
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/12/2026, 1:12:59 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+(Bash completed with no output)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/12/2026, 1:13:02 PM</sup>
+
+Clean.
+
+
+---
+
+## Assistant <sup>8/12/2026, 1:13:04 PM</sup>
+
+<details>
+<summary>Tool: <code>TodoWrite</code></summary>
+
+```json
+{
+  "todos": [
+    {
+      "content": "Add next_therapy_date_override field to LocalPatient",
+      "status": "completed",
+      "activeForm": "Adding next_therapy_date_override field"
+    },
+    {
+      "content": "Update computeDueStatus to prioritize date override",
+      "status": "completed",
+      "activeForm": "Updating computeDueStatus"
+    },
+    {
+      "content": "Add Reschedule modal + handlers to NextTherapyNotification.tsx",
+      "status": "completed",
+      "activeForm": "Adding Reschedule modal + handlers"
+    },
+    {
+      "content": "Add Reschedule icon to Due List and Reminded tabs",
+      "status": "completed",
+      "activeForm": "Adding Reschedule icon to both tabs"
+    },
+    {
+      "content": "Auto-clear override on new session in Therapy.tsx",
+      "status": "completed",
+      "activeForm": "Auto-clearing override on new session"
+    },
+    {
+      "content": "Verify with tsc",
+      "status": "completed",
+      "activeForm": "Verifying with tsc"
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/12/2026, 1:13:04 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Todos have been modified successfully. Ensure that you continue to use the todo list to track your progress. Please proceed with the current tasks if applicable
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/12/2026, 1:13:09 PM</sup>
+
+Done. Summary:
+
+- **`localDB.ts`**: added `next_therapy_date_override?: string` to `LocalPatient`.
+- **`computeDueStatus`**: now uses that explicit date (when set) instead of `lastSession + reminderDays` for the due date calculation — everything downstream (status, window, Due List membership) automatically reflects it.
+- **New "Reschedule" action** (calendar icon) on both the Due List and Reminded tabs, opening a modal with a date picker for the next therapy date and a lead-days input, plus Save / Clear Reschedule / Cancel.
+- **`Therapy.tsx`**: when a new session starts for a patient, their `next_therapy_date_override` is automatically cleared, since the reschedule is now stale — future due dates revert to the normal last-session-based calculation.
+
+`npx tsc --noEmit` passes clean.
 
 
 ---

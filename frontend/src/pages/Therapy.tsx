@@ -255,8 +255,8 @@ const Therapy: React.FC = () => {
 
   const isLocked = state === 'INIT' || state === 'ACTIVE' || state === 'PAUSED';
   const [defaultTemp, setDefaultTemp] = useState(37);
-  const [therapyMinTemp, setTherapyMinTemp] = useState(0);
-  const [maxTemp, setMaxTemp] = useState(40);
+  const [therapyMinTemp, setTherapyMinTemp] = useState(30);
+  const [maxTemp, setMaxTemp] = useState(45);
   const [showMachineAlert, setShowMachineAlert] = useState(false);
   const [showDisconnectPauseModal, setShowDisconnectPauseModal] = useState(false);
   const [showLowTempModal, setShowLowTempModal] = useState(false);
@@ -296,7 +296,7 @@ const Therapy: React.FC = () => {
     const s = await localDB.settings.get(machineId);
     return {
       session_duration: s?.default_session_minutes ?? 40,
-      therapy_min_temp: s?.therapy_min_temp ?? 0,
+      therapy_min_temp: s?.therapy_min_temp ?? 30,
       default_temperature: s?.default_temperature ?? defaultTemp,
       max_temperature: s?.max_temperature ?? 40,
       auto_flush: s?.auto_flush ? 1 : 0,
@@ -500,7 +500,6 @@ const Therapy: React.FC = () => {
           setShowHighTempModal(true);
           try {
             const params = await buildAllParams();
-            await sendPrepareParams({ ...params, start_session: 1, prepare_session: 1, pause_session: 1 });
             await sendPrepareParams({ ...params, start_session: 1, prepare_session: 1, pause_session: 1, heater: 0 });
           } catch {
             // Stay paused locally even if command fails
@@ -662,6 +661,12 @@ const Therapy: React.FC = () => {
     });
 
     activeSessionLocalId.current = localId as number;
+
+    // A new session has started, so any manual "reschedule" override for this patient is now stale.
+    if (selectedPatientId != null) {
+      await localDB.patients.update(selectedPatientId, { next_therapy_date_override: undefined });
+    }
+
     setState('ACTIVE');
   };
 

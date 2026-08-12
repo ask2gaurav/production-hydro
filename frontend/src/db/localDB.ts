@@ -94,6 +94,7 @@ export interface LocalPatient {
   reminder_days_override?: number;
   alert_lead_days_override?: number;
   last_reminded_at?: string;
+  next_therapy_date_override?: string; // ISO date (YYYY-MM-DD) — explicit reschedule, takes priority over the computed due date
 }
 
 export interface LocalReminderLog {

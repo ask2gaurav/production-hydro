@@ -69,14 +69,14 @@ const Dashboard: React.FC = () => {
               </IonCard>
             </IonCol>
 
-            {/* <IonCol size="4">
+            <IonCol size="4">
               <IonCard button onClick={() => history.push('/notifications')} style={{ width: 'auto', textAlign: 'center', height: '90%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', backgroundColor: '#eef5f9' }}>
                 <IonIcon icon={alarmOutline} style={{ fontSize: '4rem', color: '#0a5c99' }} />
                 <IonCardHeader>
                   <IonCardTitle style={{ lineHeight: '2.4rem' }}>Next Therapy Notification</IonCardTitle>
                 </IonCardHeader>
               </IonCard>
-            </IonCol> */}
+            </IonCol>
 
            
           </IonRow>

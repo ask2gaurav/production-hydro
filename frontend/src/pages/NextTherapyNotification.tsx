@@ -5,7 +5,7 @@ import {
 } from '@ionic/react';
 import {
   arrowBack, searchOutline, alarmOutline, checkmarkDoneOutline, paperPlaneOutline, closeOutline,
-  chatbubbleOutline, logoWhatsapp, mailOutline, callOutline, createOutline, eyeOutline,
+  chatbubbleOutline, logoWhatsapp, mailOutline, callOutline, createOutline, eyeOutline, calendarOutline,
 } from 'ionicons/icons';
 import { useHistory } from 'react-router';
 import { useStore } from '../store/useStore';
@@ -85,10 +85,19 @@ const computeDueStatus = (
   const today = startOfDay(new Date());
   const reminderDays = patient.reminder_days_override ?? globalReminderDays;
   const leadDays = patient.alert_lead_days_override ?? globalLeadDays;
-  const dueDate = startOfDay(new Date(lastSession.getTime() + reminderDays * MS_PER_DAY));
+  const dueDate = patient.next_therapy_date_override
+    ? startOfDay(new Date(patient.next_therapy_date_override))
+    : startOfDay(new Date(lastSession.getTime() + reminderDays * MS_PER_DAY));
   const windowStart = startOfDay(new Date(dueDate.getTime() - leadDays * MS_PER_DAY));
   const status: DueStatus = dueDate < today ? 'Overdue' : dueDate.getTime() === today.getTime() ? 'Due Today' : 'Upcoming';
   return { reminderDays, leadDays, dueDate, windowStart, status };
+};
+
+const toInputDateString = (d: Date): string => {
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
 };
 
 const METHOD_LABEL: Record<'sms' | 'whatsapp' | 'email' | 'call', string> = {
@@ -112,6 +121,7 @@ const NextTherapyNotification: React.FC = () => {
   const [lastSessionByPatientId, setLastSessionByPatientId] = useState<Record<string, Date>>({});
   const [search, setSearch] = useState('');
   const [editingPatientId, setEditingPatientId] = useState<number | null>(null);
+  const [editingOverrideLogId, setEditingOverrideLogId] = useState<number | null>(null);
   const [reminderDaysDraft, setReminderDaysDraft] = useState('');
   const [leadDaysDraft, setLeadDaysDraft] = useState('');
 
@@ -131,6 +141,10 @@ const NextTherapyNotification: React.FC = () => {
   const [sendTarget, setSendTarget] = useState<LocalPatient | null>(null);
   const [selectedLang, setSelectedLang] = useState<'en' | 'gu' | 'hi'>('en');
   const [draftMessage, setDraftMessage] = useState('');
+
+  const [rescheduleTarget, setRescheduleTarget] = useState<LocalPatient | null>(null);
+  const [rescheduleDateDraft, setRescheduleDateDraft] = useState('');
+  const [rescheduleLeadDaysDraft, setRescheduleLeadDaysDraft] = useState('');
 
   const loadData = useCallback(async () => {
     const p = await localDB.patients
@@ -310,8 +324,43 @@ const NextTherapyNotification: React.FC = () => {
     await loadData();
   };
 
-  const openOverrideEditor = (patient: LocalPatient, reminderDays: number, leadDays: number) => {
+  const openRescheduleModal = (patient: LocalPatient, currentDueDate: Date | undefined, currentLeadDays: number) => {
+    setRescheduleTarget(patient);
+    setRescheduleDateDraft(patient.next_therapy_date_override ?? (currentDueDate ? toInputDateString(currentDueDate) : ''));
+    setRescheduleLeadDaysDraft(String(patient.alert_lead_days_override ?? currentLeadDays));
+  };
+
+  const closeRescheduleModal = () => {
+    setRescheduleTarget(null);
+    setRescheduleDateDraft('');
+    setRescheduleLeadDaysDraft('');
+  };
+
+  const saveReschedule = async () => {
+    const patient = rescheduleTarget;
+    if (!patient?.id || !rescheduleDateDraft) return;
+    const leadDays = parseInt(rescheduleLeadDaysDraft, 10);
+    await localDB.patients.update(patient.id, {
+      next_therapy_date_override: rescheduleDateDraft,
+      alert_lead_days_override: isNaN(leadDays) ? undefined : leadDays,
+    });
+    void triggerAutoBackup(machineId);
+    closeRescheduleModal();
+    await loadData();
+  };
+
+  const clearReschedule = async () => {
+    const patient = rescheduleTarget;
+    if (!patient?.id) return;
+    await localDB.patients.update(patient.id, { next_therapy_date_override: undefined });
+    void triggerAutoBackup(machineId);
+    closeRescheduleModal();
+    await loadData();
+  };
+
+  const openOverrideEditor = (patient: LocalPatient, reminderDays: number, leadDays: number, logId?: number) => {
     setEditingPatientId(patient.id!);
+    setEditingOverrideLogId(logId ?? null);
     setReminderDaysDraft(String(reminderDays));
     setLeadDaysDraft(String(leadDays));
   };
@@ -326,6 +375,7 @@ const NextTherapyNotification: React.FC = () => {
     });
     void triggerAutoBackup(machineId);
     setEditingPatientId(null);
+    setEditingOverrideLogId(null);
     await loadData();
   };
 
@@ -337,6 +387,7 @@ const NextTherapyNotification: React.FC = () => {
     });
     void triggerAutoBackup(machineId);
     setEditingPatientId(null);
+    setEditingOverrideLogId(null);
     await loadData();
   };
 
@@ -437,6 +488,12 @@ const NextTherapyNotification: React.FC = () => {
                         </td>
                         <td style={tdStyle}>
                           <IonIcon
+                            icon={calendarOutline}
+                            title="Reschedule next therapy session"
+                            style={{ color: '#0a5c99', cursor: 'pointer', fontSize: '1.2rem', marginRight: '0.75rem' }}
+                            onClick={() => openRescheduleModal(entry.patient, entry.dueDate, entry.leadDays)}
+                          />
+                          <IonIcon
                             icon={alarmOutline}
                             title="Set custom reminder days for this patient"
                             style={{ color: '#0a5c99', cursor: 'pointer', fontSize: '1.2rem', marginRight: '0.75rem' }}
@@ -480,7 +537,7 @@ const NextTherapyNotification: React.FC = () => {
                               </div>
                               <IonButton size="small" onClick={() => saveOverride(entry.patient)}>Save</IonButton>
                               <IonButton size="small" fill="outline" onClick={() => clearOverride(entry.patient)}>Use Global Default</IonButton>
-                              <IonButton size="small" fill="clear" onClick={() => setEditingPatientId(null)}>Cancel</IonButton>
+                              <IonButton size="small" fill="clear" onClick={() => { setEditingPatientId(null); setEditingOverrideLogId(null); }}>Cancel</IonButton>
                             </div>
                           </td>
                         </tr>
@@ -569,10 +626,16 @@ const NextTherapyNotification: React.FC = () => {
                             />
                           )}
                           <IonIcon
+                            icon={calendarOutline}
+                            title="Reschedule next therapy session"
+                            style={{ color: '#0a5c99', cursor: 'pointer', fontSize: '1.2rem', marginRight: '0.75rem' }}
+                            onClick={() => openRescheduleModal(entry.patient, undefined, entry.leadDays)}
+                          />
+                          <IonIcon
                             icon={alarmOutline}
                             title="Set custom reminder days for this patient"
                             style={{ color: '#0a5c99', cursor: 'pointer', fontSize: '1.2rem', marginRight: '0.75rem' }}
-                            onClick={() => openOverrideEditor(entry.patient, entry.reminderDays, entry.leadDays)}
+                            onClick={() => openOverrideEditor(entry.patient, entry.reminderDays, entry.leadDays, entry.log.id)}
                           />
                           {entry.status ? (
                             <IonIcon
@@ -584,7 +647,7 @@ const NextTherapyNotification: React.FC = () => {
                           ) : null}
                         </td>
                       </tr>
-                      {editingPatientId === entry.patient.id && (
+                      {editingPatientId === entry.patient.id && editingOverrideLogId === entry.log.id && (
                         <tr>
                           <td colSpan={7} style={{ ...tdStyle, backgroundColor: '#f9f9f9' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
@@ -608,7 +671,7 @@ const NextTherapyNotification: React.FC = () => {
                               </div>
                               <IonButton size="small" onClick={() => saveOverride(entry.patient)}>Save</IonButton>
                               <IonButton size="small" fill="outline" onClick={() => clearOverride(entry.patient)}>Use Global Default</IonButton>
-                              <IonButton size="small" fill="clear" onClick={() => setEditingPatientId(null)}>Cancel</IonButton>
+                              <IonButton size="small" fill="clear" onClick={() => { setEditingPatientId(null); setEditingOverrideLogId(null); }}>Cancel</IonButton>
                             </div>
                           </td>
                         </tr>
@@ -754,6 +817,46 @@ const NextTherapyNotification: React.FC = () => {
             <IonButton fill="outline" onClick={() => sendVia('call')}>
               <IonIcon icon={callOutline} slot="start" /> Call
             </IonButton>
+          </div>
+        </IonContent>
+      </IonModal>
+
+      <IonModal isOpen={!!rescheduleTarget} onDidDismiss={closeRescheduleModal} style={{ '--width': '440px', '--height': '380px', '--border-radius': '12px' } as React.CSSProperties}>
+        <IonHeader>
+          <IonToolbar color="primary">
+            <IonTitle>Reschedule{rescheduleTarget ? ` — ${rescheduleTarget.first_name} ${rescheduleTarget.last_name}` : ''}</IonTitle>
+            <IonButton slot="end" fill="clear" color="light" onClick={closeRescheduleModal}>
+              <IonIcon icon={closeOutline} />
+            </IonButton>
+          </IonToolbar>
+        </IonHeader>
+        <IonContent className="ion-padding">
+          <div style={{ marginBottom: '1.25rem' }}>
+            <div style={{ ...labelStyle, marginBottom: '0.5rem' }}>Next Therapy Date</div>
+            <input
+              type="date"
+              value={rescheduleDateDraft}
+              onChange={(e) => setRescheduleDateDraft(e.target.value)}
+              style={{ width: '100%', padding: '0.5rem 0.65rem', border: '1px solid #ccc', borderRadius: '6px', fontSize: '0.9rem', outline: 'none' }}
+            />
+          </div>
+
+          <div style={{ marginBottom: '1.5rem' }}>
+            <div style={{ ...labelStyle, marginBottom: '0.5rem' }}>Alert lead time (days before due)</div>
+            <input
+              type="number" min={0}
+              value={rescheduleLeadDaysDraft}
+              onChange={(e) => setRescheduleLeadDaysDraft(e.target.value)}
+              style={{ width: '100px', padding: '0.4rem 0.6rem', border: '1px solid #ccc', borderRadius: '6px', fontSize: '0.9rem', outline: 'none' }}
+            />
+          </div>
+
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <IonButton disabled={!rescheduleDateDraft} onClick={saveReschedule}>Save</IonButton>
+            {rescheduleTarget?.next_therapy_date_override && (
+              <IonButton fill="outline" color="danger" onClick={clearReschedule}>Clear Reschedule</IonButton>
+            )}
+            <IonButton fill="clear" onClick={closeRescheduleModal}>Cancel</IonButton>
           </div>
         </IonContent>
       </IonModal>
