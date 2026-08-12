@@ -9,7 +9,8 @@ import { Capacitor } from '@capacitor/core';
 import {
   arrowBack, addOutline, personOutline, personCircleOutline,
   peopleOutline, pencilOutline, trashOutline, searchOutline,
-  wifiOutline, cloudOfflineOutline, checkmarkCircleOutline, playCircleOutline, pauseCircleOutline
+  wifiOutline, cloudOfflineOutline, checkmarkCircleOutline, playCircleOutline, pauseCircleOutline,
+  calendarOutline, closeOutline
 } from 'ionicons/icons';
 import { useHistory } from 'react-router';
 import { useStore } from '../store/useStore';
@@ -22,6 +23,15 @@ import MachineInfoModal from '../components/MachineInfoModal';
 import DobPicker from '../components/DobPicker';
 
 // ---------- Helpers ----------
+
+const DEFAULT_LEAD_DAYS = 2;
+
+const toInputDateString = (d: Date): string => {
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+};
 
 const computeAge = (dob?: string): string => {
   if (!dob) return '—';
@@ -250,6 +260,10 @@ const Therapy: React.FC = () => {
   const [epNotes, setEpNotes] = useState('');
   const [epSaving, setEpSaving] = useState(false);
   const [epError, setEpError] = useState('');
+  // Reschedule next therapy modal
+  const [rescheduleTarget, setRescheduleTarget] = useState<LocalPatient | null>(null);
+  const [rescheduleDateDraft, setRescheduleDateDraft] = useState('');
+  const [rescheduleLeadDaysDraft, setRescheduleLeadDaysDraft] = useState('');
   // Session stats
   const [sessionStats, setSessionStats] = useState<StatMap>({});
 
@@ -948,6 +962,48 @@ const Therapy: React.FC = () => {
     if (!window.confirm(`Delete ${p.first_name} ${p.last_name}? This cannot be undone.`)) return;
     await localDB.patients.update(p.id!, { is_active: false, synced: 0 });
     if (selectedPatientId === p.id) setSelectedPatientId(null);
+    await loadLocal();
+    runSync(machineId).then(loadLocal);
+  };
+
+  const openRescheduleModal = async (p: LocalPatient) => {
+    setRescheduleTarget(p);
+    setRescheduleDateDraft(p.next_therapy_date_override ?? toInputDateString(new Date()));
+    if (p.alert_lead_days_override != null) {
+      setRescheduleLeadDaysDraft(String(p.alert_lead_days_override));
+    } else {
+      const settings = await localDB.settings.get(machineId);
+      setRescheduleLeadDaysDraft(String(settings?.next_therapy_alert_lead_days ?? DEFAULT_LEAD_DAYS));
+    }
+  };
+
+  const closeRescheduleModal = () => {
+    setRescheduleTarget(null);
+    setRescheduleDateDraft('');
+    setRescheduleLeadDaysDraft('');
+  };
+
+  const saveReschedule = async () => {
+    const p = rescheduleTarget;
+    if (!p?.id || !rescheduleDateDraft) return;
+    const leadDays = parseInt(rescheduleLeadDaysDraft, 10);
+    await localDB.patients.update(p.id, {
+      next_therapy_date_override: rescheduleDateDraft,
+      alert_lead_days_override: isNaN(leadDays) ? undefined : leadDays,
+      synced: 0,
+    });
+    void triggerAutoBackup(machineId);
+    closeRescheduleModal();
+    await loadLocal();
+    runSync(machineId).then(loadLocal);
+  };
+
+  const clearReschedule = async () => {
+    const p = rescheduleTarget;
+    if (!p?.id) return;
+    await localDB.patients.update(p.id, { next_therapy_date_override: undefined, synced: 0 });
+    void triggerAutoBackup(machineId);
+    closeRescheduleModal();
     await loadLocal();
     runSync(machineId).then(loadLocal);
   };
@@ -1677,6 +1733,12 @@ const Therapy: React.FC = () => {
                           <td style={{ ...tdStyle, textAlign: 'center' }}>{stats.total}</td>
                           <td style={tdStyle}>{stats.last ? formatDate(stats.last.toString()) : '—'}<br />{formatTime(stats.last) }</td>
                           <td style={tdStyle} onClick={(e) => e.stopPropagation()}>
+                            {/* <IonIcon
+                              icon={calendarOutline}
+                              title="Reschedule next therapy session"
+                              style={{ color: '#0a5c99', cursor: 'pointer', fontSize: '1.2rem', marginRight: '0.75rem' }}
+                              onClick={() => openRescheduleModal(p)}
+                            /> */}
                             <IonIcon
                               icon={pencilOutline}
                               style={{ color: '#0a5c99', cursor: 'pointer', fontSize: '1.2rem', marginRight: '0.75rem' }}
@@ -1696,6 +1758,47 @@ const Therapy: React.FC = () => {
               </div>
             </div>
           )}
+        </IonContent>
+      </IonModal>
+
+      {/* Reschedule Next Therapy Modal */}
+      <IonModal isOpen={!!rescheduleTarget} onDidDismiss={closeRescheduleModal} style={{ '--width': '440px', '--height': '380px', '--border-radius': '12px' } as React.CSSProperties}>
+        <IonHeader>
+          <IonToolbar color="primary">
+            <IonTitle>Reschedule{rescheduleTarget ? ` — ${rescheduleTarget.first_name} ${rescheduleTarget.last_name}` : ''}</IonTitle>
+            <IonButton slot="end" fill="clear" color="light" onClick={closeRescheduleModal}>
+              <IonIcon icon={closeOutline} />
+            </IonButton>
+          </IonToolbar>
+        </IonHeader>
+        <IonContent className="ion-padding">
+          <div style={{ marginBottom: '1.25rem' }}>
+            <div style={{ color: '#555', fontWeight: 500, marginBottom: '0.5rem' }}>Next Therapy Date</div>
+            <input
+              type="date"
+              value={rescheduleDateDraft}
+              onChange={(e) => setRescheduleDateDraft(e.target.value)}
+              style={{ width: '100%', padding: '0.5rem 0.65rem', border: '1px solid #ccc', borderRadius: '6px', fontSize: '0.9rem', outline: 'none' }}
+            />
+          </div>
+
+          <div style={{ marginBottom: '1.5rem' }}>
+            <div style={{ color: '#555', fontWeight: 500, marginBottom: '0.5rem' }}>Alert lead time (days before due)</div>
+            <input
+              type="number" min={0}
+              value={rescheduleLeadDaysDraft}
+              onChange={(e) => setRescheduleLeadDaysDraft(e.target.value)}
+              style={{ width: '100px', padding: '0.4rem 0.6rem', border: '1px solid #ccc', borderRadius: '6px', fontSize: '0.9rem', outline: 'none' }}
+            />
+          </div>
+
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <IonButton disabled={!rescheduleDateDraft} onClick={saveReschedule}>Save</IonButton>
+            {rescheduleTarget?.next_therapy_date_override && (
+              <IonButton fill="outline" color="danger" onClick={clearReschedule}>Clear Reschedule</IonButton>
+            )}
+            <IonButton fill="clear" onClick={closeRescheduleModal}>Cancel</IonButton>
+          </div>
         </IonContent>
       </IonModal>
 

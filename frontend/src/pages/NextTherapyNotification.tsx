@@ -93,6 +93,16 @@ const computeDueStatus = (
   return { reminderDays, leadDays, dueDate, windowStart, status };
 };
 
+const computeOriginalDueDate = (
+  patient: LocalPatient,
+  lastSession: Date | undefined,
+  globalReminderDays: number
+): Date | undefined => {
+  if (!lastSession) return undefined;
+  const reminderDays = patient.reminder_days_override ?? globalReminderDays;
+  return startOfDay(new Date(lastSession.getTime() + reminderDays * MS_PER_DAY));
+};
+
 const toInputDateString = (d: Date): string => {
   const yyyy = d.getFullYear();
   const mm = String(d.getMonth() + 1).padStart(2, '0');
@@ -116,7 +126,7 @@ const NextTherapyNotification: React.FC = () => {
   const history = useHistory();
   const { machineId } = useStore();
 
-  const [tab, setTab] = useState<'due' | 'reminded' | 'settings'>('due');
+  const [tab, setTab] = useState<'due' | 'reminded' | 'rescheduled' | 'settings'>('due');
   const [patients, setPatients] = useState<LocalPatient[]>([]);
   const [lastSessionByPatientId, setLastSessionByPatientId] = useState<Record<string, Date>>({});
   const [search, setSearch] = useState('');
@@ -230,9 +240,9 @@ const NextTherapyNotification: React.FC = () => {
         const dueInfo = lastSession ? computeDueStatus(patient, lastSession, globalReminderDays, globalLeadDays) : undefined;
         const reminderDays = dueInfo?.reminderDays ?? patient.reminder_days_override ?? globalReminderDays;
         const leadDays = dueInfo?.leadDays ?? patient.alert_lead_days_override ?? globalLeadDays;
-        return { log, patient, lastSession, status: dueInfo?.status, reminderDays, leadDays };
+        return { log, patient, lastSession, status: dueInfo?.status, dueDate: dueInfo?.dueDate, reminderDays, leadDays };
       })
-      .filter((e): e is { log: LocalReminderLog; patient: LocalPatient; lastSession: Date | undefined; status: DueStatus | undefined; reminderDays: number; leadDays: number } => e !== null);
+      .filter((e): e is { log: LocalReminderLog; patient: LocalPatient; lastSession: Date | undefined; status: DueStatus | undefined; dueDate: Date | undefined; reminderDays: number; leadDays: number } => e !== null);
   }, [reminderLogs, patientsById, lastSessionByPatientId, globalReminderDays, globalLeadDays]);
 
   const filteredRemindedEntries = useMemo(() => {
@@ -243,6 +253,29 @@ const NextTherapyNotification: React.FC = () => {
       (e.patient.phone || '').toLowerCase().includes(q)
     );
   }, [remindedEntries, search]);
+
+  const rescheduledEntries = useMemo(() => {
+    const entries = patients
+      .filter((patient) => !!patient.next_therapy_date_override)
+      .map((patient) => {
+        const lastSession = patient.server_id ? lastSessionByPatientId[patient.server_id] : undefined;
+        const rescheduledDate = startOfDay(new Date(patient.next_therapy_date_override!));
+        const originalDueDate = computeOriginalDueDate(patient, lastSession, globalReminderDays);
+        const leadDays = patient.alert_lead_days_override ?? globalLeadDays;
+        return { patient, lastSession, rescheduledDate, originalDueDate, leadDays };
+      });
+    entries.sort((a, b) => a.rescheduledDate.getTime() - b.rescheduledDate.getTime());
+    return entries;
+  }, [patients, lastSessionByPatientId, globalReminderDays, globalLeadDays]);
+
+  const filteredRescheduledEntries = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return rescheduledEntries;
+    return rescheduledEntries.filter((e) =>
+      `${e.patient.first_name} ${e.patient.last_name}`.toLowerCase().includes(q) ||
+      (e.patient.phone || '').toLowerCase().includes(q)
+    );
+  }, [rescheduledEntries, search]);
 
   const statusColor = (status: DueStatus): string => {
     if (status === 'Overdue') return 'danger';
@@ -432,12 +465,15 @@ const NextTherapyNotification: React.FC = () => {
         </IonToolbar>
       </IonHeader>
       <IonContent className="ion-padding">
-        <IonSegment value={tab} onIonChange={(e) => setTab(e.detail.value as 'due' | 'reminded' | 'settings')} style={{ marginBottom: '1rem' }}>
+        <IonSegment value={tab} onIonChange={(e) => setTab(e.detail.value as 'due' | 'reminded' | 'rescheduled' | 'settings')} style={{ marginBottom: '1rem' }}>
           <IonSegmentButton value="due">
             <IonLabel>Due List</IonLabel>
           </IonSegmentButton>
           <IonSegmentButton value="reminded">
             <IonLabel>Reminded</IonLabel>
+          </IonSegmentButton>
+          <IonSegmentButton value="rescheduled">
+            <IonLabel>Rescheduled</IonLabel>
           </IonSegmentButton>
           <IonSegmentButton value="settings">
             <IonLabel>Settings</IonLabel>
@@ -465,7 +501,7 @@ const NextTherapyNotification: React.FC = () => {
                     <th style={thStyle}>Last Session</th>
                     <th style={thStyle}>Due Date</th>
                     <th style={thStyle}>Status</th>
-                    <th style={thStyle}>Actions</th>
+                    <th style={{ ...thStyle, textAlign: 'right' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -482,11 +518,16 @@ const NextTherapyNotification: React.FC = () => {
                         <td style={tdStyle}>{entry.patient.first_name} {entry.patient.last_name}</td>
                         <td style={tdStyle}>{entry.patient.phone}</td>
                         <td style={tdStyle}>{formatDate(entry.lastSession)}</td>
-                        <td style={tdStyle}>{formatDate(entry.dueDate)}</td>
+                        <td style={tdStyle}>
+                          {formatDate(entry.dueDate)}
+                          {entry.patient.next_therapy_date_override && (
+                            <IonBadge color="tertiary" style={{ marginLeft: '0.4rem', fontSize: '0.65rem' }}>Rescheduled</IonBadge>
+                          )}
+                        </td>
                         <td style={tdStyle}>
                           <IonBadge color={statusColor(entry.status)}>{entry.status}</IonBadge>
                         </td>
-                        <td style={tdStyle}>
+                        <td style={{ ...tdStyle, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 0.5rem' }}>
                           <IonIcon
                             icon={calendarOutline}
                             title="Reschedule next therapy session"
@@ -561,6 +602,7 @@ const NextTherapyNotification: React.FC = () => {
             </div>
 
             <div style={{ overflowX: 'auto' }}>
+              
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr>
@@ -570,7 +612,7 @@ const NextTherapyNotification: React.FC = () => {
                     <th style={thStyle}>Message</th>
                     <th style={thStyle}>Sent On</th>
                     <th style={thStyle}>Current Status</th>
-                    <th style={thStyle}>Actions</th>
+                    <th style={{ ...thStyle, textAlign: 'right' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -615,16 +657,21 @@ const NextTherapyNotification: React.FC = () => {
                         <td style={tdStyle}>{formatDate(new Date(entry.log.sent_at))}</td>
                         <td style={tdStyle}>
                           {entry.status ? <IonBadge color={statusColor(entry.status)}>{entry.status}</IonBadge> : '—'}
+                          {entry.dueDate && (
+                            <div style={{ fontSize: '0.72rem', color: '#888', marginTop: '0.25rem' }}>
+                              {formatDate(entry.dueDate)}
+                              {entry.patient.next_therapy_date_override && ' (Rescheduled)'}
+                            </div>
+                          )}
                         </td>
-                        <td style={tdStyle}>
-                          {entry.log.message && (
+                        <td style={{ ...tdStyle, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 0.5rem' }}>
                             <IonIcon
                               icon={eyeOutline}
                               title="View full message"
-                              style={{ color: '#0a5c99', cursor: 'pointer', fontSize: '1.2rem', marginRight: '0.75rem' }}
-                              onClick={() => setViewMessageEntry({ patientName: `${entry.patient.first_name} ${entry.patient.last_name}`, message: entry.log.message! })}
+                            style={{ color: '#0a5c99', fontSize: '1.2rem', marginRight: '0.75rem', ...(!entry.log.message ? { opacity: '0.5' } : { cursor: 'pointer' } ) }}
+                              className={entry.log.message ? '' : 'disabled-icon'}
+                            onClick={!entry.log.message ? undefined : () => setViewMessageEntry({ patientName: `${entry.patient.first_name} ${entry.patient.last_name}`, message: entry.log.message! })}
                             />
-                          )}
                           <IonIcon
                             icon={calendarOutline}
                             title="Reschedule next therapy session"
@@ -695,6 +742,70 @@ const NextTherapyNotification: React.FC = () => {
                           </td>
                         </tr>
                       )}
+                    </React.Fragment>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : tab === 'rescheduled' ? (
+          <div>
+            <div style={{ display: 'flex', width: '50%', alignItems: 'center', gap: '0.5rem', border: '1px solid #ccc', borderRadius: '8px', padding: '0.4rem 0.75rem', backgroundColor: 'white', marginBottom: '1rem' }}>
+              <IonIcon icon={searchOutline} style={{ color: '#999', flexShrink: 0 }} />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search by name or mobile..."
+                style={{ border: 'none', outline: 'none', flex: 1, fontSize: '0.9rem' }}
+              />
+            </div>
+
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr>
+                    <th style={thStyle}>Name</th>
+                    <th style={thStyle}>Mobile</th>
+                    <th style={thStyle}>Original Due Date</th>
+                    <th style={thStyle}>Rescheduled Date</th>
+                    <th style={thStyle}>Alert Lead</th>
+                    <th style={{ ...thStyle, textAlign: 'right' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredRescheduledEntries.length === 0 && (
+                    <tr>
+                      <td colSpan={6} style={{ ...tdStyle, textAlign: 'center', color: '#999', padding: '2rem' }}>
+                        No rescheduled therapy sessions.
+                      </td>
+                    </tr>
+                  )}
+                  {filteredRescheduledEntries.map((entry) => (
+                    <React.Fragment key={entry.patient.id}>
+                      <tr>
+                        <td style={tdStyle}>{entry.patient.first_name} {entry.patient.last_name}</td>
+                        <td style={tdStyle}>{entry.patient.phone}</td>
+                        <td style={tdStyle}>{formatDate(entry.originalDueDate ?? null)}</td>
+                        <td style={tdStyle}>
+                          {formatDate(entry.rescheduledDate)}
+                          <IonBadge color="tertiary" style={{ marginLeft: '0.4rem', fontSize: '0.65rem' }}>Re</IonBadge>
+                        </td>
+                        <td style={tdStyle}>{entry.leadDays} days</td>
+                        <td style={{ ...tdStyle, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 0.5rem' }}>
+                          <IonIcon
+                            icon={calendarOutline}
+                            title="Edit / clear reschedule"
+                            style={{ color: '#0a5c99', cursor: 'pointer', fontSize: '1.2rem', marginRight: '0.75rem' }}
+                            onClick={() => openRescheduleModal(entry.patient, entry.rescheduledDate, entry.leadDays)}
+                          />
+                          <IonIcon
+                            icon={paperPlaneOutline}
+                            title="Send reminder"
+                            style={{ color: '#0a5c99', cursor: 'pointer', fontSize: '1.2rem' }}
+                            onClick={() => openSendModal(entry.patient)}
+                          />
+                        </td>
+                      </tr>
                     </React.Fragment>
                   ))}
                 </tbody>

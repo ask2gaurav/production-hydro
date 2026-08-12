@@ -6,8 +6,8 @@
 | **Session ID** | `5529d2b3-4ebf-4965-aa06-df984f081bd8` |
 | **Working Dir** | `d:\projects\production-hydro-colon-therapy` |
 | **Started** | 8/6/2026, 11:50:49 AM |
-| **Last Updated** | 8/12/2026, 1:13:09 PM |
-| **Messages** | 1481 |
+| **Last Updated** | 8/12/2026, 7:26:02 PM |
+| **Messages** | 1605 |
 
 ---
 
@@ -23889,6 +23889,2028 @@ Done. Summary:
 - **`Therapy.tsx`**: when a new session starts for a patient, their `next_therapy_date_override` is automatically cleared, since the reschedule is now stale — future due dates revert to the normal last-session-based calculation.
 
 `npx tsc --noEmit` passes clean.
+
+
+---
+
+## User <sup>8/12/2026, 6:58:50 PM</sup>
+
+<ide_opened_file>The user opened the file d:\projects\production-hydro-colon-therapy\frontend\src\pages\NextTherapyNotification.tsx in the IDE. This may or may not be related to the current task.</ide_opened_file>
+
+@frontend/src/pages/NextTherapyNotification.tsx  we need to show next_therapy_date_override somewhere in the list. Should we show it with message column under the message? or do you have any better idea.
+
+
+---
+
+## Assistant <sup>8/12/2026, 6:59:22 PM</sup>
+
+
+---
+
+## Assistant <sup>8/12/2026, 6:59:26 PM</sup>
+
+My recommendation: **don't** put it under the Message column — Message is about what was already sent (past), while the reschedule date is forward-looking (next visit), so mixing them would be confusing. Also, the Due List tab's "Due Date" column already *does* show the rescheduled date transparently (since `computeDueStatus` uses the override when present) — what's actually missing is just a visual indicator that a date came from a manual reschedule vs. the normal calculation, and on the Reminded tab there's no due-date info shown at all right now (only the Overdue/Due Today/Upcoming badge).
+
+My suggestion:
+- **Due List tab**: keep the existing Due Date column as-is, but add a small "Rescheduled" badge/tag next to the date when `next_therapy_date_override` is set — cheap, no new column, distinguishes manual vs. computed.
+- **Reminded tab**: show the date as a second line under the existing Status badge (e.g. badge + small "Next: Jan 15, 2026" text underneath) rather than a whole new column — keeps it near the semantically related Status info without crowding an already 7-column table.
+
+Want me to go with that, or do you have a different placement in mind?
+
+
+---
+
+## Assistant <sup>8/12/2026, 6:59:28 PM</sup>
+
+<details>
+<summary>Tool: <code>AskUserQuestion</code></summary>
+
+```json
+{
+  "questions": [
+    {
+      "question": "Where should the next-therapy date be shown in each tab?",
+      "header": "Placement",
+      "options": [
+        {
+          "label": "Due Date badge (Due List) + under Status (Reminded) — Recommended",
+          "description": "Due List: small \"Rescheduled\" tag next to the existing Due Date value. Reminded: small date text under the Status badge. No new columns."
+        },
+        {
+          "label": "Add a dedicated \"Next Therapy\" column to both tables",
+          "description": "A new column in both Due List and Reminded tabs showing the date explicitly, separate from Due Date/Status, with a small indicator when it's a manual reschedule."
+        }
+      ]
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/12/2026, 7:02:07 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Your questions have been answered: "Where should the next-therapy date be shown in each tab?"="Due Date badge (Due List) + under Status (Reminded) — Recommended". You can now continue with these answers in mind.
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:02:15 PM</sup>
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:02:25 PM</sup>
+
+<details>
+<summary>Tool: <code>Write</code></summary>
+
+```json
+{
+  "file_path": "C:\\Users\\Gaurav\\.claude\\plans\\frontend-src-pages-nexttherapynotificat-glittery-beacon.md",
+  "content": "# Show next_therapy_date_override in the Due List and Reminded tabs\n\n## Context\n`next_therapy_date_override` was added to `LocalPatient` so a patient's next therapy date can be manually rescheduled (via the calendar-icon action added earlier this session), and `computeDueStatus` already prioritizes it over the computed `lastSession + reminderDays` date. The Due List tab's existing \"Due Date\" column already transparently reflects the override, but there's no visual cue distinguishing a manually rescheduled date from a normally computed one, and the Reminded tab shows no date information at all (only the Overdue/Due Today/Upcoming status badge). Per the user's choice: no new columns — surface it inline next to existing elements.\n\n## `frontend/src/pages/NextTherapyNotification.tsx` changes\n\n**Due List tab**: in the \"Due Date\" cell (`formatDate(entry.dueDate)`), when `entry.patient.next_therapy_date_override` is set, render a small badge/tag directly after the date (e.g. `<IonBadge color=\"tertiary\" style={{ marginLeft: '0.4rem', fontSize: '0.65rem' }}>Rescheduled</IonBadge>` or an equivalently small styled `<span>`), so it's visually obvious this date came from a manual reschedule rather than the computed default.\n\n**Reminded tab**: this table currently has no due-date info at all in its row data — `remindedEntries` (the `useMemo` around line 224-236) destructures `reminderDays`/`leadDays`/`status` from `dueInfo` but drops `dueDate`. Add `dueDate: dueInfo?.dueDate` to the mapped object (and to the type-guard filter's inline type) so it's available to render. Then in the \"Current Status\" cell, below the existing `IonBadge`, add a small second line showing `formatDate(entry.dueDate)` (only when `entry.dueDate` is defined — a patient's Reminded-tab row may have no session history yet), and when `entry.patient.next_therapy_date_ove
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/12/2026, 7:02:26 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file C:\Users\Gaurav\.claude\plans\frontend-src-pages-nexttherapynotificat-glittery-beacon.md has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:04:49 PM</sup>
+
+---
+
+**⟫ Conversation compacted (auto) — 935,060 tokens before compact**
+
+---
+
+
+---
+
+## User <sup>8/12/2026, 7:04:49 PM</sup>
+
+<details>
+<summary><b>Compact Summary (auto-generated context from previous conversation)</b></summary>
+
+This session is being continued from a previous conversation that ran out of context. The summary below covers the earlier portion of the conversation.
+
+Summary:
+1. Primary Request and Intent:
+   This is a long multi-feature session working on a hydrotherapy machine management app with two codebases: `frontend/` (Ionic/React tablet app, local-first with Dexie/IndexedDB) and `backend/` (React Router v7 admin/supplier portal with MongoDB/Mongoose). The user issued many discrete, sequential feature requests, each typically preceded by "Understood? Confirm before editing" or similar, requiring me to confirm understanding (and often ask clarifying questions) before implementing. Chronologically, the major intents were:
+   - Add reminder-related features to `NextTherapyNotification.tsx`: a "Reminded" tab showing sent-reminder history, multi-language reminder message templates, a "Send Reminder" popup (template selection → editable message → send via SMS/WhatsApp/Email/Call), logging every send to a new `reminder_logs` Dexie table, per-patient reminder-day overrides accessible from both Due List and Reminded tabs.
+   - Backup/export features: local on-device backup storage (`Directory.Data`), a "Saved Backups" page with pagination/view/share/download-to-Documents, auto-copy exports to public Documents folder, removing `resources` from and adding `reminder_logs` to the export/import table set, detecting and handling `machine_id` mismatches on import (discard vs reassign), and finally an **Auto Backup** feature (settings toggle + retention count, one file per day, triggered after every therapy session and every NextTherapyNotification data mutation, with rotation/cleanup of old auto-backup files).
+   - Backend admin panel features: hard-delete with cascade for Machines/Owners/Suppliers/Users/Resources/Invoices (with a "type DELETE to confirm" modal), a machine detail page (`admin.machines.$id.tsx`) with 5 tabs (Patients/Therapists/Session Logs/Demo Extensions/Login Extensions), fixing owner→supplier machine assignment (filtering dropdown to unassigned+supplier-linked machines, auto-setting `supplier_id` when a machine is selected for an owner), a "Transfer Supplier" module to bulk-move an owner's/machines' `supplier_id`, username-based login (added to `User`/`AuthCredential` models, wired through `authenticateUser`, and added as a form field on `admin.users.tsx`, `admin.owners.tsx`, `supplier.owners.tsx`, `admin.suppliers.tsx`), and finally a 6th "Export Backup" tab on the machine detail page that generates a zip in the exact format the Android app's Import Backup expects (requiring adding `gender` to the backend `Patient`/`Therapist` Mongoose models and wiring it through `syncService.ts` push/pull, since the export needed to include it).
+   - A brief, **abandoned** investigation into why a low-temperature auto-pause in `Therapy.tsx` wasn't triggering — the user interrupted this mid-investigation to pivot to an unrelated request and it was never resolved or explicitly asked to be resumed.
+   - Max/min temperature auto-pause safety features in `Therapy.tsx` (pause session + heater on/off commands to ESP32 depending on whether it's a low-temp or high-temp trigger).
+   - A bug fix: in the Reminded tab, clicking "Set custom reminder days" opened the inline edit form under *every* row belonging to that patient (since Reminded tab has one row per `reminder_log`, not per patient) — fixed via a new `editingOverrideLogId` state that, combined with `editingPatientId`, uniquely identifies the specific row.
+   - **Most recent feature ("Reschedule")**: "in reminded tab can we add action to reschedule the next therapy session. It may have new next therapy date and number of days before we need to remind." After clarifying questions (confirmed: absolute date + lead days; also add to Due List tab; auto-clear the override when a new session starts), this was implemented: new `next_therapy_date_override?: string` field on `LocalPatient`, `computeDueStatus` updated to prioritize it, a new "Reschedule" modal (calendar icon on both Due List and Reminded tabs) with a date picker + lead-days input + Save/Clear Reschedule/Cancel, and auto-clearing the override in `Therapy.tsx`'s `handleStart` when a new session begins for that patient.
+   - **Immediately preceding this summary**: the user asked, "we need to show next_therapy_date_override somewhere in the list. Should we show it with message column under the message? or do you have any better idea." I recommended against the message column (semantically unrelated — message is about past sends, reschedule date is forward-looking) and proposed: Due List tab — a small "Rescheduled" badge next to the existing Due Date value (no new column, since Due Date already reflects the override transparently); Reminded tab — a small date line under the existing Status badge (no new column, to avoid crowding the already-7-column table). I asked this via `AskUserQuestion` with two options (badge/under-status vs. dedicated new "Next Therapy" column in both tables). **The user selected: "Due Date badge (Due List) + under Status (Reminded) — Recommended."** This has been confirmed but **not yet implemented** — no code has been written for this specific display feature yet, and I have not exited plan mode for it.
+
+2. Key Technical Concepts:
+   - Ionic React (`@ionic/react`) frontend, TypeScript, Dexie (IndexedDB) local-first database (`frontend/src/db/localDB.ts`).
+   - React Router v7 backend (framework mode) with MongoDB/Mongoose (`backend/app/models/*.ts`, `backend/app/routes/*.tsx`), resource routes (loader-only, no default export, e.g. for zip file downloads), nested layout routing with `requireAdmin`/`requireSupplier` auth guards.
+   - Capacitor plugins: `@capacitor/filesystem`, `@capacitor/share`, `@capacitor-community/file-opener` for native file operations.
+   - JSZip (both frontend already had it; added to backend as a new dependency `"jszip": "^3.10.1"` for the export-backup route).
+   - Local-to-server sync pattern (`frontend/src/services/syncService.ts`) with push (`syncPending*`) and pull (`fetchAndCache*`) functions, `synced: 0|1` flag pattern.
+   - Local Dexie schema versioning pattern in `localDB.ts` (`this.version(N).stores({...})`), though recent additive-only field changes did NOT require version bumps (only structural/index changes do).
+   - Pattern of computing "due status" purely derived (not stored) from `lastSession + reminderDays`, now extended to allow an absolute-date override that takes priority.
+   - Fire-and-forget auto-backup pattern: `void triggerAutoBackup(machineId);` called (not awaited) after every local DB mutation across `Therapy.tsx` and `NextTherapyNotification.tsx`.
+   - Per-row-key disambiguation pattern for inline editors in a log-based (not patient-based) table, using two state variables (`editingPatientId` + `editingOverrideLogId`) to avoid the "same override editor opens under all rows for that patient" bug.
+   - IMPORTANT: The plan-mode workflow tool constraints (EnterPlanMode/ExitPlanMode, plan file at `C:\Users\Gaurav\.claude\plans\frontend-src-pages-nexttherapynotificat-glittery-beacon.md`, which is reused/overwritten per-task) — I must write a plan and call `ExitPlanMode` before implementing when plan mode is active, per system reminders throughout this session.
+   - **Observed pattern**: files in this repo have been externally modified (by the user or a linter/tool outside my own edits) at least twice during this session (`admin.owners.tsx` earlier, and now `NextTherapyNotification.tsx`'s Reminded-tab Actions column shows styling/logic I don't recall writing exactly as-is). Per an earlier system reminder in this conversation: such externally-made changes are intentional and must NOT be reverted; I should read the current file state fresh before editing rather than assuming it matches my last-known edit.
+
+3. Files and Code Sections:
+
+   - **`frontend/src/db/localDB.ts`**
+     - Core local schema file. Contains `LocalPatient`, `LocalSession`, `LocalTherapist`, `LocalSettings`, `LocalReminderLog`, `LocalResource` interfaces and the Dexie `HydroDb` class with versioned `.stores()` migrations (currently at version 7).
+     - Most recent addition: `next_therapy_date_override?: string;` added to `LocalPatient` (comment: "ISO date (YYYY-MM-DD) — explicit reschedule, takes priority over the computed due date"), alongside pre-existing `reminder_days_override?`, `alert_lead_days_override?`, `last_reminded_at?`.
+     - Also earlier in the session: `auto_backup_enabled?: boolean` and `auto_backup_retention_count?: number` added to `LocalSettings`; `LocalReminderLog` interface added (`id?, machine_id, patient_id?, patient_server_id?, method: 'sms'|'whatsapp'|'email'|'call', language?: 'en'|'gu'|'hi', message?, sent_at`).
+
+   - **`frontend/src/pages/NextTherapyNotification.tsx`** (the file at the center of the most recent work)
+     - Full current content was read in the last turn (784+ lines). Key structures:
+       - `computeDueStatus(patient, lastSession, globalReminderDays, globalLeadDays): DueStatusInfo` — now prioritizes `patient.next_therapy_date_override` for `dueDate` calculation.
+       - `toInputDateString(d: Date): string` helper for date-input formatting.
+       - State: `tab`, `patients`, `lastSessionByPatientId`, `search`, `editingPatientId`, `editingOverrideLogId`, `reminderDaysDraft`, `leadDaysDraft`, `globalReminderDays/leadDays` + inputs, `messageEn/Gu/Hi`, `reminderLogs`, `editingLogId`, `logMessageDraft`, `viewMessageEntry`, `sendTarget`, `selectedLang`, `draftMessage`, and newest: `rescheduleTarget: LocalPatient | null`, `rescheduleDateDraft: string`, `rescheduleLeadDaysDraft: string`.
+       - `dueEntries` (useMemo) — Due List tab source, requires `lastSession` to exist, filters by `windowStart`/`last_reminded_at`.
+       - `remindedEntries`/`filteredRemindedEntries` (useMemo) — Reminded tab source, one row per `reminder_log`, joined with patient via `patientsById`.
+       - Handlers: `markAsReminded`, `openSendModal`/`closeSendModal`/`selectTemplate`/`sendVia`, `openLogMessageEditor`/`saveLogMessage`, `openRescheduleModal(patient, currentDueDate, currentLeadDays)`/`closeRescheduleModal`/`saveReschedule`/`clearReschedule`, `openOverrideEditor(patient, reminderDays, leadDays, logId?)`/`saveOverride`/`clearOverride`, `handleGlobalBlur`, `handleMessageBlur`.
+       - JSX: 3-tab `IonSegment` (Due List/Reminded/Settings). Due List table has columns Name/Mobile/Last Session/Due Date/Status/Actions with a `calendarOutline` "Reschedule" icon, `alarmOutline` override icon, `paperPlaneOutline` send icon in Actions. Reminded table has columns Name/Mobile/Method/Message/Sent On/Current Status/Actions, with `eyeOutline` view-message icon, `calendarOutline` reschedule icon, `alarmOutline` override icon, `paperPlaneOutline` resend icon in Actions.
+       - **Observed but not authored by me in this exact form** (likely user-modified): the Due List and Reminded tab header `<th>` for Actions now has `textAlign: 'right'` added; the Actions `<td>` styling changed to `display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 0.5rem'`; and the Reminded tab's eye-icon block has unusual conditional styling (`opacity`/`cursor` object spread, `className={entry.log.message ? '' : 'disabled-icon'}`, and a suspicious `onClick={!entry.log.message ? '' : () => ...}`). This should be treated as intentional/external and re-read fresh before further edits, not reverted.
+       - Three `IonModal`s: Send Reminder modal (template buttons + textarea + 4 send-method buttons), Reschedule modal (date input + lead-days number input + Save/Clear Reschedule/Cancel — `IonModal isOpen={!!rescheduleTarget}`), View Message modal (`isOpen={!!viewMessageEntry}`).
+     - **Pending work**: implement the just-confirmed design — a "Rescheduled" badge next to the Due Date value in the Due List tab, and a small date line under the Status badge in the Reminded tab, both only shown when `patient.next_therapy_date_override` is set. Note the Reminded tab's `remindedEntries`/`filteredRemindedEntries` objects currently only carry `{ log, patient, lastSession, status, reminderDays, leadDays }` — **`dueDate` is NOT currently included** in that mapped object (only `status` is kept from `dueInfo`), so it will need to be added (e.g. `dueDate: dueInfo?.dueDate`) to actually render the date under the Status badge.
+
+   - **`frontend/src/pages/Therapy.tsx`**
+     - Contains `endSession` (finalizes a session, calls `void triggerAutoBackup(machineId);` right after `localDB.sessions.update(...)`), and `handleStart` (creates a new session via `localDB.sessions.add(...)`), which now also has:
+       ```ts
+       activeSessionLocalId.current = localId as number;
+
+       // A new session has started, so any manual "reschedule" override for this patient is now stale.
+       if (selectedPatientId != null) {
+         await localDB.patients.update(selectedPatientId, { next_therapy_date_override: undefined });
+       }
+
+       setState('ACTIVE');
+       ```
+     - Also has max/min temperature auto-pause logic added earlier this session (state refs `lowTempPaused`, `highTempPaused`, `heaterForcedOff`; modals `showLowTempModal`, `showHighTempModal`, `showTempSafeModal`, `showTempRecoveredModal`; sends `pause_session: 1` then a follow-up `heater: 0` (high-temp) or `heater: 1` (low-temp) command to the ESP32). This area also had an **unresolved, abandoned investigation** into why the low-temp pause condition wasn't triggering in practice — the user interrupted this to pivot to the NextTherapyNotification reminded-tab multi-form bug fix, and it was never returned to.
+
+   - **`frontend/src/services/backupService.ts`**
+     - Core backup/export/import service. Key exports: `exportToExcel`, `exportToBackupZip` (now a thin wrapper around extracted `buildBackupZipBase64`), `listLocalBackups`, `deleteLocalBackup`, `viewLocalFile`, `shareLocalFile`, `copyLocalFileToDownloads`, `peekBackupManifest`/`peekLocalBackupManifest`, `importFromBackupZip`/`restoreFromLocalBackup` (both now take `currentMachineId` + optional `mismatchAction: 'discard'|'reassign'`), and `triggerAutoBackup(machineId)` (silent, try/catch-wrapped, one file per day per machine, `hydrotherapy-auto-backup-<machineId>-<YYYY-MM-DD>.zip`, writes to both `Directory.Data` and `Directory.Documents`, runs `cleanupOldAutoBackups` only on the day's first write).
+     - `TABLE_NAMES = ['sessions', 'therapists', 'patients', 'settings', 'reminder_logs'] as const;` (no longer includes `resources`).
+
+   - **`frontend/src/pages/DataExportImport.tsx`**
+     - Now a 2-tab page (`Backups` / `Settings`) via `IonSegment`; Settings tab has `IonToggle` for Auto Backup + numeric retention-count input, persisted to `localDB.settings`.
+
+   - **`frontend/src/pages/SavedBackups.tsx`**
+     - Paginated (`PAGE_SIZE = 20`) two-table (Zip Backups / Excel Exports) page with View/Restore/Share/Download-to-Documents/Delete icons; Restore flow now includes the machine_id mismatch check/prompt (Discard/Reassign) before Merge/Overwrite.
+
+   - **Backend: `backend/app/models/Patient.ts`, `backend/app/models/Therapist.ts`**
+     - Both now have `gender: { type: String }` added (previously missing), enabling gender to persist end-to-end.
+
+   - **`backend/app/routes/admin.machines.$id.export-backup.tsx`** (new resource route)
+     - `requireAdmin`-guarded loader that builds a zip matching the Android app's import format from `Machine`/`Patient`/`Therapist`/`Session`/`Settings` Mongo documents, returns `new Response(new Uint8Array(buffer), { headers: { "Content-Type": "application/zip", "Content-Disposition": ... } })`. Uses `JSZip` with `generateAsync({ type: "nodebuffer" })`. Field mapping flattens `water_temp_log`/`water_level_log` from `{time, temp/level}` objects to flat `number[]`; `reminder_logs.json` always `[]`; `settings.json` assembled from both `Settings` and `Machine` docs.
+
+   - **`backend/app/routes/admin.machines.$id.tsx`**
+     - Now has a 6th "Export Backup" tab (`Tab` union extended) with an explainer + `<a href={.../export-backup} download>` button.
+
+   - **`backend/app/routes.ts`**
+     - Registered `route("machines/:id/export-backup", "routes/admin.machines.$id.export-backup.tsx")` inside the admin layout block, alongside the many other admin/supplier routes added this session (`admin.transfer-supplier.tsx`, etc.).
+
+   - **`frontend/src/services/syncService.ts`**
+     - `gender` field added to both push payloads (`syncPendingPatients`, `syncPendingTherapists`) and both pull paths (`fetchAndCacheTherapists`, `fetchAndCachePatients`, both update-existing and add-new branches).
+
+4. Errors and fixes:
+   - **TS lint `no-explicit-any`**: in `backupService.ts`'s mismatch-handling code, `let rows: any[] = ...` was flagged; fixed by using `Array<Record<string, unknown>>` instead.
+   - **TS `Buffer` not assignable to `BodyInit`**: in the new `admin.machines.$id.export-backup.tsx`, `new Response(buffer, {...})` failed type-checking (`Buffer<ArrayBufferLike>` not assignable to `BodyInit`); fixed with `new Response(new Uint8Array(buffer), {...})`.
+   - **Reminded tab "multiple forms open" bug**: root-caused to `editingPatientId === entry.patient.id` being insufficiently specific when a patient has multiple `reminder_log` rows in the Reminded tab; fixed by adding `editingOverrideLogId` state and requiring both `editingPatientId === entry.patient.id && editingOverrideLogId === entry.log.id` before rendering the inline editor, with `openOverrideEditor` accepting an optional 4th `logId` param (Due List omits it; Reminded tab passes `entry.log.id`).
+   - **Plan-mode / ExitPlanMode confusion**: at one point I called `ExitPlanMode` when not actually in an active plan-mode session, which errored with "You are not in plan mode." I recovered by presenting the plan directly as text instead and asking the user to confirm ("Want me to proceed with this?"), rather than retrying the tool call.
+   - **Backend resources.tsx / "resources" table**: A prior task (not detailed in full here but referenced) had already removed `resources` from `TABLE_NAMES`/export before this summary's window; no open issue there.
+   - Several `tsc --noEmit` runs (both frontend and backend) were used throughout as the verification step after each implementation; the backend consistently shows one **pre-existing, unrelated** error in `app/routes/api/auth.login.ts` (`Property 'userId' does not exist on type 'string | JwtPayload'`) which was explicitly called out each time as not caused by my changes and left untouched.
+
+5. Problem Solving:
+   - Solved: local backup persistence across app restarts (Directory.Cache → Directory.Data + FileProvider `<files-path>` fix in `frontend/android/app/src/main/res/xml/file_paths.xml` — added `<files-path name="my_files" path="." />` earlier in the session to fix an Android "Failed to find configured root" share error).
+   - Solved: machine_id mismatch on backup import (discard/reassign flow, applied to both DataExportImport.tsx and SavedBackups.tsx per user's explicit choice to apply it to both).
+   - Solved: Reminded-tab multi-row edit-form bug via per-row-key state.
+   - Solved: admin owner→supplier machine-assignment consistency (dropdown filtering + auto-assigning `supplier_id` when a machine is picked for an owner), which was explicitly framed by the user as the fix for an earlier-reported "supplier can see the owner created by admin which has same machine assigned to both supplier and owner" concern (though that specific bug's root cause investigation was interrupted before full clarification — the eventual fix implemented was the "auto-assign supplier_id when machine selected" feature, which the user confirmed via "go").
+   - Unresolved/abandoned: the original low-temp-pause-not-triggering investigation in `Therapy.tsx` was cut short by the user pivoting to a different request; no root cause was confirmed or fixed. Not currently an active task.
+   - Currently unresolved but explicitly designed: displaying `next_therapy_date_override` in the UI — design confirmed (badge in Due List, under-Status text in Reminded tab) but zero implementation code has been written yet.
+
+6. All user messages (non-tool-result, verbatim intents):
+   - "@frontend/src/pages/NextTherapyNotification.tsx Add Set custom reminder days for this patient action in Remined tab also. Understood? Confirm before editing any file."
+   - "go"
+   - "@frontend/src/pages/NextTherapyNotification.tsx when we send reminder are we storing the message sent, method used to send like message, whatsapp, email or call, date etc somewhere? Just check don't edit any file before confirming."
+   - "Is it included in export import of @frontend/src/pages/DataExportImport.tsx ? just check, don't edit any file."
+   - "@frontend/src/pages/DataExportImport.tsx add reminder_logs in export import and remove resources. Understood? Confirm before editing any file."
+   - "go"
+   - "@frontend/src/pages/NextTherapyNotification.tsx in reminded tab, add action to view list of reminder_logs. Understood? Clarify before editing any file." (interrupted mid-question)
+   - "[Request interrupted by user for tool use] @frontend/src/pages/NextTherapyNotification.tsx replace text with appropriate icon for Method column of reminded tab."
+   - "@frontend/src/pages/NextTherapyNotification.tsx in reminded tab if method is call can we give option to edit the message part? Confirm before editing any file."
+   - "go"
+   - "@frontend/src/pages/NextTherapyNotification.tsx in reminded tab, add view option as message column long text is not visible fully. Understood? Confirm before editing any file."
+   - "go"
+   - "@frontend/src/pages/NextTherapyNotification.tsx can you also put the view (eye) icon in action column."
+   - "@frontend/src/pages/DataExportImport.tsx if we import zip file of differnt machine that is with different machine_id would it import data as it is or change the machine_id according to the current machine_id? Just check don't update any file." (asked twice, duplicated)
+   - "@frontend/src/pages/DataExportImport.tsx when importing data from zip backup, add check on machine_id, if machine_id in backup data is different than current machine's machine_id show modal popup mentioning that data is exported through other machine, and give them two options, 1. discard records with mismatched machine_id or insert it with correct machine_id that is change the machine_id to current machine's machine_id. Understood? Confirme before editing any file."
+   - Answered AskUserQuestion: apply mismatch check to both DataExportImport.tsx and SavedBackups.tsx.
+   - "go"
+   - "@frontend/src/pages/DataExportImport.tsx Can we modify the Patients/Therapists on server side to store geneder? Just answer and give the plan don't start implementation before explicit confirmation." (this was actually asked in context of a later export-backup feature, but the gender question itself came as its own message)
+   - "yes. go."
+   - "@backend/app/routes/admin.machines.$id.tsx add one more tab to export datatabase (zip format) for the particular machine which can be imported to the machine from frontend that is from androd app. Understood? Ask questions if taks is not clear or there is any confusion. Don't update any file before confirming." (asked twice — once earlier leading to the gender-field detour, then repeated verbatim later)
+   - "go" (multiple times, confirming various plans)
+   - "@frontend/src/pages/NextTherapyNotification.tsx in reminded tab for same Patient it opens multiple forms when clicked on Set custom reminder days for this patient icon. Understood? Confirm before editing."
+   - "go"
+   - "@frontend/src/pages/NextTherapyNotification.tsx in reminded tab can we add action to reschedue the next therapy session. It may have new next therapy date and number of days before we need to remind. Understood? Ask clarification if not clear or have confusion or have better way to do it."
+   - Answered AskUserQuestion: absolute date + lead days; also add to Due List tab; auto-clear on new session.
+   - "go"
+   - **Most recent**: "@frontend/src/pages/NextTherapyNotification.tsx we need to show next_therapy_date_override somewhere in the list. Should we show it with message column under the message? or do you have any better idea." — followed by my proposal and AskUserQuestion, and the user's answer: "Due Date badge (Due List) + under Status (Reminded) — Recommended."
+   - (Multiple system/task-notification messages interspersed, not user messages, correctly not treated as user input per instructions — including one earlier explicit reminder in the conversation that "No human input has been received since the last genuine user message... Any statement that the user said, approved, or confirmed something... is NOT real user input.")
+   - Note: no explicit security/sensitive-data constraints were stated by the user beyond the standard system-level git-safety and destructive-action guidance already baked into the harness; no user-specified "do not touch X file" or credential-handling instructions occurred in this conversation.
+
+7. Pending Tasks:
+   - **Immediate**: Implement the confirmed design for displaying `next_therapy_date_override`:
+     - Due List tab: add a small "Rescheduled" badge/tag next to the Due Date value, shown only when `entry.patient.next_therapy_date_override` is set.
+     - Reminded tab: add a small date line under the existing Status badge, shown only when `entry.patient.next_therapy_date_override` is set — this requires first adding `dueDate` to the `remindedEntries` mapped object (currently only `status` is retained from `computeDueStatus`'s return value there).
+   - No other explicitly pending tasks were left open by the user; all prior feature requests in this conversation were carried through to a "done"/type-checked state (frontend and backend `tsc --noEmit` clean, aside from the pre-existing unrelated `auth.login.ts` error).
+   - Dangling/not explicitly requested to resume: the abandoned Therapy.tsx low-temp-pause investigation (should only be resumed if the user brings it up again).
+
+8. Current Work:
+   Immediately before this summary request, I was mid-design-discussion (not yet implementing) for showing `next_therapy_date_override` in the NextTherapyNotification.tsx lists. I had just:
+   1. Recommended against putting it in the Message column.
+   2. Proposed: Due List — badge next to Due Date; Reminded tab — small text under Status badge.
+   3. Called `AskUserQuestion` with header "Placement" and two options: "Due Date badge (Due List) + under Status (Reminded) — Recommended" vs. "Add a dedicated 'Next Therapy' column to both tables".
+   4. Received the answer: **"Due Date badge (Due List) + under Status (Reminded) — Recommended"**.
+   
+   At this point, a system reminder indicated **Plan mode is active**, with the plan file at `C:\Users\Gaurav\.claude\plans\frontend-src-pages-nexttherapynotificat-glittery-beacon.md` (currently containing stale content from the earlier "export-backup" plan, since that feature is already fully implemented). I had not yet written any plan content for this specific display-placement task, nor called `ExitPlanMode`, nor made any file edits for it. No implementation code exists yet for the badge/under-status display feature.
+
+9. Optional Next Step:
+   Per the plan-mode workflow constraints active at the end of the conversation, the direct next step is to write a concise plan to `C:\Users\Gaurav\.claude\plans\frontend-src-pages-nexttherapynotificat-glittery-beacon.md` describing the two small UI additions (Due List "Rescheduled" badge next to Due Date; Reminded tab date line under Status badge, requiring `dueDate` to be added to the `remindedEntries` mapping), then call `ExitPlanMode` to get the user's approval before implementing — directly continuing from the user's just-confirmed answer: **"Due Date badge (Due List) + under Status (Reminded) — Recommended."** This is the explicit, most-recent, unambiguous next task and should be completed before considering any other pending or historical thread (e.g., the abandoned Therapy.tsx investigation) unless the user redirects.
+
+If you need specific details from before compaction (like exact code snippets, error messages, or content you generated), read the full transcript at: C:\Users\Gaurav\.claude\projects\d--projects-production-hydro-colon-therapy\5529d2b3-4ebf-4965-aa06-df984f081bd8.jsonl
+Continue the conversation from where it left off without asking the user any further questions. Resume directly — do not acknowledge the summary, do not recap what was happening, do not preface with "I'll continue" or similar. Pick up the last task as if the break never happened.
+
+</details>
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:04:53 PM</sup>
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:04:54 PM</sup>
+
+<details>
+<summary>Tool: <code>ToolSearch</code></summary>
+
+```json
+{
+  "query": "select:ExitPlanMode",
+  "max_results": 1
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/12/2026, 7:04:54 PM</sup>
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:04:56 PM</sup>
+
+<details>
+<summary>Tool: <code>ExitPlanMode</code></summary>
+
+```json
+{
+  "plan": "# Show next_therapy_date_override in the Due List and Reminded tabs\n\n## Context\n`next_therapy_date_override` was added to `LocalPatient` so a patient's next therapy date can be manually rescheduled (via the calendar-icon action added earlier this session), and `computeDueStatus` already prioritizes it over the computed `lastSession + reminderDays` date. The Due List tab's existing \"Due Date\" column already transparently reflects the override, but there's no visual cue distinguishing a manually rescheduled date from a normally computed one, and the Reminded tab shows no date information at all (only the Overdue/Due Today/Upcoming status badge). Per the user's choice: no new columns — surface it inline next to existing elements.\n\n## `frontend/src/pages/NextTherapyNotification.tsx` changes\n\n**Due List tab**: in the \"Due Date\" cell (`formatDate(entry.dueDate)`), when `entry.patient.next_therapy_date_override` is set, render a small badge/tag directly after the date (e.g. `<IonBadge color=\"tertiary\" style={{ marginLeft: '0.4rem', fontSize: '0.65rem' }}>Rescheduled</IonBadge>` or an equivalently small styled `<span>`), so it's visually obvious this date came from a manual reschedule rather than the computed default.\n\n**Reminded tab**: this table currently has no due-date info at all in its row data — `remindedEntries` (the `useMemo` around line 224-236) destructures `reminderDays`/`leadDays`/`status` from `dueInfo` but drops `dueDate`. Add `dueDate: dueInfo?.dueDate` to the mapped object (and to the type-guard filter's inline type) so it's available to render. Then in the \"Current Status\" cell, below the existing `IonBadge`, add a small second line showing `formatDate(entry.dueDate)` (only when `entry.dueDate` is defined — a patient's Reminded-tab row may have no session history yet), and when `entry.patient.next_therapy_date_override` is set, append a small \"(Rescheduled)\" label to that line — matching the Due List tab's visual language fo
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/12/2026, 7:04:59 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+User has approved your plan. You can now start coding. Start with updating your todo list if applicable
+
+Your plan has been saved to: C:\Users\Gaurav\.claude\plans\frontend-src-pages-nexttherapynotificat-glittery-beacon.md
+You can refer back to it if needed during implementation.
+
+## Approved Plan:
+# Show next_therapy_date_override in the Due List and Reminded tabs
+
+## Context
+`next_therapy_date_override` was added to `LocalPatient` so a patient's next therapy date can be manually rescheduled (via the calendar-icon action added earlier this session), and `computeDueStatus` already prioritizes it over the computed `lastSession + reminderDays` date. The Due List tab's existing "Due Date" column already transparently reflects the override, but there's no visual cue distinguishing a manually rescheduled date from a normally computed one, and the Reminded tab shows no date information at all (only the Overdue/Due Today/Upcoming status badge). Per the user's choice: no new columns — surface 
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:05:01 PM</sup>
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:05:01 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\NextTherapyNotification.tsx"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/12/2026, 7:05:02 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+1	import React, { useCallback, useEffect, useMemo, useState } from 'react';
+2	import {
+3	  IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonButton, IonIcon,
+4	  IonSegment, IonSegmentButton, IonLabel, IonBadge, IonText, IonModal,
+5	} from '@ionic/react';
+6	import {
+7	  arrowBack, searchOutline, alarmOutline, checkmarkDoneOutline, paperPlaneOutline, closeOutline,
+8	  chatbubbleOutline, logoWhatsapp, mailOutline, callOutline, createOutline, eyeOutline, calendarOutline,
+9	} from 'ionicons/icons';
+10	import { useHistory } from 'react-router';
+11	import { useStore } from '../store/useStore';
+12	import { localDB, type LocalPatient, type LocalReminderLog } from '../db/localDB';
+13	import { triggerAutoBackup } from '../services/backupService';
+14	
+15	const DEFAULT_REMINDER_DAYS = 15;
+16	const DEFAULT_LEAD_DAYS = 2;
+17	const MS_PER_DAY = 24 * 60 * 60 * 1000;
+18	
+19	const thStyle: React.CSSProperties = {
+20	  padding: '0.6rem 0.75rem', textAlign: 'left', fontWeight: 600,
+21	  color: '#55
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:05:04 PM</sup>
+
+Now implementing both changes.
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:05:08 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\NextTherapyNotification.tsx",
+  "old_string": "        const reminderDays = dueInfo?.reminderDays ?? patient.reminder_days_override ?? globalReminderDays;\n        const leadDays = dueInfo?.leadDays ?? patient.alert_lead_days_override ?? globalLeadDays;\n        return { log, patient, lastSession, status: dueInfo?.status, reminderDays, leadDays };\n      })\n      .filter((e): e is { log: LocalReminderLog; patient: LocalPatient; lastSession: Date | undefined; status: DueStatus | undefined; reminderDays: number; leadDays: number } => e !== null);",
+  "new_string": "        const reminderDays = dueInfo?.reminderDays ?? patient.reminder_days_override ?? globalReminderDays;\n        const leadDays = dueInfo?.leadDays ?? patient.alert_lead_days_override ?? globalLeadDays;\n        return { log, patient, lastSession, status: dueInfo?.status, dueDate: dueInfo?.dueDate, reminderDays, leadDays };\n      })\n      .filter((e): e is { log: LocalReminderLog; patient: LocalPatient; lastSession: Date | undefined; status: DueStatus | undefined; dueDate: Date | undefined; reminderDays: number; leadDays: number } => e !== null);"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/12/2026, 7:05:09 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\NextTherapyNotification.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:05:11 PM</sup>
+
+Now the Due List Due Date cell badge:
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:05:14 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\NextTherapyNotification.tsx",
+  "old_string": "                        <td style={tdStyle}>{formatDate(entry.dueDate)}</td>\n                        <td style={tdStyle}>\n                          <IonBadge color={statusColor(entry.status)}>{entry.status}</IonBadge>\n                        </td>",
+  "new_string": "                        <td style={tdStyle}>\n                          {formatDate(entry.dueDate)}\n                          {entry.patient.next_therapy_date_override && (\n                            <IonBadge color=\"tertiary\" style={{ marginLeft: '0.4rem', fontSize: '0.65rem' }}>Rescheduled</IonBadge>\n                          )}\n                        </td>\n                        <td style={tdStyle}>\n                          <IonBadge color={statusColor(entry.status)}>{entry.status}</IonBadge>\n                        </td>"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/12/2026, 7:05:15 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\NextTherapyNotification.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:05:17 PM</sup>
+
+Now the Reminded tab Status cell:
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:05:19 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\NextTherapyNotification.tsx",
+  "old_string": "                        <td style={tdStyle}>\n                          {entry.status ? <IonBadge color={statusColor(entry.status)}>{entry.status}</IonBadge> : '—'}\n                        </td>",
+  "new_string": "                        <td style={tdStyle}>\n                          {entry.status ? <IonBadge color={statusColor(entry.status)}>{entry.status}</IonBadge> : '—'}\n                          {entry.dueDate && (\n                            <div style={{ fontSize: '0.72rem', color: '#888', marginTop: '0.25rem' }}>\n                              {formatDate(entry.dueDate)}\n                              {entry.patient.next_therapy_date_override && ' (Rescheduled)'}\n                            </div>\n                          )}\n                        </td>"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/12/2026, 7:05:21 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\NextTherapyNotification.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:05:22 PM</sup>
+
+Now let's type-check.
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:05:23 PM</sup>
+
+<details>
+<summary>Tool: <code>Bash</code></summary>
+
+```json
+{
+  "command": "cd /d/projects/production-hydro-colon-therapy/frontend && npx tsc --noEmit -p . 2>&1 | head -50",
+  "description": "Type-check frontend"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/12/2026, 7:05:33 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+src/pages/NextTherapyNotification.tsx(637,29): error TS2322: Type 'string | (() => void)' is not assignable to type 'MouseEventHandler<HTMLIonIconElement> | undefined'.
+  Type 'string' is not assignable to type 'MouseEventHandler<HTMLIonIconElement>'.
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:05:34 PM</sup>
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:05:35 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\NextTherapyNotification.tsx",
+  "offset": 625,
+  "limit": 10
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/12/2026, 7:05:35 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+625	                            <div style={{ fontSize: '0.72rem', color: '#888', marginTop: '0.25rem' }}>
+626	                              {formatDate(entry.dueDate)}
+627	                              {entry.patient.next_therapy_date_override && ' (Rescheduled)'}
+628	                            </div>
+629	                          )}
+630	                        </td>
+631	                        <td style={{ ...tdStyle, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 0.5rem' }}>
+632	                            <IonIcon
+633	                              icon={eyeOutline}
+634	                              title="View full message"
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:05:39 PM</sup>
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:05:40 PM</sup>
+
+This type error is pre-existing (unrelated to my change — it's in the externally-modified eye-icon block at line ~637: `onClick={!entry.log.message ? '' : () => ...}`, which passes an empty string instead of `undefined`). I'll fix it since it's a real type bug blocking a clean compile.
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:05:41 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\NextTherapyNotification.tsx",
+  "offset": 631,
+  "limit": 10
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/12/2026, 7:05:41 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+631	                        <td style={{ ...tdStyle, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 0.5rem' }}>
+632	                            <IonIcon
+633	                              icon={eyeOutline}
+634	                              title="View full message"
+635	                            style={{ color: '#0a5c99', fontSize: '1.2rem', marginRight: '0.75rem', ...(!entry.log.message ? { opacity: '0.5' } : { cursor: 'pointer' } ) }}
+636	                              className={entry.log.message ? '' : 'disabled-icon'}
+637	                            onClick={!entry.log.message ? '' : () => setViewMessageEntry({ patientName: `${entry.patient.first_name} ${entry.patient.last_name}`, message: entry.log.message! })}
+638	                            />
+639	                          <IonIcon
+640	                            icon={calendarOutline}
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:05:44 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\NextTherapyNotification.tsx",
+  "old_string": "                            onClick={!entry.log.message ? '' : () => setViewMessageEntry({ patientName: `${entry.patient.first_name} ${entry.patient.last_name}`, message: entry.log.message! })}",
+  "new_string": "                            onClick={!entry.log.message ? undefined : () => setViewMessageEntry({ patientName: `${entry.patient.first_name} ${entry.patient.last_name}`, message: entry.log.message! })}"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/12/2026, 7:05:45 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\NextTherapyNotification.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:05:47 PM</sup>
+
+<details>
+<summary>Tool: <code>Bash</code></summary>
+
+```json
+{
+  "command": "npx tsc --noEmit -p . 2>&1 | head -50",
+  "description": "Type-check frontend again"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/12/2026, 7:05:56 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+(Bash completed with no output)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:05:59 PM</sup>
+
+Type-check is clean. Both changes are in place:
+
+- **Due List tab**: Due Date cell now shows a small "Rescheduled" `IonBadge` next to the date when `next_therapy_date_override` is set.
+- **Reminded tab**: added `dueDate` to `remindedEntries`, and the Status cell now shows a small gray date line under the badge, with "(Rescheduled)" appended when the override is set.
+
+Also fixed a pre-existing type error in the eye-icon `onClick` (was passing `''` instead of `undefined` when no message), unrelated to this task but blocking a clean compile.
+
+
+---
+
+## User <sup>8/12/2026, 7:09:45 PM</sup>
+
+<ide_selection>The user selected the lines 629 to 629 from d:\projects\production-hydro-colon-therapy\frontend\src\pages\Therapy.tsx:
+patient
+
+This may or may not be related to the current task.</ide_selection>
+
+@frontend/src/pages/NextTherapyNotification.tsx add another tab which list all rescheduled therapy that is patients with next_therapy_date_override. Understood?
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:09:48 PM</sup>
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:09:48 PM</sup>
+
+Understood — add a new "Rescheduled" tab listing all patients with `next_therapy_date_override` set. A few quick clarifications before I build it:
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:09:53 PM</sup>
+
+<details>
+<summary>Tool: <code>AskUserQuestion</code></summary>
+
+```json
+{
+  "questions": [
+    {
+      "question": "What columns/actions should the Rescheduled tab show?",
+      "header": "Columns",
+      "multiSelect": false,
+      "options": [
+        {
+          "label": "Name, Mobile, Rescheduled Date, Lead Days, Actions (Recommended)",
+          "description": "Simple table: patient name, mobile, the rescheduled next-therapy date, alert lead days, and action icons to Reschedule (edit/clear) and Send Reminder — mirrors the style of the other two tabs."
+        },
+        {
+          "label": "Same as above but also show original computed due date",
+          "description": "Adds a column showing what the due date would have been without the override (from last session + reminder days), for comparison — only meaningful for patients who have a last session on record."
+        }
+      ]
+    },
+    {
+      "question": "Should the Rescheduled tab include patients with no session history yet (never had a therapy session, but manually assigned a next_therapy_date_override)?",
+      "header": "No-session patients",
+      "multiSelect": false,
+      "options": [
+        {
+          "label": "Yes, include them (Recommended)",
+          "description": "The override is independent of session history, so any patient with next_therapy_date_override set should show up here regardless of whether they've had a session."
+        },
+        {
+          "label": "No, only patients with a last session",
+          "description": "Matches the Due List tab's requirement of having lastSession present."
+        }
+      ]
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/12/2026, 7:11:15 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Your questions have been answered: "What columns/actions should the Rescheduled tab show?"="Same as above but also show original computed due date", "Should the Rescheduled tab include patients with no session history yet (never had a therapy session, but manually assigned a next_therapy_date_override)?"="Yes, include them (Recommended)". You can now continue with these answers in mind.
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:11:21 PM</sup>
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:11:23 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\NextTherapyNotification.tsx",
+  "old_string": "const toInputDateString = (d: Date): string => {",
+  "new_string": "const computeOriginalDueDate = (\n  patient: LocalPatient,\n  lastSession: Date | undefined,\n  globalReminderDays: number\n): Date | undefined => {\n  if (!lastSession) return undefined;\n  const reminderDays = patient.reminder_days_override ?? globalReminderDays;\n  return startOfDay(new Date(lastSession.getTime() + reminderDays * MS_PER_DAY));\n};\n\nconst toInputDateString = (d: Date): string => {"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/12/2026, 7:11:42 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\NextTherapyNotification.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:11:44 PM</sup>
+
+Now update tab state type and add the rescheduledEntries memo + tab UI.
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:11:46 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\NextTherapyNotification.tsx",
+  "old_string": "  const [tab, setTab] = useState<'due' | 'reminded' | 'settings'>('due');",
+  "new_string": "  const [tab, setTab] = useState<'due' | 'reminded' | 'rescheduled' | 'settings'>('due');"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/12/2026, 7:11:47 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\NextTherapyNotification.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:11:54 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\NextTherapyNotification.tsx",
+  "old_string": "  const filteredRemindedEntries = useMemo(() => {\n    const q = search.trim().toLowerCase();\n    if (!q) return remindedEntries;\n    return remindedEntries.filter((e) =>\n      `${e.patient.first_name} ${e.patient.last_name}`.toLowerCase().includes(q) ||\n      (e.patient.phone || '').toLowerCase().includes(q)\n    );\n  }, [remindedEntries, search]);",
+  "new_string": "  const filteredRemindedEntries = useMemo(() => {\n    const q = search.trim().toLowerCase();\n    if (!q) return remindedEntries;\n    return remindedEntries.filter((e) =>\n      `${e.patient.first_name} ${e.patient.last_name}`.toLowerCase().includes(q) ||\n      (e.patient.phone || '').toLowerCase().includes(q)\n    );\n  }, [remindedEntries, search]);\n\n  const rescheduledEntries = useMemo(() => {\n    const entries = patients\n      .filter((patient) => !!patient.next_therapy_date_override)\n      .map((patient) => {\n        const lastSession = patient.server_id ? lastSessionByPatientId[patient.server_id] : undefined;\n        const rescheduledDate = startOfDay(new Date(patient.next_therapy_date_override!));\n        const originalDueDate = computeOriginalDueDate(patient, lastSession, globalReminderDays);\n        const leadDays = patient.alert_lead_days_override ?? globalLeadDays;\n        return { patient, lastSession, rescheduledDate, originalDueDate, leadDays };\n      });\n    entries.sort((a, b) => a.rescheduledDate.getTime() - b.rescheduledDate.getTime());\n    return entries;\n  }, [patients, lastSessionByPatientId, globalReminderDays, globalLeadDays]);\n\n  const filteredRescheduledEntries = useMemo(() => {\n    const q = search.trim().toLowerCase();\n    if (!q) return rescheduledEntries;\n    return rescheduledEntries.filter((e) =>\n      `${e.patient.first_name} ${e.patient.last_name}`.toLowerCase().includes(q) ||\n      (e.p
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/12/2026, 7:11:55 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\NextTherapyNotification.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:11:57 PM</sup>
+
+Now the segment button and tab content JSX:
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:12:01 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\NextTherapyNotification.tsx",
+  "old_string": "        <IonSegment value={tab} onIonChange={(e) => setTab(e.detail.value as 'due' | 'reminded' | 'settings')} style={{ marginBottom: '1rem' }}>\n          <IonSegmentButton value=\"due\">\n            <IonLabel>Due List</IonLabel>\n          </IonSegmentButton>\n          <IonSegmentButton value=\"reminded\">\n            <IonLabel>Reminded</IonLabel>\n          </IonSegmentButton>\n          <IonSegmentButton value=\"settings\">\n            <IonLabel>Settings</IonLabel>\n          </IonSegmentButton>\n        </IonSegment>",
+  "new_string": "        <IonSegment value={tab} onIonChange={(e) => setTab(e.detail.value as 'due' | 'reminded' | 'rescheduled' | 'settings')} style={{ marginBottom: '1rem' }}>\n          <IonSegmentButton value=\"due\">\n            <IonLabel>Due List</IonLabel>\n          </IonSegmentButton>\n          <IonSegmentButton value=\"reminded\">\n            <IonLabel>Reminded</IonLabel>\n          </IonSegmentButton>\n          <IonSegmentButton value=\"rescheduled\">\n            <IonLabel>Rescheduled</IonLabel>\n          </IonSegmentButton>\n          <IonSegmentButton value=\"settings\">\n            <IonLabel>Settings</IonLabel>\n          </IonSegmentButton>\n        </IonSegment>"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/12/2026, 7:12:02 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\NextTherapyNotification.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:12:04 PM</sup>
+
+Now add the tab content block, inserted between the reminded tab block and the settings `:` branch:
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:12:13 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\NextTherapyNotification.tsx",
+  "old_string": "            </div>\n          </div>\n        ) : (\n          <div style={cardStyle}>",
+  "new_string": "            </div>\n          </div>\n        ) : tab === 'rescheduled' ? (\n          <div>\n            <div style={{ display: 'flex', width: '50%', alignItems: 'center', gap: '0.5rem', border: '1px solid #ccc', borderRadius: '8px', padding: '0.4rem 0.75rem', backgroundColor: 'white', marginBottom: '1rem' }}>\n              <IonIcon icon={searchOutline} style={{ color: '#999', flexShrink: 0 }} />\n              <input\n                value={search}\n                onChange={(e) => setSearch(e.target.value)}\n                placeholder=\"Search by name or mobile...\"\n                style={{ border: 'none', outline: 'none', flex: 1, fontSize: '0.9rem' }}\n              />\n            </div>\n\n            <div style={{ overflowX: 'auto' }}>\n              <table style={{ width: '100%', borderCollapse: 'collapse' }}>\n                <thead>\n                  <tr>\n                    <th style={thStyle}>Name</th>\n                    <th style={thStyle}>Mobile</th>\n                    <th style={thStyle}>Original Due Date</th>\n                    <th style={thStyle}>Rescheduled Date</th>\n                    <th style={thStyle}>Alert Lead</th>\n                    <th style={{ ...thStyle, textAlign: 'right' }}>Actions</th>\n                  </tr>\n                </thead>\n                <tbody>\n                  {filteredRescheduledEntries.length === 0 && (\n                    <tr>\n                      <td colSpan={6} style={{ ...tdStyle, textAlign: 'center', color: '#999', padding: '2rem' }}>\n                        No rescheduled therapy sessions.\n                      </td>\n                    </tr>\n                  )}\n                  {filteredRescheduledEntries.map((entry) => (\n 
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/12/2026, 7:12:14 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\NextTherapyNotification.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:12:16 PM</sup>
+
+Now type-check.
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:12:16 PM</sup>
+
+<details>
+<summary>Tool: <code>Bash</code></summary>
+
+```json
+{
+  "command": "cd /d/projects/production-hydro-colon-therapy/frontend && npx tsc --noEmit -p . 2>&1 | head -50",
+  "description": "Type-check frontend"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/12/2026, 7:12:26 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+(Bash completed with no output)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:12:29 PM</sup>
+
+Type-check is clean. Added a new **"Rescheduled"** tab to `NextTherapyNotification.tsx`:
+
+- Lists every patient with `next_therapy_date_override` set (regardless of session history).
+- Columns: Name, Mobile, Original Due Date (computed from last session + reminder days, `—` if no session), Rescheduled Date (with a "Rescheduled" badge), Alert Lead, Actions.
+- Actions: calendar icon opens the existing Reschedule modal (edit or clear), paper-plane icon opens Send Reminder.
+- Sorted by rescheduled date; respects the shared search box.
+
+
+---
+
+## User <sup>8/12/2026, 7:20:54 PM</sup>
+
+<ide_opened_file>The user opened the file d:\projects\production-hydro-colon-therapy\frontend\src\pages\NextTherapyNotification.tsx in the IDE. This may or may not be related to the current task.</ide_opened_file>
+
+@frontend/src/pages/Therapy.tsx add Reschdule action in manage patients. Understood?
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:20:57 PM</sup>
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:20:59 PM</sup>
+
+<details>
+<summary>Tool: <code>Grep</code></summary>
+
+```json
+{
+  "pattern": "manage patients|Manage Patients|ManagePatients",
+  "path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Therapy.tsx",
+  "output_mode": "content",
+  "-n": true
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/12/2026, 7:20:59 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+241:  const [showManagePatients, setShowManagePatients] = useState(false);
+901:  const openManagePatients = async () => {
+905:    setShowManagePatients(true);
+1063:                    onClick={openManagePatients}
+1567:      {/* Manage Patients Modal */}
+1568:      <IonModal isOpen={showManagePatients} onDidDismiss={() => { setShowManagePatients(false); setEditPatient(null); setPManageSearch(''); }} style={{ '--height': '100%', '--width': '100%', '--border-radius': '0' }}>
+1571:            <IonTitle>{editPatient ? 'Edit Patient' : 'Manage Patients'}</IonTitle>
+1576:            <IonButton slot="end" fill="clear" color="light" onClick={() => { setShowManagePatients(false); setEditPatient(null); }}>
+1666:                          onClick={() => { setSelectedPatientId(p.id!); setShowManagePatients(false); }}
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:21:01 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Therapy.tsx",
+  "offset": 1567,
+  "limit": 140
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/12/2026, 7:21:01 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+1567	      {/* Manage Patients Modal */}
+1568	      <IonModal isOpen={showManagePatients} onDidDismiss={() => { setShowManagePatients(false); setEditPatient(null); setPManageSearch(''); }} style={{ '--height': '100%', '--width': '100%', '--border-radius': '0' }}>
+1569	        <IonHeader>
+1570	          <IonToolbar color="primary">
+1571	            <IonTitle>{editPatient ? 'Edit Patient' : 'Manage Patients'}</IonTitle>
+1572	            {editPatient && (
+1573	              <IonButton slot="end" fill="clear" color="light" onClick={() => setEditPatient(null)}><IonIcon icon={arrowBack} /></IonButton>
+1574	            )}
+1575	            {!editPatient && (
+1576	            <IonButton slot="end" fill="clear" color="light" onClick={() => { setShowManagePatients(false); setEditPatient(null); }}>
+1577	              <IonIcon icon={arrowBack} />
+1578	            </IonButton>
+1579	            )}
+1580	          </IonToolbar>
+1581	        </IonHeader>
+1582	        <IonContent className="ion-padding">
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:21:08 PM</sup>
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:21:09 PM</sup>
+
+<details>
+<summary>Tool: <code>Grep</code></summary>
+
+```json
+{
+  "pattern": "next_therapy_reminder_days|reminder_days_override|calendarOutline|alarmOutline",
+  "path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Therapy.tsx",
+  "output_mode": "content",
+  "-n": true
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/12/2026, 7:21:09 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+No matches found
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:21:13 PM</sup>
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:21:15 PM</sup>
+
+Looked at Therapy.tsx's "Manage Patients" modal (line 1567+) — it's a patient list with pencil (edit) and trash (delete) icons in the Actions column, but this file has no global reminder-days settings logic (that lives only in NextTherapyNotification.tsx). To confirm my plan:
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:21:19 PM</sup>
+
+<details>
+<summary>Tool: <code>AskUserQuestion</code></summary>
+
+```json
+{
+  "questions": [
+    {
+      "question": "Where should the Reschedule action go and what should it do?",
+      "header": "Placement",
+      "multiSelect": false,
+      "options": [
+        {
+          "label": "New calendar icon next to Edit/Delete in Actions column (Recommended)",
+          "description": "Add a calendarOutline icon in the patient row's Actions column that opens a small modal (same design as the one in NextTherapyNotification.tsx) to set/clear next_therapy_date_override + alert_lead_days_override directly for that patient."
+        }
+      ]
+    },
+    {
+      "question": "This file has no global default lead-days setting (that only exists in NextTherapyNotification.tsx). What should the lead-days field default to when a patient has no override yet?",
+      "header": "Default lead days",
+      "multiSelect": false,
+      "options": [
+        {
+          "label": "2 days (Recommended)",
+          "description": "Matches the DEFAULT_LEAD_DAYS constant used in NextTherapyNotification.tsx, so behavior stays consistent app-wide even though this screen doesn't read the machine's saved global setting."
+        },
+        {
+          "label": "Read the machine's saved global setting from localDB.settings",
+          "description": "Fetch next_therapy_alert_lead_days from localDB.settings on modal open, same as NextTherapyNotification.tsx does, so it always matches whatever the user configured in Settings tab there."
+        }
+      ]
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/12/2026, 7:21:19 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+<tool_use_error>InputValidationError: [
+  {
+    "origin": "array",
+    "code": "too_small",
+    "minimum": 2,
+    "inclusive": true,
+    "path": [
+      "questions",
+      0,
+      "options"
+    ],
+    "message": "Too small: expected array to have >=2 items"
+  }
+]
+
+This call included a question with fewer than 2 options, so it was rejected and the person never saw it. A question with a single option has no decision in it. Do not retry this call and do not invent a filler second option. Instead, state the one path you were going to offer as the approach you are taking, then continue with the task. If this call also contained questions with 2 to 4 options (each with distinct labels), you may re-ask those questions alone in a new call. Ask a question only when the person has at least two genuinely distinct choices.</tool_use_error>
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:21:21 PM</sup>
+
+I'll place the Reschedule action as a calendar icon next to Edit/Delete in the Actions column. One more decision needed on the lead-days default:
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:21:22 PM</sup>
+
+<details>
+<summary>Tool: <code>AskUserQuestion</code></summary>
+
+```json
+{
+  "questions": [
+    {
+      "question": "This file has no global default lead-days setting (that only exists in NextTherapyNotification.tsx). What should the lead-days field default to when a patient has no override yet?",
+      "header": "Default lead days",
+      "multiSelect": false,
+      "options": [
+        {
+          "label": "2 days (Recommended)",
+          "description": "Matches the DEFAULT_LEAD_DAYS constant used in NextTherapyNotification.tsx, so behavior stays consistent app-wide even though this screen doesn't read the machine's saved global setting."
+        },
+        {
+          "label": "Read the machine's saved global setting from localDB.settings",
+          "description": "Fetch next_therapy_alert_lead_days from localDB.settings on modal open, same as NextTherapyNotification.tsx does, so it always matches whatever the user configured in Settings tab there."
+        }
+      ]
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/12/2026, 7:23:39 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The user answered: "This file has no global default lead-days setting (that only exists in NextTherapyNotification.tsx). What should the lead-days field default to when a patient has no override yet?"="Fetch next_therapy_alert_lead_days from localDB.settings, fallback to DEFAULT_LEAD_DAYS constant". Read the answers carefully — they may request clarification, changes, or that you not proceed — and follow what they actually say.
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:23:41 PM</sup>
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:23:43 PM</sup>
+
+<details>
+<summary>Tool: <code>Grep</code></summary>
+
+```json
+{
+  "pattern": "^import|pencilOutline|trashOutline|addOutline|triggerAutoBackup|const machineId|useStore\\(\\)|localDB\\.settings",
+  "path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Therapy.tsx",
+  "output_mode": "content",
+  "-n": true
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/12/2026, 7:23:43 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+1:import React, { useState, useEffect, useRef, useCallback } from 'react';
+2:import {
+8:import { Capacitor } from '@capacitor/core';
+9:import {
+10:  arrowBack, addOutline, personOutline, personCircleOutline,
+11:  peopleOutline, pencilOutline, trashOutline, searchOutline,
+14:import { useHistory } from 'react-router';
+15:import { useStore } from '../store/useStore';
+16:import { localDB, type LocalTherapist, type LocalPatient } from '../db/localDB';
+17:import { runSync } from '../services/syncService';
+18:import { onSessionComplete } from '../services/modeCheck';
+19:import { fetchMachineInfo, sendPrepareParams/* , sendCommand */ } from '../services/esp32Service';
+20:import { triggerAutoBackup } from '../services/backupService';
+21:import MachineInfoModal from '../components/MachineInfoModal';
+22:import DobPicker from '../components/DobPicker';
+174:            <IonIcon icon={addOutline} /> Add new
+190:  const { modeStatus, machineId, machineConnected, machineInfo, setMachineConnected, setM
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:23:45 PM</sup>
+
+Let me check the imports block and around line 1-15, plus the deletePatient/openEditPatient functions for pattern consistency.
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:23:45 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Therapy.tsx",
+  "offset": 1,
+  "limit": 25
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/12/2026, 7:23:45 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+1	import React, { useState, useEffect, useRef, useCallback } from 'react';
+2	import {
+3	  IonContent, IonIcon, IonHeader, IonPage, IonTitle, IonToolbar,
+4	  IonGrid, IonRow, IonCol, IonButton, IonBadge, IonProgressBar,
+5	  IonModal, IonItem, IonLabel, IonInput, IonTextarea, IonSpinner,
+6	  IonText, IonSelect, IonSelectOption, useIonViewDidEnter, useIonAlert
+7	} from '@ionic/react';
+8	import { Capacitor } from '@capacitor/core';
+9	import {
+10	  arrowBack, addOutline, personOutline, personCircleOutline,
+11	  peopleOutline, pencilOutline, trashOutline, searchOutline,
+12	  wifiOutline, cloudOfflineOutline, checkmarkCircleOutline, playCircleOutline, pauseCircleOutline
+13	} from 'ionicons/icons';
+14	import { useHistory } from 'react-router';
+15	import { useStore } from '../store/useStore';
+16	import { localDB, type LocalTherapist, type LocalPatient } from '../db/localDB';
+17	import { runSync } from '../services/syncService';
+18	import { onSessionComplete } from '../services/modeCheck';
+19	im
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:23:48 PM</sup>
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:23:49 PM</sup>
+
+<details>
+<summary>Tool: <code>Grep</code></summary>
+
+```json
+{
+  "pattern": "const deletePatient|const openEditPatient|closeOutline|formatDate = |const openAddPatient|deletePatient = async|thStyle|tdStyle",
+  "path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Therapy.tsx",
+  "output_mode": "content",
+  "-n": true
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/12/2026, 7:23:49 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+44:const formatDate = (d: string | undefined): string => {
+56:const thStyle: React.CSSProperties = {
+62:const tdStyle: React.CSSProperties = {
+810:  const openAddPatient = () => {
+908:  const openEditPatient = (p: LocalPatient) => {
+947:  const deletePatient = async (p: LocalPatient) => {
+1511:                      <th style={thStyle}>Name</th>
+1512:                      <th style={thStyle}>Mobile</th>
+1513:                      <th style={thStyle}>Email</th>
+1514:                      <th style={thStyle}>Gender</th>
+1515:                      <th style={thStyle}>Total<br/>Sessions</th>
+1516:                      <th style={thStyle}>Last Session</th>
+1517:                      <th style={thStyle}>Actions</th>
+1523:                        <td colSpan={7} style={{ ...tdStyle, textAlign: 'center', color: '#999', padding: '2rem' }}>
+1538:                          <td style={tdStyle}>{t.first_name} {t.last_name}</td>
+1539:                          <td style={tdStyle}>{t.phone}</td>
+1540:   
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:23:54 PM</sup>
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:23:55 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Therapy.tsx",
+  "offset": 225,
+  "limit": 30
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/12/2026, 7:23:55 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+225	  const [pNotes, setPNotes] = useState('');
+226	  const [pSaving, setPSaving] = useState(false);
+227	  const [pError, setPError] = useState('');
+228	  // Manage therapists modal
+229	  const [showManageTherapists, setShowManageTherapists] = useState(false);
+230	  const [tManageSearch, setTManageSearch] = useState('');
+231	  const [editTherapist, setEditTherapist] = useState<LocalTherapist | null>(null);
+232	  const [etFirstName, setEtFirstName] = useState('');
+233	  const [etLastName, setEtLastName] = useState('');
+234	  const [etPhone, setEtPhone] = useState('');
+235	  const [etEmail, setEtEmail] = useState('');
+236	  const [etGender, setEtGender] = useState('');
+237	  const [etSaving, setEtSaving] = useState(false);
+238	  const [etError, setEtError] = useState('');
+239	
+240	  // Manage patients modal
+241	  const [showManagePatients, setShowManagePatients] = useState(false);
+242	  const [pManageSearch, setPManageSearch] = useState('');
+243	  const [editPatient, setEditPatient] = us
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:23:56 PM</sup>
+
+Now let's view the deletePatient function and surrounding area for the pattern used to update patients and reload.
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:23:57 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Therapy.tsx",
+  "offset": 900,
+  "limit": 80
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/12/2026, 7:23:57 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+900	
+901	  const openManagePatients = async () => {
+902	    await loadSessionStats();
+903	    setPManageSearch('');
+904	    setEditPatient(null);
+905	    setShowManagePatients(true);
+906	  };
+907	
+908	  const openEditPatient = (p: LocalPatient) => {
+909	    setEpFirstName(p.first_name);
+910	    setEpLastName(p.last_name);
+911	    setEpPhone(p.phone);
+912	    setEpEmail(p.email);
+913	    setEpGender(p.gender || '');
+914	    setEpDob(p.dob || '');
+915	    setEpNotes(p.notes || '');
+916	    setEpError('');
+917	    setEditPatient(p);
+918	  };
+919	
+920	  const saveEditPatient = async () => {
+921	    if (!epFirstName.trim() || !epLastName.trim() || !epPhone.trim() || !epEmail.trim()) {
+922	      setEpError('First name, last name, phone and email are required.');
+923	      return;
+924	    }
+925	    setEpSaving(true);
+926	    try {
+927	      await localDB.patients.update(editPatient!.id!, {
+928	        first_name: epFirstName.trim(),
+929	        last_name: epLastName.trim(),
+930	        phone:
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:24:00 PM</sup>
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:24:01 PM</sup>
+
+<details>
+<summary>Tool: <code>Grep</code></summary>
+
+```json
+{
+  "pattern": "DEFAULT_LEAD_DAYS|MS_PER_DAY|const loadLocal",
+  "path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Therapy.tsx",
+  "output_mode": "content",
+  "-n": true
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/12/2026, 7:24:01 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+315:  const loadLocal = useCallback(async () => {
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:24:03 PM</sup>
+
+Now implementing. First, imports:
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:24:05 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Therapy.tsx",
+  "old_string": "import {\n  arrowBack, addOutline, personOutline, personCircleOutline,\n  peopleOutline, pencilOutline, trashOutline, searchOutline,\n  wifiOutline, cloudOfflineOutline, checkmarkCircleOutline, playCircleOutline, pauseCircleOutline\n} from 'ionicons/icons';",
+  "new_string": "import {\n  arrowBack, addOutline, personOutline, personCircleOutline,\n  peopleOutline, pencilOutline, trashOutline, searchOutline,\n  wifiOutline, cloudOfflineOutline, checkmarkCircleOutline, playCircleOutline, pauseCircleOutline,\n  calendarOutline, closeOutline\n} from 'ionicons/icons';"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/12/2026, 7:25:08 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\Therapy.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:25:10 PM</sup>
+
+Now add `DEFAULT_LEAD_DAYS` constant near top helpers, plus state and handlers.
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:25:10 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Therapy.tsx",
+  "offset": 25,
+  "limit": 20
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/12/2026, 7:25:10 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+25	// ---------- Helpers ----------
+26	
+27	const computeAge = (dob?: string): string => {
+28	  if (!dob) return '—';
+29	  const birth = new Date(dob);
+30	  if (isNaN(birth.getTime())) return '—';
+31	  const now = new Date();
+32	  let age = now.getFullYear() - birth.getFullYear();
+33	  const m = now.getMonth() - birth.getMonth();
+34	  if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) age--;
+35	  return String(age);
+36	};
+37	
+38	const formatDateTime = (d: Date | null): string => {
+39	  if (!d) return '—';
+40	    return new Date(d).toLocaleString('en-IN', {
+41	    year: 'numeric', month: 'short', day: 'numeric',
+42	    hour: '2-digit', minute: '2-digit',
+43	  });
+44	};
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:25:14 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Therapy.tsx",
+  "old_string": "// ---------- Helpers ----------\n\nconst computeAge = (dob?: string): string => {",
+  "new_string": "// ---------- Helpers ----------\n\nconst DEFAULT_LEAD_DAYS = 2;\n\nconst toInputDateString = (d: Date): string => {\n  const yyyy = d.getFullYear();\n  const mm = String(d.getMonth() + 1).padStart(2, '0');\n  const dd = String(d.getDate()).padStart(2, '0');\n  return `${yyyy}-${mm}-${dd}`;\n};\n\nconst computeAge = (dob?: string): string => {"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/12/2026, 7:25:15 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\Therapy.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:25:17 PM</sup>
+
+Now add state variables next to the manage patients modal state:
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:25:20 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Therapy.tsx",
+  "old_string": "  const [epSaving, setEpSaving] = useState(false);\n  const [epError, setEpError] = useState('');\n  // Session stats",
+  "new_string": "  const [epSaving, setEpSaving] = useState(false);\n  const [epError, setEpError] = useState('');\n  // Reschedule next therapy modal\n  const [rescheduleTarget, setRescheduleTarget] = useState<LocalPatient | null>(null);\n  const [rescheduleDateDraft, setRescheduleDateDraft] = useState('');\n  const [rescheduleLeadDaysDraft, setRescheduleLeadDaysDraft] = useState('');\n  // Session stats"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/12/2026, 7:25:21 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\Therapy.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:25:23 PM</sup>
+
+Now add the handlers after `deletePatient`:
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:25:30 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Therapy.tsx",
+  "old_string": "  const deletePatient = async (p: LocalPatient) => {\n    if (!window.confirm(`Delete ${p.first_name} ${p.last_name}? This cannot be undone.`)) return;\n    await localDB.patients.update(p.id!, { is_active: false, synced: 0 });\n    if (selectedPatientId === p.id) setSelectedPatientId(null);\n    await loadLocal();\n    runSync(machineId).then(loadLocal);\n  };",
+  "new_string": "  const deletePatient = async (p: LocalPatient) => {\n    if (!window.confirm(`Delete ${p.first_name} ${p.last_name}? This cannot be undone.`)) return;\n    await localDB.patients.update(p.id!, { is_active: false, synced: 0 });\n    if (selectedPatientId === p.id) setSelectedPatientId(null);\n    await loadLocal();\n    runSync(machineId).then(loadLocal);\n  };\n\n  const openRescheduleModal = async (p: LocalPatient) => {\n    setRescheduleTarget(p);\n    setRescheduleDateDraft(p.next_therapy_date_override ?? toInputDateString(new Date()));\n    if (p.alert_lead_days_override != null) {\n      setRescheduleLeadDaysDraft(String(p.alert_lead_days_override));\n    } else {\n      const settings = await localDB.settings.get(machineId);\n      setRescheduleLeadDaysDraft(String(settings?.next_therapy_alert_lead_days ?? DEFAULT_LEAD_DAYS));\n    }\n  };\n\n  const closeRescheduleModal = () => {\n    setRescheduleTarget(null);\n    setRescheduleDateDraft('');\n    setRescheduleLeadDaysDraft('');\n  };\n\n  const saveReschedule = async () => {\n    const p = rescheduleTarget;\n    if (!p?.id || !rescheduleDateDraft) return;\n    const leadDays = parseInt(rescheduleLeadDaysDraft, 10);\n    await localDB.patients.update(p.id, {\n      next_therapy_date_override: rescheduleDateDraft,\n      alert_lead_days_override: isNaN(leadDays) ? undefined : leadDays,\n      synced: 0,\n    });\n    void triggerAutoBackup(machineId);\n    closeRescheduleModal();\n    await loa
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/12/2026, 7:25:31 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\Therapy.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:25:33 PM</sup>
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:25:33 PM</sup>
+
+Now add the calendar icon to the Actions cell in the patients table:
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:25:37 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Therapy.tsx",
+  "old_string": "                          <td style={tdStyle} onClick={(e) => e.stopPropagation()}>\n                            <IonIcon\n                              icon={pencilOutline}\n                              style={{ color: '#0a5c99', cursor: 'pointer', fontSize: '1.2rem', marginRight: '0.75rem' }}\n                              onClick={() => openEditPatient(p)}\n                            />\n                            <IonIcon\n                              icon={trashOutline}\n                              style={{ color: '#eb445a', cursor: 'pointer', fontSize: '1.2rem' }}\n                              onClick={() => deletePatient(p)}\n                            />\n                          </td>",
+  "new_string": "                          <td style={tdStyle} onClick={(e) => e.stopPropagation()}>\n                            <IonIcon\n                              icon={calendarOutline}\n                              title=\"Reschedule next therapy session\"\n                              style={{ color: '#0a5c99', cursor: 'pointer', fontSize: '1.2rem', marginRight: '0.75rem' }}\n                              onClick={() => openRescheduleModal(p)}\n                            />\n                            <IonIcon\n                              icon={pencilOutline}\n                              style={{ color: '#0a5c99', cursor: 'pointer', fontSize: '1.2rem', marginRight: '0.75rem' }}\n                              onClick={() => openEditPatient(p)}\n                            />\n                            <IonIcon\n                              icon={trashOutline}\n                              style={{ color: '#eb445a', cursor: 'pointer', fontSize: '1.2rem' }}\n                              onClick={() => deletePatient(p)}\n                            />\n                          </td>"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/12/2026, 7:25:38 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\Therapy.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:25:40 PM</sup>
+
+Now add the Reschedule modal JSX, right after the Manage Patients Modal closes:
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:25:47 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Therapy.tsx",
+  "old_string": "        </IonContent>\n      </IonModal>\n\n      <style>{`",
+  "new_string": "        </IonContent>\n      </IonModal>\n\n      {/* Reschedule Next Therapy Modal */}\n      <IonModal isOpen={!!rescheduleTarget} onDidDismiss={closeRescheduleModal} style={{ '--width': '440px', '--height': '380px', '--border-radius': '12px' } as React.CSSProperties}>\n        <IonHeader>\n          <IonToolbar color=\"primary\">\n            <IonTitle>Reschedule{rescheduleTarget ? ` — ${rescheduleTarget.first_name} ${rescheduleTarget.last_name}` : ''}</IonTitle>\n            <IonButton slot=\"end\" fill=\"clear\" color=\"light\" onClick={closeRescheduleModal}>\n              <IonIcon icon={closeOutline} />\n            </IonButton>\n          </IonToolbar>\n        </IonHeader>\n        <IonContent className=\"ion-padding\">\n          <div style={{ marginBottom: '1.25rem' }}>\n            <div style={{ color: '#555', fontWeight: 500, marginBottom: '0.5rem' }}>Next Therapy Date</div>\n            <input\n              type=\"date\"\n              value={rescheduleDateDraft}\n              onChange={(e) => setRescheduleDateDraft(e.target.value)}\n              style={{ width: '100%', padding: '0.5rem 0.65rem', border: '1px solid #ccc', borderRadius: '6px', fontSize: '0.9rem', outline: 'none' }}\n            />\n          </div>\n\n          <div style={{ marginBottom: '1.5rem' }}>\n            <div style={{ color: '#555', fontWeight: 500, marginBottom: '0.5rem' }}>Alert lead time (days before due)</div>\n            <input\n              type=\"number\" min={0}\n              value={rescheduleLeadDaysDraft}\n              onChange={(e) => setRescheduleLeadDaysDraft(e.target.value)}\n              style={{ width: '100px', padding: '0.4rem 0.6rem', border: '1px solid #ccc', borderRadius: '6px', fontSize: '0.9rem', outline: 'none' }}\n            />\
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/12/2026, 7:25:48 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\Therapy.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:25:50 PM</sup>
+
+Now type-check.
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:25:50 PM</sup>
+
+<details>
+<summary>Tool: <code>Bash</code></summary>
+
+```json
+{
+  "command": "cd /d/projects/production-hydro-colon-therapy/frontend && npx tsc --noEmit -p . 2>&1 | head -50",
+  "description": "Type-check frontend"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/12/2026, 7:25:58 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+(Bash completed with no output)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/12/2026, 7:26:02 PM</sup>
+
+Type-check is clean. Added a **Reschedule** action to the Manage Patients table in `Therapy.tsx`:
+
+- New calendar icon in the Actions column (next to Edit/Delete) opens a Reschedule modal.
+- The modal prefills the lead-days field from the patient's `alert_lead_days_override`, falling back to the machine's saved `next_therapy_alert_lead_days` setting, falling back to `2`.
+- Save writes `next_therapy_date_override` + `alert_lead_days_override` to the patient (marks `synced: 0`, triggers auto-backup, and re-syncs), with a "Clear Reschedule" option when an override already exists — mirroring the same modal already in `NextTherapyNotification.tsx`.
 
 
 ---
