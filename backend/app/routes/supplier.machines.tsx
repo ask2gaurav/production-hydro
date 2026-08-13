@@ -590,7 +590,7 @@ export default function SupplierMachines() {
                 </div>
               </div>
 
-              {editModeField === "demo" && (
+              { false && editModeField === "demo" && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Demo Session Limit *</label>
                   <input
@@ -603,7 +603,7 @@ export default function SupplierMachines() {
                   />
                 </div>
               )}
-
+              { false && editModeField === "demo" && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Owner Login Limit *</label>
                 <input
@@ -615,7 +615,7 @@ export default function SupplierMachines() {
                   className={supplierInputCls}
                 />
               </div>
-
+              )}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Installation Location</label>
                 <input name="installation_location" defaultValue={editModal.installation_location ?? ""} placeholder="Optional" className={supplierInputCls} />

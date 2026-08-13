@@ -6,8 +6,8 @@
 | **Session ID** | `5529d2b3-4ebf-4965-aa06-df984f081bd8` |
 | **Working Dir** | `d:\projects\production-hydro-colon-therapy` |
 | **Started** | 8/6/2026, 11:50:49 AM |
-| **Last Updated** | 8/12/2026, 7:26:02 PM |
-| **Messages** | 1605 |
+| **Last Updated** | 8/13/2026, 10:52:19 AM |
+| **Messages** | 1645 |
 
 ---
 
@@ -25911,6 +25911,647 @@ Type-check is clean. Added a **Reschedule** action to the Manage Patients table 
 - New calendar icon in the Actions column (next to Edit/Delete) opens a Reschedule modal.
 - The modal prefills the lead-days field from the patient's `alert_lead_days_override`, falling back to the machine's saved `next_therapy_alert_lead_days` setting, falling back to `2`.
 - Save writes `next_therapy_date_override` + `alert_lead_days_override` to the patient (marks `synced: 0`, triggers auto-backup, and re-syncs), with a "Clear Reschedule" option when an override already exists — mirroring the same modal already in `NextTherapyNotification.tsx`.
+
+
+---
+
+## User <sup>8/13/2026, 10:38:44 AM</sup>
+
+<ide_opened_file>The user opened the file d:\projects\production-hydro-colon-therapy\frontend\src\App.tsx in the IDE. This may or may not be related to the current task.</ide_opened_file>
+
+@frontend/src/pages/NextTherapyNotification.tsx  right now, Patients with no last session date is not listed in Due List even though it's in reschedule, list the patients with reschedule date and no last session date also along with other patients. Also don't list duplicate patient on this list, in case of two dates fall in due list that is one according to last session settings and other according to reschedule list then use the nearest coming date to list in Due List. Hope requirement is clear. Please ask question if it's not clear.
+
+
+---
+
+## Assistant <sup>8/13/2026, 10:39:32 AM</sup>
+
+
+---
+
+## Assistant <sup>8/13/2026, 10:39:32 AM</sup>
+
+A couple of points genuinely need a decision before I touch the merge logic:
+
+
+---
+
+## Assistant <sup>8/13/2026, 10:39:37 AM</sup>
+
+<details>
+<summary>Tool: <code>AskUserQuestion</code></summary>
+
+```json
+{
+  "questions": [
+    {
+      "question": "When a patient has both a computed due date (from last session + reminder days) and a reschedule override, and the two dates differ, which one should \"nearest coming date\" mean?",
+      "header": "Nearest date",
+      "multiSelect": false,
+      "options": [
+        {
+          "label": "Chronologically earliest of the two (Recommended)",
+          "description": "Compare the computed date and the override date, use whichever is sooner (min) as the entry's due date — e.g. if computed says overdue by 5 days but reschedule says 10 days from now, show the overdue computed date since it's sooner."
+        },
+        {
+          "label": "Override always wins unless computed is sooner",
+          "description": "Same practical outcome as \"earliest of the two\" — just confirming this isn't meant to always prefer the override date regardless of which is sooner (that was the old behavior before this request)."
+        }
+      ]
+    },
+    {
+      "question": "For patients with a reschedule date but NO last session at all, should the existing lead-time window filtering still apply (i.e. hide them from Due List until they're within their alert-lead-days window), same as it does for last-session-based patients?",
+      "header": "Lead-time window",
+      "multiSelect": false,
+      "options": [
+        {
+          "label": "Yes, apply the same lead-day window (Recommended)",
+          "description": "Keeps Due List focused on what's actually due soon — a patient rescheduled 2 months out won't clutter the list until close to that date, consistent with how last-session patients behave."
+        },
+        {
+          "label": "No, always show them regardless of how far off the date is",
+          "description": "Any patient with a manual reschedule set shows up in Due List immediately, no matter how far in the future the date is."
+        }
+      ]
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/13/2026, 10:41:08 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Your questions have been answered: "When a patient has both a computed due date (from last session + reminder days) and a reschedule override, and the two dates differ, which one should "nearest coming date" mean?"="Override always wins unless computed is sooner", "For patients with a reschedule date but NO last session at all, should the existing lead-time window filtering still apply (i.e. hide them from Due List until they're within their alert-lead-days window), same as it does for last-session-based patients?"="Yes, apply the same lead-day window (Recommended)". You can now continue with these answers in mind.
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/13/2026, 10:41:13 AM</sup>
+
+
+---
+
+## Assistant <sup>8/13/2026, 10:41:15 AM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\NextTherapyNotification.tsx",
+  "old_string": "interface DueEntry {\n  patient: LocalPatient;\n  lastSession: Date;\n  reminderDays: number;\n  leadDays: number;\n  dueDate: Date;\n  status: DueStatus;\n}",
+  "new_string": "interface DueEntry {\n  patient: LocalPatient;\n  lastSession: Date | undefined;\n  reminderDays: number;\n  leadDays: number;\n  dueDate: Date;\n  status: DueStatus;\n}"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/13/2026, 10:41:19 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\NextTherapyNotification.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/13/2026, 10:41:21 AM</sup>
+
+Now rewrite `dueEntries`:
+
+
+---
+
+## Assistant <sup>8/13/2026, 10:41:28 AM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\NextTherapyNotification.tsx",
+  "old_string": "  const dueEntries = useMemo((): DueEntry[] => {\n    const today = startOfDay(new Date());\n    const entries: DueEntry[] = [];\n    for (const patient of patients) {\n      if (!patient.server_id) continue;\n      const lastSession = lastSessionByPatientId[patient.server_id];\n      if (!lastSession) continue;\n\n      const { reminderDays, leadDays, dueDate, windowStart, status } = computeDueStatus(patient, lastSession, globalReminderDays, globalLeadDays);\n\n      if (today < windowStart) continue;\n\n      if (patient.last_reminded_at) {\n        const remindedAt = startOfDay(new Date(patient.last_reminded_at));\n        if (remindedAt >= windowStart) continue;\n      }\n\n      entries.push({ patient, lastSession, reminderDays, leadDays, dueDate, status });\n    }\n\n    entries.sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime());\n    return entries;\n  }, [patients, lastSessionByPatientId, globalReminderDays, globalLeadDays]);",
+  "new_string": "  const dueEntries = useMemo((): DueEntry[] => {\n    const today = startOfDay(new Date());\n    const entries: DueEntry[] = [];\n    for (const patient of patients) {\n      const lastSession = patient.server_id ? lastSessionByPatientId[patient.server_id] : undefined;\n      const computedDate = computeOriginalDueDate(patient, lastSession, globalReminderDays);\n      const overrideDate = patient.next_therapy_date_override\n        ? startOfDay(new Date(patient.next_therapy_date_override))\n        : undefined;\n\n      // Nothing to base a due date on (no session history and no manual reschedule).\n      if (!computedDate && !overrideDate) continue;\n\n      // When both exist, use whichever is sooner (nearest coming date) so the patient appears once.\n      const dueDate = computedDate && overrideDate\n        ? (computedDate.getTime() <= overrideDate.get
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/13/2026, 10:41:29 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\NextTherapyNotification.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/13/2026, 10:41:32 AM</sup>
+
+Now fix the render's `formatDate(entry.lastSession)` call (Date | undefined now) and `openRescheduleModal` calls that pass `entry.lastSession`/`entry.dueDate` — check `computeDueStatus` is still used elsewhere fine. Let's check the render usage.
+
+
+---
+
+## Assistant <sup>8/13/2026, 10:41:33 AM</sup>
+
+<details>
+<summary>Tool: <code>Bash</code></summary>
+
+```json
+{
+  "command": "cd /d/projects/production-hydro-colon-therapy/frontend && npx tsc --noEmit -p . 2>&1 | head -50",
+  "description": "Type-check frontend"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/13/2026, 10:41:44 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+src/pages/NextTherapyNotification.tsx(533,57): error TS2345: Argument of type 'Date | undefined' is not assignable to parameter of type 'Date | null'.
+  Type 'undefined' is not assignable to type 'Date | null'.
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/13/2026, 10:41:46 AM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\NextTherapyNotification.tsx",
+  "offset": 530,
+  "limit": 4
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/13/2026, 10:41:46 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+530	                      <tr>
+531	                        <td style={tdStyle}>{entry.patient.first_name} {entry.patient.last_name}</td>
+532	                        <td style={tdStyle}>{entry.patient.phone}</td>
+533	                        <td style={tdStyle}>{formatDate(entry.lastSession)}</td>
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/13/2026, 10:41:49 AM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\NextTherapyNotification.tsx",
+  "old_string": "                        <td style={tdStyle}>{formatDate(entry.lastSession)}</td>",
+  "new_string": "                        <td style={tdStyle}>{formatDate(entry.lastSession ?? null)}</td>"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/13/2026, 10:41:50 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\NextTherapyNotification.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/13/2026, 10:41:52 AM</sup>
+
+<details>
+<summary>Tool: <code>Bash</code></summary>
+
+```json
+{
+  "command": "npx tsc --noEmit -p . 2>&1 | head -50",
+  "description": "Type-check frontend"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/13/2026, 10:41:59 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+(Bash completed with no output)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/13/2026, 10:42:03 AM</sup>
+
+
+---
+
+## Assistant <sup>8/13/2026, 10:42:06 AM</sup>
+
+Type-check is clean. Summary of the change in `NextTherapyNotification.tsx`'s Due List logic (`dueEntries`):
+
+- Now iterates all patients (not just those with a last session), computing a **computed date** (from last session + reminder days, if a session exists) and an **override date** (if a reschedule is set).
+- If a patient has neither, they're skipped (nothing to track yet).
+- If both exist, the entry's due date is the **earlier of the two** — so a patient rescheduled into the future but still overdue by the old computed date will still surface as overdue, and vice versa.
+- Each patient produces exactly one row (single loop over `patients`), so no duplicates.
+- The existing lead-day window and `last_reminded_at` suppression logic still applies using that resolved due date, same as before.
+
+This required loosening `DueEntry.lastSession` to `Date | undefined` and adjusting the one render spot that formats it.
+
+
+---
+
+## User <sup>8/13/2026, 10:51:15 AM</sup>
+
+<ide_selection>The user selected the lines 1736 to 1741 from d:\projects\production-hydro-colon-therapy\frontend\src\pages\Therapy.tsx:
+ {/* <IonIcon
+                              icon={calendarOutline}
+                              title="Reschedule next therapy session"
+                              style={{ color: '#0a5c99', cursor: 'pointer', fontSize: '1.2rem', marginRight: '0.75rem' }}
+                              onClick={() => openRescheduleModal(p)}
+                            /> */}
+
+This may or may not be related to the current task.</ide_selection>
+
+@backend/.react-router/types/app/routes/+types/supplier.machines.ts remove Demo Session Limit and Owner Login Limit from edit form. confirm understood it correctly.
+
+
+---
+
+## Assistant <sup>8/13/2026, 10:51:20 AM</sup>
+
+
+---
+
+## Assistant <sup>8/13/2026, 10:51:20 AM</sup>
+
+That file is auto-generated route types — the actual edit form is in `backend/app/routes/supplier.machines.tsx`. Let me check it.
+
+
+---
+
+## Assistant <sup>8/13/2026, 10:51:22 AM</sup>
+
+<details>
+<summary>Tool: <code>Grep</code></summary>
+
+```json
+{
+  "pattern": "Demo Session Limit|Owner Login Limit|demo_session_limit|login.*limit|owner_login",
+  "path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\supplier.machines.tsx",
+  "output_mode": "content",
+  "-n": true,
+  "-i": true
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/13/2026, 10:51:22 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+30:  demo_session_limit: number;
+31:  owner_login_count: number;
+32:  owner_login_limit: number;
+73:        demo_session_limit: m.demo_session_limit ?? 10,
+74:        owner_login_count: m.owner_login_count ?? 0,
+75:        owner_login_limit: m.owner_login_limit ?? 2,
+110:    const demo_session_limit = parseInt(formData.get("demo_session_limit") as string) || 10;
+111:    const owner_login_limit = parseInt(formData.get("owner_login_limit") as string) || 2;
+131:      demo_session_limit: mode === "demo" ? demo_session_limit : 10,
+132:      owner_login_limit,
+163:      previous_limit: machine.demo_session_limit,
+168:    machine.demo_session_limit = new_limit;
+178:    if (!new_limit || new_limit < 1) return { error: "Please enter a valid login limit." };
+183:    (machine as any).owner_login_extended_at.push({
+185:      previous_limit: (machine as any).owner_login_limit,
+190:    (machine as any).owner_login_limit = new_limit;
+237:      const demo_session_limit = parseInt(formData.get("demo_se
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/13/2026, 10:51:25 AM</sup>
+
+
+---
+
+## Assistant <sup>8/13/2026, 10:51:26 AM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\supplier.machines.tsx",
+  "offset": 560,
+  "limit": 200
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/13/2026, 10:51:26 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+560	                />
+561	                <p className="text-xs text-gray-400 mt-1">Cannot be changed after creation.</p>
+562	              </div>
+563	
+564	              <div>
+565	                <label className="block text-sm font-medium text-gray-700 mb-1">Model Name *</label>
+566	                <input name="model_name" defaultValue={editModal.model_name} required className={supplierInputCls} />
+567	              </div>
+568	
+569	              <div className="grid grid-cols-2 gap-3">
+570	                <div>
+571	                  <label className="block text-sm font-medium text-gray-700 mb-1">Status *</label>
+572	                  <select name="machine_status" defaultValue={editModal.machine_status} required className={supplierInputCls}>
+573	                    <option value="Active">Active</option>
+574	                    <option value="Inactive">Inactive</option>
+575	                    <option value="Maintenance">Maintenance</option>
+576	                  </select>
+577	        
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/13/2026, 10:51:31 AM</sup>
+
+
+---
+
+## Assistant <sup>8/13/2026, 10:51:32 AM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\supplier.machines.tsx",
+  "offset": 85,
+  "limit": 145
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/13/2026, 10:51:32 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+85	    })
+86	    .filter(Boolean);
+87	
+88	  const supplierDefaults = {
+89	    supplier_name: `${supplierUser?.first_name ?? ''} ${supplierUser?.last_name ?? ''}`.trim(),
+90	    supplier_email: supplierUser?.email ?? '',
+91	    supplier_phone: supplierUser?.phone ?? '',
+92	  };
+93	
+94	  return { machines, supplierId, supplierDefaults };
+95	}
+96	
+97	export async function action({ request }: { request: Request }) {
+98	  const decoded: any = await requireSupplier(request);
+99	  const supplierId = decoded.userId;
+100	  await connectDB();
+101	
+102	  const formData = await request.formData();
+103	  const intent = formData.get("intent") as string;
+104	
+105	  if (intent === "add_machine") {
+106	    const serial_number = (formData.get("serial_number") as string)?.trim();
+107	    const model_name = (formData.get("model_name") as string)?.trim();
+108	    const machine_status = formData.get("machine_status") as string;
+109	    const mode = formData.get("mode") as string;
+110	    const demo_session_
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/13/2026, 10:51:35 AM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\supplier.machines.tsx",
+  "offset": 228,
+  "limit": 30
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/13/2026, 10:51:35 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+228	    const updateData: any = {
+229	      model_name,
+230	      machine_status,
+231	      mode,
+232	      installation_location,
+233	      production_date: production_date ? new Date(production_date) : undefined,
+234	    };
+235	
+236	    if (mode === "demo") {
+237	      const demo_session_limit = parseInt(formData.get("demo_session_limit") as string);
+238	      if (demo_session_limit >= 1) updateData.demo_session_limit = demo_session_limit;
+239	    }
+240	
+241	    const owner_login_limit = parseInt(formData.get("owner_login_limit") as string);
+242	    if (owner_login_limit >= 1) updateData.owner_login_limit = owner_login_limit;
+243	
+244	    if (!existingMachine.ssid) updateData.ssid = (formData.get("ssid") as string)?.trim() || undefined;
+245	    if (!existingMachine.password) updateData.password = (formData.get("password") as string)?.trim() || undefined;
+246	
+247	    await Machine.findByIdAndUpdate(machine_id, updateData);
+248	    return { success: true, intent };
+249	  }
+250	
+251	  
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/13/2026, 10:51:39 AM</sup>
+
+
+---
+
+## Assistant <sup>8/13/2026, 10:51:43 AM</sup>
+
+Confirmed — I found both fields in `backend/app/routes/supplier.machines.tsx`, in the **Edit Machine modal** (lines 593–617): a conditional "Demo Session Limit" input (only rendered when mode is "demo") and an "Owner Login Limit" input. There's a separate, distinct "Add Machine" modal further down (lines 735–759) with the same two fields — you said "edit form" specifically, so I'll leave the Add modal untouched.
+
+Good news on safety: the `update_machine` action handler (line 236-242) already guards these fields with `if (demo_session_limit >= 1)` / `if (owner_login_limit >= 1)` before including them in the update — so if the fields are simply absent from the submitted form, the handler will skip touching those two fields on the machine (won't reset them to defaults). No backend changes needed.
+
+Plan: remove just the two `<div>` blocks (the Demo Session Limit block and the Owner Login Limit block) from the Edit Machine modal JSX only.
+
+
+---
+
+## Assistant <sup>8/13/2026, 10:51:45 AM</sup>
+
+<details>
+<summary>Tool: <code>AskUserQuestion</code></summary>
+
+```json
+{
+  "questions": [
+    {
+      "question": "Confirm: remove only the two input blocks (Demo Session Limit + Owner Login Limit) from the Edit Machine modal, leave the Add Machine modal and the backend action handler untouched?",
+      "header": "Scope check",
+      "multiSelect": false,
+      "options": [
+        {
+          "label": "Yes, that's correct (Recommended)",
+          "description": "Remove the two <div> blocks at lines 593-617 of supplier.machines.tsx from the Edit modal only. Suppliers will manage these limits via the existing Extend Demo/Extend Login flows instead."
+        },
+        {
+          "label": "Also remove from Add Machine modal",
+          "description": "Additionally strip these two fields from the Add Machine modal so new machines are always created with the default demo_session_limit (10) and owner_login_limit (2)."
+        }
+      ]
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/13/2026, 10:52:19 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The user doesn't want to proceed with this tool use. The tool use was rejected (eg. if it was a file edit, the new_string was NOT written to the file). STOP what you are doing and wait for the user to tell you how to proceed.
+```
+
+</details>
+
+
+---
+
+## User <sup>8/13/2026, 10:52:19 AM</sup>
+
+[Request interrupted by user for tool use]
 
 
 ---

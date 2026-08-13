@@ -61,7 +61,7 @@ type DueStatus = 'Overdue' | 'Due Today' | 'Upcoming';
 
 interface DueEntry {
   patient: LocalPatient;
-  lastSession: Date;
+  lastSession: Date | undefined;
   reminderDays: number;
   leadDays: number;
   dueDate: Date;
@@ -196,11 +196,24 @@ const NextTherapyNotification: React.FC = () => {
     const today = startOfDay(new Date());
     const entries: DueEntry[] = [];
     for (const patient of patients) {
-      if (!patient.server_id) continue;
-      const lastSession = lastSessionByPatientId[patient.server_id];
-      if (!lastSession) continue;
+      const lastSession = patient.server_id ? lastSessionByPatientId[patient.server_id] : undefined;
+      const computedDate = computeOriginalDueDate(patient, lastSession, globalReminderDays);
+      const overrideDate = patient.next_therapy_date_override
+        ? startOfDay(new Date(patient.next_therapy_date_override))
+        : undefined;
 
-      const { reminderDays, leadDays, dueDate, windowStart, status } = computeDueStatus(patient, lastSession, globalReminderDays, globalLeadDays);
+      // Nothing to base a due date on (no session history and no manual reschedule).
+      if (!computedDate && !overrideDate) continue;
+
+      // When both exist, use whichever is sooner (nearest coming date) so the patient appears once.
+      const dueDate = computedDate && overrideDate
+        ? (computedDate.getTime() <= overrideDate.getTime() ? computedDate : overrideDate)
+        : (computedDate ?? overrideDate)!;
+
+      const reminderDays = patient.reminder_days_override ?? globalReminderDays;
+      const leadDays = patient.alert_lead_days_override ?? globalLeadDays;
+      const windowStart = startOfDay(new Date(dueDate.getTime() - leadDays * MS_PER_DAY));
+      const status: DueStatus = dueDate < today ? 'Overdue' : dueDate.getTime() === today.getTime() ? 'Due Today' : 'Upcoming';
 
       if (today < windowStart) continue;
 
@@ -517,7 +530,7 @@ const NextTherapyNotification: React.FC = () => {
                       <tr>
                         <td style={tdStyle}>{entry.patient.first_name} {entry.patient.last_name}</td>
                         <td style={tdStyle}>{entry.patient.phone}</td>
-                        <td style={tdStyle}>{formatDate(entry.lastSession)}</td>
+                        <td style={tdStyle}>{formatDate(entry.lastSession ?? null)}</td>
                         <td style={tdStyle}>
                           {formatDate(entry.dueDate)}
                           {entry.patient.next_therapy_date_override && (

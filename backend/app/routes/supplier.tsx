@@ -3,7 +3,14 @@ import { useState } from "react";
 import { requireSupplier } from "../lib/auth.server";
 import { connectDB } from "../lib/db";
 import User from "../models/User";
+import type { Route } from "./+types/supplier";
 
+export function meta({}: Route.MetaArgs) {
+  return [
+    { title: "Dasatva Admin Panel" },
+    {name: "description", content: "Manage machines, owners and resources. Manage demo sessions and number of logins allowed for machines in demo mode. Make machine in full mode" }
+  ];
+}
 export async function loader({ request }: { request: Request }) {
   let decoded: any;
   try {

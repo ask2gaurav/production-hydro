@@ -3,6 +3,14 @@ import { useState } from "react";
 import { requireAdmin } from "../lib/auth.server";
 import { connectDB } from "../lib/db";
 import User from "../models/User";
+import type { Route } from "./+types/supplier";
+
+export function meta({}: Route.MetaArgs) {
+  return [
+    { title: "Dasatva Admin Panel" },
+    { name: "description", content: "Welcome to the Admin Panel" }
+  ];
+}
 
 export async function loader({ request }: { request: Request }) {
   let decoded: any;
