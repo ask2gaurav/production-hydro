@@ -1,6 +1,6 @@
-# Docker MongoDB Google Drive Backup Script
-
 #!/bin/bash
+
+# Docker MongoDB Google Drive Backup Script
 # ============================================================
 # Docker MongoDB to Google Drive Weekly Backup Script
 # ============================================================
@@ -29,6 +29,7 @@ LOCAL_BACKUP_DIR="${LOCAL_BACKUP_DIR:-/home/vhosts/react/hydro-colon-therapy}"
 GDRIVE_REMOTE="${GDRIVE_REMOTE:-gdrive}"
 GDRIVE_FOLDER="${GDRIVE_FOLDER:-MongoBackups}"
 RETENTION_DAYS=${RETENTION_DAYS:-10}
+MONGO_DB=${MONGO_DB:-hydrotherapy}
 
 # Ensure critical variables loaded from .env are not empty
 if [ -z "$MONGO_USER" ] || [ -z "$MONGO_PASS" ] || [ -z "$GDRIVE_CLIENT_ID" ] || [ -z "$GDRIVE_CLIENT_SECRET" ]; then
@@ -63,7 +64,8 @@ if docker exec -i "${CONTAINER_NAME}" mongodump \
     echo "Success: Local database archive created safely at ${LOCAL_FILE_PATH}"else
     echo "CRITICAL ERROR: Failed to execute mongodump inside container. Aborting upload." >&2
 
-    exit 1fi
+    exit 1
+fi
 # ------------------------------------------------------------------------------
 # 4. Step 2: Upload to Google Drive via Rclone
 # ------------------------------------------------------------------------------
@@ -75,7 +77,8 @@ if rclone copy "${LOCAL_FILE_PATH}" "${GDRIVE_REMOTE}:${GDRIVE_FOLDER}" \
     --drive-client-secret "${GDRIVE_CLIENT_SECRET}"; then
     echo "Success: Secure cloud synchronization completed successfully."else
     echo "ERROR: Cloud upload failed. Keeping local file intact for manual recovery." >&2
-    exit 1fi
+    exit 1
+fi
 
 # ------------------------------------------------------------------------------
 # 5. Step 3: Local Retention Enforcement
@@ -121,7 +124,7 @@ if [ "$FILE_COUNT" -gt "$RETENTION_DAYS" ]; then
                 echo "ERROR: Failed to delete oldest cloud file." >&2
             fi
         fi
-    
+    done
 else
     echo "Cloud backup count (${FILE_COUNT}) is within safety threshold (<= ${RETENTION_DAYS}). No cloud files will be removed."
 fi
