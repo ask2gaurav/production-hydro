@@ -124,17 +124,27 @@ const DataExportImport: React.FC = () => {
     });
   };
 
+  // Presenting a new IonAlert synchronously from inside another alert's button handler
+  // races that alert's dismiss animation and can silently fail to show. Deferring to the
+  // next tick (after the first alert has closed) lets the second alert present reliably.
+  const promptImportModeDeferred = (file: File, mismatchAction?: MachineMismatchAction) => {
+    setTimeout(() => promptImportMode(file, mismatchAction), 300);
+  };
+
   const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
 
+    setBusy('Reading backup file...');
     let manifest;
     try {
       manifest = await peekBackupManifest(file);
     } catch (err) {
       showError(err instanceof Error ? err.message : 'Failed to read backup file.');
       return;
+    } finally {
+      setBusy(null);
     }
 
     if (manifest.machine_id !== machineId) {
@@ -143,8 +153,8 @@ const DataExportImport: React.FC = () => {
         message: `This backup was exported from a different machine (ID: ${manifest.machine_id}). How would you like to handle the mismatched records?`,
         buttons: [
           { text: 'Cancel', role: 'cancel' },
-          { text: 'Discard Mismatched Records', handler: () => promptImportMode(file, 'discard') },
-          { text: 'Reassign to This Machine', handler: () => promptImportMode(file, 'reassign') },
+          { text: 'Discard Mismatched Records', handler: () => promptImportModeDeferred(file, 'discard') },
+          { text: 'Reassign to This Machine', handler: () => promptImportModeDeferred(file, 'reassign') },
         ],
       });
     } else {
