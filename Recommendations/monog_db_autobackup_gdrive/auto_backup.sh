@@ -25,7 +25,7 @@ fi
 # Fallback/Default Configuration Variables if not fully specified in .env
 CONTAINER_NAME="${CONTAINER_NAME:-hydro-colon-therapy-mongodb-1}"
 AUTH_DB="${AUTH_DB:-admin}"
-LOCAL_BACKUP_DIR="${LOCAL_BACKUP_DIR:-/home/vhosts/react/hydro-colon-therapy}"
+LOCAL_BACKUP_DIR="${LOCAL_BACKUP_DIR:-/home/vhosts/react/hydro-colon-therapy/mongo_backups}"
 GDRIVE_REMOTE="${GDRIVE_REMOTE:-gdrive}"
 GDRIVE_FOLDER="${GDRIVE_FOLDER:-MongoBackups}"
 RETENTION_DAYS=${RETENTION_DAYS:-10}
@@ -61,9 +61,9 @@ if docker exec -i "${CONTAINER_NAME}" mongodump \
     --archive \
     --gzip > "${LOCAL_FILE_PATH}"; then
     
-    echo "Success: Local database archive created safely at ${LOCAL_FILE_PATH}"else
+    echo "Success: Local database archive created safely at ${LOCAL_FILE_PATH}"
+else
     echo "CRITICAL ERROR: Failed to execute mongodump inside container. Aborting upload." >&2
-
     exit 1
 fi
 # ------------------------------------------------------------------------------
@@ -75,7 +75,8 @@ echo "Syncing backup file to Google Drive tracking path: ${GDRIVE_REMOTE}:${GDRI
 if rclone copy "${LOCAL_FILE_PATH}" "${GDRIVE_REMOTE}:${GDRIVE_FOLDER}" \
     --drive-client-id "${GDRIVE_CLIENT_ID}" \
     --drive-client-secret "${GDRIVE_CLIENT_SECRET}"; then
-    echo "Success: Secure cloud synchronization completed successfully."else
+    echo "Success: Secure cloud synchronization completed successfully."
+else
     echo "ERROR: Cloud upload failed. Keeping local file intact for manual recovery." >&2
     exit 1
 fi
