@@ -202,6 +202,14 @@ export async function triggerAutoBackup(machineId: string): Promise<void> {
     await Filesystem.writeFile({ path: relPath, data: base64, directory: Directory.Data, recursive: true });
 
     try {
+      // On Android 10+ writes to public Directory.Documents go through MediaStore, which does
+      // not reliably overwrite an existing entry with the same name (it can create a duplicate
+      // or no-op instead). Deleting the old entry first forces today's copy to be replaced.
+      try {
+        await Filesystem.deleteFile({ path: fileName, directory: Directory.Documents });
+      } catch {
+        // Nothing to delete (first backup of the day) — proceed to write.
+      }
       await Filesystem.writeFile({ path: fileName, data: base64, directory: Directory.Documents, recursive: true });
     } catch {
       // Non-fatal — the file is still safely stored under Directory.Data.

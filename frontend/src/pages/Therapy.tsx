@@ -6,6 +6,7 @@ import {
   IonText, IonSelect, IonSelectOption, useIonViewDidEnter, useIonAlert
 } from '@ionic/react';
 import { Capacitor } from '@capacitor/core';
+import { KeepAwake } from '@capacitor-community/keep-awake';
 import {
   arrowBack, addOutline, personOutline, personCircleOutline,
   peopleOutline, pencilOutline, trashOutline, searchOutline,
@@ -608,6 +609,19 @@ const Therapy: React.FC = () => {
     const t = setInterval(() => setTimeLeft((s) => s - 1), 1000);
     return () => clearInterval(t);
   }, [state, timeLeft, endSession, buildAllParams]);
+
+  // Keep the screen awake while a session is running so the OS doesn't
+  // auto-lock and force a pause mid-therapy.
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    const active = state === 'ACTIVE' || state === 'PAUSED';
+    if (active) {
+      KeepAwake.keepAwake().catch(() => {});
+    } else {
+      KeepAwake.allowSleep().catch(() => {});
+    }
+    return () => { KeepAwake.allowSleep().catch(() => {}); };
+  }, [state]);
 
   // Auto-pause when the app goes to background or the screen is locked (native Android only)
   useEffect(() => {

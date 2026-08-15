@@ -3,6 +3,9 @@ import { useState, useEffect } from "react";
 import { connectDB } from "../lib/db";
 import { DeleteConfirmModal } from "../components/DeleteConfirmModal";
 import Resource from "../models/Resource";
+import SupplierResource from "../models/SupplierResource";
+import User from "../models/User";
+import UserType from "../models/UserType";
 
 const LIMIT = 50;
 
@@ -107,6 +110,60 @@ export async function action({ request }: { request: Request }) {
     return { success: true };
   }
 
+  if (intent === "sync") {
+    const supplierType = await UserType.findOne({ name: "Supplier" }).lean();
+    if (!supplierType) return { error: "No supplier user type found." };
+
+    const [suppliers, resources] = await Promise.all([
+      User.find({ user_type_id: (supplierType as any)._id }).select("_id").lean(),
+      Resource.find({}).lean(),
+    ]);
+
+    if (suppliers.length === 0 || resources.length === 0) {
+      return { syncSuccess: true, added: 0, skipped: 0 };
+    }
+
+    const existing = await SupplierResource.find({
+      supplier_id: { $in: suppliers.map((s: any) => s._id) },
+    })
+      .select("supplier_id slug")
+      .lean();
+    const existingKeys = new Set(
+      existing.map((e: any) => `${e.supplier_id.toString()}:${e.slug}`)
+    );
+
+    const toInsert: any[] = [];
+    for (const supplier of suppliers) {
+      for (const resource of resources as any[]) {
+        const key = `${(supplier as any)._id.toString()}:${resource.slug}`;
+        if (existingKeys.has(key)) continue;
+        existingKeys.add(key);
+        toInsert.push({
+          supplier_id: (supplier as any)._id,
+          title: resource.title,
+          slug: resource.slug,
+          content: resource.content,
+          category: resource.category,
+          is_active: resource.is_active,
+          updated_at: new Date(),
+        });
+      }
+    }
+
+    let added = 0;
+    if (toInsert.length > 0) {
+      try {
+        const inserted = await SupplierResource.insertMany(toInsert, { ordered: false });
+        added = inserted.length;
+      } catch (e: any) {
+        // insertMany with ordered:false still inserts non-conflicting docs even if some fail
+        added = e?.result?.insertedCount ?? e?.insertedDocs?.length ?? 0;
+      }
+    }
+
+    return { syncSuccess: true, added, skipped: toInsert.length - added };
+  }
+
   return { error: "Unknown intent." };
 }
 
@@ -133,6 +190,9 @@ export default function AdminResources() {
     }
   }, [actionData]);
 
+  const isSyncing =
+    isSubmitting && navigation.formData?.get("intent") === "sync";
+
   const openCreate = () => {
     setEditItem(null);
     setTitleValue("");
@@ -155,13 +215,37 @@ export default function AdminResources() {
             {total} total records — synced to PWA clients for offline display
           </p>
         </div>
-        <button
-          onClick={openCreate}
-          className="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-800 text-sm font-medium"
-        >
-          + Add Resource
-        </button>
+        <div className="flex items-center gap-3">
+          <Form
+            method="post"
+            onSubmit={(e) => {
+              if (!confirm("Sync all resources to every supplier? Suppliers who already have a matching resource will be left unchanged.")) e.preventDefault();
+            }}
+          >
+            <input type="hidden" name="intent" value="sync" />
+            <button
+              type="submit"
+              disabled={isSyncing}
+              className="px-4 py-2 bg-white border border-blue-700 text-blue-700 rounded hover:bg-blue-50 text-sm font-medium disabled:opacity-50"
+            >
+              {isSyncing ? "Syncing..." : "Sync to Suppliers"}
+            </button>
+          </Form>
+          <button
+            onClick={openCreate}
+            className="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-800 text-sm font-medium"
+          >
+            + Add Resource
+          </button>
+        </div>
       </div>
+
+      {actionData?.syncSuccess && (
+        <div className="mb-4 p-3 bg-green-50 border border-green-200 text-green-700 rounded text-sm">
+          Sync complete — {actionData.added} resource{actionData.added === 1 ? "" : "s"} added to suppliers
+          {actionData.skipped > 0 ? `, ${actionData.skipped} already existed and were left unchanged` : ""}.
+        </div>
+      )}
 
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">

@@ -70,6 +70,9 @@ export async function nativeFetch(
  * On web (dev or PWA): returns the configured VITE_ESP32_URL (mDNS / direct).
  */
 export function getEsp32BaseUrl(): string {
+  if (import.meta.env.VITE_NOHARDWARE === 'true') {
+    return import.meta.env.VITE_ESP32_URL ?? 'http://advaithydro.local:8091';
+  }
   if (Capacitor.isNativePlatform()) {
     const ip = localStorage.getItem('esp32_ip');
     if (!ip) throw new Error('ESP32 not registered yet. Waiting for device to connect.');

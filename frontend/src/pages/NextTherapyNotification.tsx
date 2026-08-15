@@ -385,6 +385,7 @@ const NextTherapyNotification: React.FC = () => {
   const saveReschedule = async () => {
     const patient = rescheduleTarget;
     if (!patient?.id || !rescheduleDateDraft) return;
+    if (rescheduleDateDraft < toInputDateString(new Date())) return;
     const leadDays = parseInt(rescheduleLeadDaysDraft, 10);
     await localDB.patients.update(patient.id, {
       next_therapy_date_override: rescheduleDateDraft,
@@ -540,31 +541,33 @@ const NextTherapyNotification: React.FC = () => {
                         <td style={tdStyle}>
                           <IonBadge color={statusColor(entry.status)}>{entry.status}</IonBadge>
                         </td>
-                        <td style={{ ...tdStyle, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 0.5rem' }}>
-                          <IonIcon
-                            icon={calendarOutline}
-                            title="Reschedule next therapy session"
-                            style={{ color: '#0a5c99', cursor: 'pointer', fontSize: '1.2rem', marginRight: '0.75rem' }}
-                            onClick={() => openRescheduleModal(entry.patient, entry.dueDate, entry.leadDays)}
-                          />
-                          <IonIcon
-                            icon={alarmOutline}
-                            title="Set custom reminder days for this patient"
-                            style={{ color: '#0a5c99', cursor: 'pointer', fontSize: '1.2rem', marginRight: '0.75rem' }}
-                            onClick={() => openOverrideEditor(entry.patient, entry.reminderDays, entry.leadDays)}
-                          />
-                          <IonIcon
-                            icon={paperPlaneOutline}
-                            title="Send reminder"
-                            style={{ color: '#0a5c99', cursor: 'pointer', fontSize: '1.2rem', marginRight: '0.75rem' }}
-                            onClick={() => openSendModal(entry.patient)}
-                          />
-                          <IonIcon
-                            icon={checkmarkDoneOutline}
-                            title="Mark as reminded"
-                            style={{display:'none', color: '#2dd36f', cursor: 'pointer', fontSize: '1.2rem' }}
-                            onClick={() => markAsReminded(entry.patient)}
-                          />
+                        <td style={{ ...tdStyle, padding: '0.75rem 0.5rem' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem' }}>
+                            <IonIcon
+                              icon={calendarOutline}
+                              title="Reschedule next therapy session"
+                              style={{ color: '#0a5c99', cursor: 'pointer', fontSize: '1.2rem', marginRight: '0.75rem' }}
+                              onClick={() => openRescheduleModal(entry.patient, entry.dueDate, entry.leadDays)}
+                            />
+                            <IonIcon
+                              icon={alarmOutline}
+                              title="Set custom reminder days for this patient"
+                              style={{ color: '#0a5c99', cursor: 'pointer', fontSize: '1.2rem', marginRight: '0.75rem' }}
+                              onClick={() => openOverrideEditor(entry.patient, entry.reminderDays, entry.leadDays)}
+                            />
+                            <IonIcon
+                              icon={paperPlaneOutline}
+                              title="Send reminder"
+                              style={{ color: '#0a5c99', cursor: 'pointer', fontSize: '1.2rem', marginRight: '0.75rem' }}
+                              onClick={() => openSendModal(entry.patient)}
+                            />
+                            <IonIcon
+                              icon={checkmarkDoneOutline}
+                              title="Mark as reminded"
+                              style={{display:'none', color: '#2dd36f', cursor: 'pointer', fontSize: '1.2rem' }}
+                              onClick={() => markAsReminded(entry.patient)}
+                            />
+                          </div>
                         </td>
                       </tr>
                       {editingPatientId === entry.patient.id && (
@@ -677,34 +680,36 @@ const NextTherapyNotification: React.FC = () => {
                             </div>
                           )}
                         </td>
-                        <td style={{ ...tdStyle, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 0.5rem' }}>
+                        <td style={{ ...tdStyle, padding: '0.75rem 0.5rem' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem' }}>
                             <IonIcon
                               icon={eyeOutline}
                               title="View full message"
-                            style={{ color: '#0a5c99', fontSize: '1.2rem', marginRight: '0.75rem', ...(!entry.log.message ? { opacity: '0.5' } : { cursor: 'pointer' } ) }}
+                              style={{ color: '#0a5c99', fontSize: '1.2rem', marginRight: '0.75rem', ...(!entry.log.message ? { opacity: '0.5' } : { cursor: 'pointer' } ) }}
                               className={entry.log.message ? '' : 'disabled-icon'}
-                            onClick={!entry.log.message ? undefined : () => setViewMessageEntry({ patientName: `${entry.patient.first_name} ${entry.patient.last_name}`, message: entry.log.message! })}
+                              onClick={!entry.log.message ? undefined : () => setViewMessageEntry({ patientName: `${entry.patient.first_name} ${entry.patient.last_name}`, message: entry.log.message! })}
                             />
-                          <IonIcon
-                            icon={calendarOutline}
-                            title="Reschedule next therapy session"
-                            style={{ color: '#0a5c99', cursor: 'pointer', fontSize: '1.2rem', marginRight: '0.75rem' }}
-                            onClick={() => openRescheduleModal(entry.patient, undefined, entry.leadDays)}
-                          />
-                          <IonIcon
-                            icon={alarmOutline}
-                            title="Set custom reminder days for this patient"
-                            style={{ color: '#0a5c99', cursor: 'pointer', fontSize: '1.2rem', marginRight: '0.75rem' }}
-                            onClick={() => openOverrideEditor(entry.patient, entry.reminderDays, entry.leadDays, entry.log.id)}
-                          />
-                          {entry.status ? (
                             <IonIcon
-                              icon={paperPlaneOutline}
-                              title="Resend reminder"
-                              style={{ color: '#0a5c99', cursor: 'pointer', fontSize: '1.2rem' }}
-                              onClick={() => openSendModal(entry.patient, entry.log.language, entry.log.message)}
+                              icon={calendarOutline}
+                              title="Reschedule next therapy session"
+                              style={{ color: '#0a5c99', cursor: 'pointer', fontSize: '1.2rem', marginRight: '0.75rem' }}
+                              onClick={() => openRescheduleModal(entry.patient, undefined, entry.leadDays)}
                             />
-                          ) : null}
+                            <IonIcon
+                              icon={alarmOutline}
+                              title="Set custom reminder days for this patient"
+                              style={{ color: '#0a5c99', cursor: 'pointer', fontSize: '1.2rem', marginRight: '0.75rem' }}
+                              onClick={() => openOverrideEditor(entry.patient, entry.reminderDays, entry.leadDays, entry.log.id)}
+                            />
+                            {entry.status ? (
+                              <IonIcon
+                                icon={paperPlaneOutline}
+                                title="Resend reminder"
+                                style={{ color: '#0a5c99', cursor: 'pointer', fontSize: '1.2rem' }}
+                                onClick={() => openSendModal(entry.patient, entry.log.language, entry.log.message)}
+                              />
+                            ) : null}
+                          </div>
                         </td>
                       </tr>
                       {editingPatientId === entry.patient.id && editingOverrideLogId === entry.log.id && (
@@ -804,19 +809,21 @@ const NextTherapyNotification: React.FC = () => {
                           <IonBadge color="tertiary" style={{ marginLeft: '0.4rem', fontSize: '0.65rem' }}>Re</IonBadge>
                         </td>
                         <td style={tdStyle}>{entry.leadDays} days</td>
-                        <td style={{ ...tdStyle, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 0.5rem' }}>
-                          <IonIcon
-                            icon={calendarOutline}
-                            title="Edit / clear reschedule"
-                            style={{ color: '#0a5c99', cursor: 'pointer', fontSize: '1.2rem', marginRight: '0.75rem' }}
-                            onClick={() => openRescheduleModal(entry.patient, entry.rescheduledDate, entry.leadDays)}
-                          />
-                          <IonIcon
-                            icon={paperPlaneOutline}
-                            title="Send reminder"
-                            style={{ color: '#0a5c99', cursor: 'pointer', fontSize: '1.2rem' }}
-                            onClick={() => openSendModal(entry.patient)}
-                          />
+                        <td style={{ ...tdStyle, padding: '0.75rem 0.5rem' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem' }}>
+                            <IonIcon
+                              icon={calendarOutline}
+                              title="Edit / clear reschedule"
+                              style={{ color: '#0a5c99', cursor: 'pointer', fontSize: '1.2rem', marginRight: '0.75rem' }}
+                              onClick={() => openRescheduleModal(entry.patient, entry.rescheduledDate, entry.leadDays)}
+                            />
+                            <IonIcon
+                              icon={paperPlaneOutline}
+                              title="Send reminder"
+                              style={{ color: '#0a5c99', cursor: 'pointer', fontSize: '1.2rem' }}
+                              onClick={() => openSendModal(entry.patient)}
+                            />
+                          </div>
                         </td>
                       </tr>
                     </React.Fragment>
@@ -959,6 +966,7 @@ const NextTherapyNotification: React.FC = () => {
             <div style={{ ...labelStyle, marginBottom: '0.5rem' }}>Next Therapy Date</div>
             <input
               type="date"
+              min={toInputDateString(new Date())}
               value={rescheduleDateDraft}
               onChange={(e) => setRescheduleDateDraft(e.target.value)}
               style={{ width: '100%', padding: '0.5rem 0.65rem', border: '1px solid #ccc', borderRadius: '6px', fontSize: '0.9rem', outline: 'none' }}
@@ -976,7 +984,7 @@ const NextTherapyNotification: React.FC = () => {
           </div>
 
           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-            <IonButton disabled={!rescheduleDateDraft} onClick={saveReschedule}>Save</IonButton>
+            <IonButton disabled={!rescheduleDateDraft || rescheduleDateDraft < toInputDateString(new Date())} onClick={saveReschedule}>Save</IonButton>
             {rescheduleTarget?.next_therapy_date_override && (
               <IonButton fill="outline" color="danger" onClick={clearReschedule}>Clear Reschedule</IonButton>
             )}
