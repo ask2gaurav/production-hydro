@@ -55,7 +55,7 @@ const DobPicker: React.FC<Props> = ({ value, onChange }) => {
   const selectStyle: React.CSSProperties = { minWidth: 0, flex: 1 };
 
   return (
-    <div style={{ width:'280px'}}>
+    <div style={{ width:'380px'}}>
       <IonLabel style={{ fontSize: '0.75rem', color: '#666', paddingLeft: '16px', display: 'block', marginBottom: '4px' }}>
         Date of Birth
       </IonLabel>

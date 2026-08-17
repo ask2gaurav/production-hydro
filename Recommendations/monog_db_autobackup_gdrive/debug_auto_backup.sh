@@ -31,6 +31,33 @@ GDRIVE_FOLDER="${GDRIVE_FOLDER:-MongoBackups}"
 RETENTION_DAYS=${RETENTION_DAYS:-10}
 MONGO_DB=${MONGO_DB:-hydrotherapy}
 
+
+
+echo "Evaluating remote cloud landscape to purge old archives from Google Drive..."
+
+echo "(rclone lsf --format "tp" "${GDRIVE_REMOTE}:${GDRIVE_FOLDER}"     --drive-client-id "${GDRIVE_CLIENT_ID}"     --drive-client-secret "${GDRIVE_CLIENT_SECRET}" 2>/dev/null | grep "mongobkp_${MONGO_DB}_" | sort)"
+exit 1
+# Fetch all existing backup files along with their modification time, delimited by '|'
+FILE_LIST=$(rclone lsf --format "t|p" "${GDRIVE_REMOTE}:${GDRIVE_FOLDER}" \
+    --drive-client-id "${GDRIVE_CLIENT_ID}" \
+    --drive-client-secret "${GDRIVE_CLIENT_SECRET}" 2>/dev/null | grep "mongobkp_${MONGO_DB}_" | sort)
+
+# Count how many total backup files currently exist in the cloud directory
+FILE_COUNT=$(echo "$FILE_LIST" | grep -c "mongobkp_${MONGO_DB}_")
+
+echo "Current cloud backup count: ${FILE_COUNT} (Target Threshold: ${RETENTION_DAYS})"
+
+exit 0;
+
+echo "Evaluating storage landscape to purge historical archives older than ${RETENTION_DAYS} days..."
+# Locate and remove local database dumps older than the retention threshold
+FILE_COUNT_LOCAL=$(find "${LOCAL_BACKUP_DIR}" -type f -name "mongobkp_${MONGO_DB}_*.archive.gz" -mtime +"${RETENTION_DAYS}" | wc -l)
+
+echo "Current local backup count: ${FILE_COUNT_LOCAL} (Target Threshold: ${RETENTION_DAYS})"
+if [ "$FILE_COUNT_LOCAL" -gt "$RETENTION_DAYS" ]; then
+    echo "Found excess local backups. Proceeding with cleanup."
+fi
+exit 0
 # Ensure critical variables loaded from .env are not empty
 if [ -z "$MONGO_USER" ] || [ -z "$MONGO_PASS" ] || [ -z "$GDRIVE_CLIENT_ID" ] || [ -z "$GDRIVE_CLIENT_SECRET" ]; then
     echo "CRITICAL ERROR: Missing required credentials (MONGO_USER, MONGO_PASS, GDRIVE_CLIENT_ID, or GDRIVE_CLIENT_SECRET) in ${ENV_FILE}." >&2
@@ -84,21 +111,9 @@ fi
 # ------------------------------------------------------------------------------
 # 5. Step 3: Local Retention Enforcement
 # ------------------------------------------------------------------------------
+echo "Evaluating storage landscape to purge historical archives older than ${RETENTION_DAYS} days..."
 # Locate and remove local database dumps older than the retention threshold
-FILE_COUNT_LOCAL=$(find "${LOCAL_BACKUP_DIR}" -type f -name "mongobkp_${MONGO_DB}_*.archive.gz" -mtime +"${RETENTION_DAYS}" | wc -l)
-echo "Current local backup count: ${FILE_COUNT_LOCAL} (Target Threshold: ${RETENTION_DAYS})"
-if [ "$FILE_COUNT_LOCAL" -gt "$RETENTION_DAYS" ]; then
-    echo "Found excess local backups. Proceeding with cleanup."
-    #find the oldest files exceeding the retention threshold and remove them. i.e. if retention is 10 days, total files are 12, then remove the 2 oldest files. 
-    NUM_FILE_TO_DELETE=$((FILE_COUNT_LOCAL - RETENTION_DAYS))
-    for i in $(seq 1 $NUM_FILE_TO_DELETE); do
-        OLDEST_FILE=$(find "${LOCAL_BACKUP_DIR}" -type f -name "mongobkp_${MONGO_DB}_*.archive.gz" -printf "%T+ %p\n" | sort | head -n 1 | awk '{print $2}')
-        if [ -n "$OLDEST_FILE" ]; then
-            echo "Removing oldest local backup file: ${OLDEST_FILE}"
-            rm -f "$OLDEST_FILE"
-        fi
-    done
-fi
+find "${LOCAL_BACKUP_DIR}" -type f -name "mongobkp_${MONGO_DB}_*.archive.gz" -mtime +"${RETENTION_DAYS}" -exec rm -v {} \;
 
 # ------------------------------------------------------------------------------
 # 6. Step 4: Cloud Retention Enforcement
@@ -106,7 +121,7 @@ fi
 echo "Evaluating remote cloud landscape to purge old archives from Google Drive..."
 
 # Fetch all existing backup files along with their modification time, delimited by '|'
-FILE_LIST=$(rclone lsf --format "tp" "${GDRIVE_REMOTE}:${GDRIVE_FOLDER}" \
+FILE_LIST=$(rclone lsf --format "t|p" "${GDRIVE_REMOTE}:${GDRIVE_FOLDER}" \
     --drive-client-id "${GDRIVE_CLIENT_ID}" \
     --drive-client-secret "${GDRIVE_CLIENT_SECRET}" 2>/dev/null | grep "mongobkp_${MONGO_DB}_" | sort)
 
@@ -123,10 +138,9 @@ if [ "$FILE_COUNT" -gt "$RETENTION_DAYS" ]; then
     echo "Cloud file count exceeds ${RETENTION_DAYS}. Preparing to remove ${NUM_FILE_TO_DELETE} oldest file(s)."
     #loop through the number of files to delete and remove them one by one
     for i in $(seq 1 $NUM_FILE_TO_DELETE); do
-        OLDEST_LINE=$(echo "$FILE_LIST" | head -n $i | tail -n 1)
+        OLDEST_LINE=$(echo "$FILE_LIST" | head -n 1)
         # Isolate the exact filename from the delimiter split
-        OLDEST_FILE=$(echo "$OLDEST_LINE" | grep -o "mongobkp_${MONGO_DB}_.*\.archive\.gz")
-        #OLDEST_FILE=$(echo "$OLDEST_LINE" | cut -d';' -f2-)
+        OLDEST_FILE=$(echo "$OLDEST_LINE" | cut -d'|' -f2-)
         
         if [ -n "$OLDEST_FILE" ]; then
             echo "Cloud file count exceeds ${RETENTION_DAYS}. Removing ONLY the oldest file: ${OLDEST_FILE}"
