@@ -8,6 +8,7 @@ import api from '../services/api';
 import { useStore } from '../store/useStore';
 import { checkModeOnBoot } from '../services/modeCheck';
 import { fetchAndCacheResources, runSync } from '../services/syncService';
+import { localDB } from '../db/localDB';
 
 type ServerStatus = 'checking' | 'ok' | 'down';
 
@@ -91,6 +92,14 @@ const LoginPage: React.FC = () => {
 
       setToken(token);
       setMachineId(machineId);
+
+      const existingSettings = await localDB.settings.get(machineId);
+      await localDB.settings.put({
+        ...existingSettings,
+        machine_id: machineId,
+        auto_backup_install_id: crypto.randomUUID(),
+      });
+
       await fetchAndCacheResources(machineId);
       if (navigator.onLine) {
         await runSync(machineId);

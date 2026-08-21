@@ -6,8 +6,8 @@
 | **Session ID** | `850bab2f-2f59-4d07-a582-e8d188f55f9e` |
 | **Working Dir** | `d:\projects\production-hydro-colon-therapy` |
 | **Started** | 8/14/2026, 7:09:26 PM |
-| **Last Updated** | 8/15/2026, 2:13:54 PM |
-| **Messages** | 257 |
+| **Last Updated** | 8/21/2026, 12:07:03 PM |
+| **Messages** | 294 |
 
 ---
 
@@ -3889,6 +3889,581 @@ No errors. Summary of changes in [NextTherapyNotification.tsx](frontend/src/page
 - Added `min={toInputDateString(new Date())}` to the reschedule date `<input type="date">` (line 967) — disables past dates in the native date picker.
 - Disabled the "Save" button when the selected date is before today (line 986), as a visible UI guard.
 - Added the same check inside `saveReschedule` (line 388) as a backstop, in case a past date slips through (e.g. manual entry on some platforms).
+
+
+---
+
+## User <sup>8/21/2026, 11:57:41 AM</sup>
+
+<ide_opened_file>The user opened the file d:\projects\production-hydro-colon-therapy\frontend\src\pages\DataExportImport.tsx in the IDE. This may or may not be related to the current task.</ide_opened_file>
+
+@frontend/src/pages/DataExportImport.tsx in auto export zip file creation, the file created by previously installed app can not be removed or rewrite (overwrite). So we need to create a unique id at the time of login which would be used in the file name to avoid this issue. Undestood? Just clarify.
+
+
+---
+
+## Assistant <sup>8/21/2026, 11:57:41 AM</sup>
+
+Failed to authenticate: OAuth session expired and could not be refreshed
+
+
+---
+
+## User <sup>8/21/2026, 11:58:31 AM</sup>
+
+@frontend/src/pages/DataExportImport.tsx in auto export zip file creation, the file created by previously installed app can not be removed or rewrite (overwrite). So we need to create a unique id at the time of login which would be used in the file name to avoid this issue. Undestood? Just clarify.
+
+
+---
+
+## Assistant <sup>8/21/2026, 11:58:48 AM</sup>
+
+
+---
+
+## Assistant <sup>8/21/2026, 11:58:49 AM</sup>
+
+<details>
+<summary>Tool: <code>Grep</code></summary>
+
+```json
+{
+  "pattern": "login|Login|installId|deviceId|uuid|randomUUID",
+  "path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src",
+  "output_mode": "files_with_matches",
+  "-i": true
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/21/2026, 11:58:49 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Found 3 files
+frontend\src\App.tsx
+frontend\src\pages\LoginPage.tsx
+frontend\src\services\debugLog.ts
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/21/2026, 11:58:51 AM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\LoginPage.tsx"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/21/2026, 11:58:51 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+1	import React, { useState, useEffect, useCallback } from 'react';
+2	import {
+3	  IonPage, IonContent, IonHeader, IonToolbar, IonTitle,
+4	  IonItem, IonLabel, IonInput, IonButton, IonText, IonSpinner
+5	} from '@ionic/react';
+6	import { useHistory } from 'react-router';
+7	import api from '../services/api';
+8	import { useStore } from '../store/useStore';
+9	import { checkModeOnBoot } from '../services/modeCheck';
+10	import { fetchAndCacheResources, runSync } from '../services/syncService';
+11	
+12	type ServerStatus = 'checking' | 'ok' | 'down';
+13	
+14	const bannerStyle = (color: string): React.CSSProperties => ({
+15	  backgroundColor: color,
+16	  color: '#fff',
+17	  padding: '0.6rem 1rem',
+18	  display: 'flex',
+19	  alignItems: 'center',
+20	  gap: '0.5rem',
+21	  fontSize: '0.875rem',
+22	  fontWeight: 500,
+23	});
+24	
+25	const LoginPage: React.FC = () => {
+26	  const history = useHistory();
+27	  const { setMachineId, setToken } = useStore();
+28	
+29	  const [email, setEmail] = useState('');
+3
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/21/2026, 11:59:10 AM</sup>
+
+
+---
+
+## Assistant <sup>8/21/2026, 11:59:19 AM</sup>
+
+Understood, here's my restatement of the problem and plan — flagging a few points to confirm before I implement:
+
+**The problem**: `autoBackupFileName()` (backupService.ts) generates a deterministic filename — `hydrotherapy-auto-backup-{machineId}-{YYYY-MM-DD}.zip` — same name every day, same machine. If the app is uninstalled and reinstalled (or app data is cleared), Android's scoped-storage (`MediaStore`, used for public `Directory.Documents`) can leave the *old* app-install's file behind as effectively orphaned — the new app instance can't delete or overwrite it (this is on top of the MediaStore duplicate-instead-of-overwrite issue I fixed last time, which only handles the same-install case). Since the filename is identical, today's fresh auto-backup collides with that untouchable leftover file and silently fails to replace it.
+
+**Your proposed fix**: generate a random unique ID once, at login, persist it locally, and fold it into the auto-backup filename (e.g. `hydrotherapy-auto-backup-{machineId}-{installId}-{date}.zip`). Since a reinstall wipes local storage (IndexedDB/Dexie), a fresh login after reinstall generates a *new* ID — so the new install's backups get fresh filenames that can never collide with the old orphaned file from the previous install.
+
+I understand the goal. A few things I want to confirm before implementing:
+
+1. **Where should the ID be generated/stored?** I'm planning to generate it once via `crypto.randomUUID()` in `handleLogin` (`LoginPage.tsx`), store it in `localDB.settings` (keyed by `machineId`, e.g. a new `install_id` field), and reuse it on subsequent logins if already present (not regenerate every login — only when missing, i.e. effectively once per install). Does that match what you meant by "at the time of login"?
+2. **Scope**: should this ID only be added to the **auto-backup** filename (the one with the daily-collision problem), or also to the manual "Export Backup (.zip)"/"Export to Excel" filenames? Those already include a full timestamp so they don't collide today — I'd leave them as-is unless you want it added everywhere for consistency.
+3. Should the ID be appended to both the internal `Directory.Data` copy and the public `Directory.Documents` copy, or only the public one (since that's the one actually affected by the orphaned-file problem)? I'd lean toward both, for one consistent filename, but want to confirm.
+
+
+---
+
+## User <sup>8/21/2026, 12:04:55 PM</sup>
+
+<ide_opened_file>The user opened the file d:\projects\production-hydro-colon-therapy\frontend\src\pages\DataExportImport.tsx in the IDE. This may or may not be related to the current task.</ide_opened_file>
+
+1. Generate it everytime they login, no need to check if it exist or not.  2. Yes, only for auto-backup filename.  3. Yes
+
+
+---
+
+## Assistant <sup>8/21/2026, 12:05:24 PM</sup>
+
+
+---
+
+## Assistant <sup>8/21/2026, 12:05:24 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\db\\localDB.ts",
+  "offset": 22,
+  "limit": 65
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/21/2026, 12:05:25 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+22	export interface LocalSettings {
+23	  machine_id: string;
+24	  default_session_minutes?: number;
+25	  max_temperature?: number;
+26	  therapy_min_temp?: number;
+27	  default_temperature?: number;
+28	  water_inlet_valve?: boolean;
+29	  flush_valve?: boolean;
+30	  blower_switch?: boolean;
+31	  heater_switch?: boolean;
+32	  pump_switch?: boolean;
+33	  flush_frequency?: number;
+34	  auto_flush?: boolean;
+35	  flush_duration?: number;
+36	  flush_mode?: 'continuous' | 'interval';
+37	  blower_auto?: boolean;
+38	  blower_frequency_mode?: 'continuous' | 'interval';
+39	  blower_interval?: number;
+40	  blower_duration?: number;
+41	
+42	  // WiFi credentials synced from server
+43	  ssid?: string;
+44	  password?: string;
+45	
+46	  // Demo Mode overrides
+47	  mode?: string;
+48	  demo_sessions_used?: number;
+49	  demo_session_limit?: number;
+50	  sessions_remaining?: number | null;
+51	  is_locked?: boolean;
+52	  lock_screen_contact?: Record<string, string>;
+53	
+54	  // Next therapy reminder settings
+
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/21/2026, 12:05:26 PM</sup>
+
+Adding the field to the settings type first.
+
+
+---
+
+## Assistant <sup>8/21/2026, 12:05:28 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\db\\localDB.ts",
+  "old_string": "  // Auto Backup\n  auto_backup_enabled?: boolean;\n  auto_backup_retention_count?: number;\n}",
+  "new_string": "  // Auto Backup\n  auto_backup_enabled?: boolean;\n  auto_backup_retention_count?: number;\n  // Regenerated on every login — folded into the auto-backup filename so a fresh\n  // install/login never collides with a same-named file an old install left behind\n  // (e.g. an orphaned public-storage file the new install can't delete or overwrite).\n  auto_backup_install_id?: string;\n}"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/21/2026, 12:06:02 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\db\localDB.ts has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/21/2026, 12:06:04 PM</sup>
+
+Now generate the ID on every login.
+
+
+---
+
+## Assistant <sup>8/21/2026, 12:06:06 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\LoginPage.tsx",
+  "old_string": "import { useHistory } from 'react-router';\nimport api from '../services/api';\nimport { useStore } from '../store/useStore';\nimport { checkModeOnBoot } from '../services/modeCheck';\nimport { fetchAndCacheResources, runSync } from '../services/syncService';",
+  "new_string": "import { useHistory } from 'react-router';\nimport api from '../services/api';\nimport { useStore } from '../store/useStore';\nimport { checkModeOnBoot } from '../services/modeCheck';\nimport { fetchAndCacheResources, runSync } from '../services/syncService';\nimport { localDB } from '../db/localDB';"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/21/2026, 12:06:07 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\LoginPage.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/21/2026, 12:06:10 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\LoginPage.tsx",
+  "old_string": "      setToken(token);\n      setMachineId(machineId);\n      await fetchAndCacheResources(machineId);",
+  "new_string": "      setToken(token);\n      setMachineId(machineId);\n\n      const existingSettings = await localDB.settings.get(machineId);\n      await localDB.settings.put({\n        ...existingSettings,\n        machine_id: machineId,\n        auto_backup_install_id: crypto.randomUUID(),\n      });\n\n      await fetchAndCacheResources(machineId);"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/21/2026, 12:06:12 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\LoginPage.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/21/2026, 12:06:14 PM</sup>
+
+Now update `backupService.ts` — filename generation and the retention-cleanup sort, which currently relies on lexical string sort over the full filename (which breaks once an ID is inserted before the date).
+
+
+---
+
+## Assistant <sup>8/21/2026, 12:06:14 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\services\\backupService.ts",
+  "offset": 56,
+  "limit": 180
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/21/2026, 12:06:14 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+56	const AUTO_BACKUP_PREFIX = 'hydrotherapy-auto-backup-';
+57	const DEFAULT_AUTO_BACKUP_RETENTION = 5;
+58	
+59	function todayDateStamp(): string {
+60	  const d = new Date();
+61	  const yyyy = d.getFullYear();
+62	  const mm = String(d.getMonth() + 1).padStart(2, '0');
+63	  const dd = String(d.getDate()).padStart(2, '0');
+64	  return `${yyyy}-${mm}-${dd}`;
+65	}
+66	
+67	function autoBackupFileName(machineId: string): string {
+68	  return `${AUTO_BACKUP_PREFIX}${machineId}-${todayDateStamp()}.zip`;
+69	}
+70	
+71	async function writeAndShare(fileName: string, base64Data: string) {
+72	  const written = await Filesystem.writeFile({
+73	    path: `${BACKUPS_DIR}/${fileName}`,
+74	    data: base64Data,
+75	    directory: Directory.Data,
+76	    recursive: true,
+77	  });
+78	
+79	  try {
+80	    await Filesystem.writeFile({
+81	      path: fileName,
+82	      data: base64Data,
+83	      directory: Directory.Documents,
+84	      recursive: true,
+85	    });
+86	  } catch {
+87	    // Non-fatal — the file is still 
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/21/2026, 12:06:17 PM</sup>
+
+
+---
+
+## Assistant <sup>8/21/2026, 12:06:20 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\services\\backupService.ts",
+  "old_string": "function autoBackupFileName(machineId: string): string {\n  return `${AUTO_BACKUP_PREFIX}${machineId}-${todayDateStamp()}.zip`;\n}",
+  "new_string": "function autoBackupFileName(machineId: string, installId: string): string {\n  return `${AUTO_BACKUP_PREFIX}${machineId}-${installId}-${todayDateStamp()}.zip`;\n}\n\n// Auto-backup filenames now embed a per-login install ID before the date, so a plain\n// string sort no longer sorts them chronologically — pull the trailing YYYY-MM-DD out instead.\nfunction extractAutoBackupDate(name: string): string {\n  const match = name.match(/-(\\d{4}-\\d{2}-\\d{2})\\.zip$/i);\n  return match ? match[1] : '';\n}"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/21/2026, 12:06:21 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\services\backupService.ts has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/21/2026, 12:06:25 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\services\\backupService.ts",
+  "old_string": "    const autoFiles = res.files\n      .map((f) => f.name)\n      .filter((name) => name.startsWith(prefix) && name.toLowerCase().endsWith('.zip'))\n      .sort()\n      .reverse(); // newest first — the embedded YYYY-MM-DD sorts chronologically as a string",
+  "new_string": "    const autoFiles = res.files\n      .map((f) => f.name)\n      .filter((name) => name.startsWith(prefix) && name.toLowerCase().endsWith('.zip'))\n      .sort((a, b) => extractAutoBackupDate(b).localeCompare(extractAutoBackupDate(a))); // newest first, by embedded date"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/21/2026, 12:06:26 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\services\backupService.ts has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/21/2026, 12:06:27 PM</sup>
+
+Now update `triggerAutoBackup` to resolve the install ID and pass it through:
+
+
+---
+
+## Assistant <sup>8/21/2026, 12:06:30 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\services\\backupService.ts",
+  "old_string": "    const retention = settings.auto_backup_retention_count ?? DEFAULT_AUTO_BACKUP_RETENTION;\n    const fileName = autoBackupFileName(machineId);\n    const relPath = `${BACKUPS_DIR}/${fileName}`;",
+  "new_string": "    const retention = settings.auto_backup_retention_count ?? DEFAULT_AUTO_BACKUP_RETENTION;\n    // Falls back to a fixed id for a session that logged in before this field existed.\n    const installId = settings.auto_backup_install_id ?? 'legacy';\n    const fileName = autoBackupFileName(machineId, installId);\n    const relPath = `${BACKUPS_DIR}/${fileName}`;"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/21/2026, 12:06:31 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\services\backupService.ts has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/21/2026, 12:06:32 PM</sup>
+
+Now typecheck.
+
+
+---
+
+## Assistant <sup>8/21/2026, 12:06:33 PM</sup>
+
+<details>
+<summary>Tool: <code>Bash</code></summary>
+
+```json
+{
+  "command": "cd \"d:/projects/production-hydro-colon-therapy/frontend\" && npx tsc --noEmit -p . 2>&1 | grep -iE \"backupService|LoginPage|localDB\"; echo done",
+  "description": "Typecheck edited files"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/21/2026, 12:06:58 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+done
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/21/2026, 12:07:03 PM</sup>
+
+No errors. Summary of changes:
+
+- **`localDB.ts`**: added `auto_backup_install_id?: string` to `LocalSettings`.
+- **`LoginPage.tsx`**: on every successful login, generates a new `crypto.randomUUID()` and writes it to `localDB.settings.auto_backup_install_id` for that machine — unconditionally, no existence check.
+- **`backupService.ts`**:
+  - `autoBackupFileName(machineId, installId)` now embeds the install ID: `hydrotherapy-auto-backup-{machineId}-{installId}-{date}.zip`.
+  - `triggerAutoBackup` reads `settings.auto_backup_install_id` (falling back to `'legacy'` for a session that logged in before this shipped) and passes it into the filename.
+  - `cleanupOldAutoBackups`'s retention sort no longer does a plain lexical string sort (which relied on the date being the last differentiator) — it now extracts the trailing `YYYY-MM-DD` via regex and sorts by that, since the install ID sitting before the date would otherwise scramble the ordering.
+
+Each login now gets a fresh filename lineage, so a reinstall (or repeated logins) can never collide with a same-named file an earlier install left behind in public storage.
 
 
 ---

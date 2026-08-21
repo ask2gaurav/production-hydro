@@ -64,8 +64,15 @@ function todayDateStamp(): string {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-function autoBackupFileName(machineId: string): string {
-  return `${AUTO_BACKUP_PREFIX}${machineId}-${todayDateStamp()}.zip`;
+function autoBackupFileName(machineId: string, installId: string): string {
+  return `${AUTO_BACKUP_PREFIX}${machineId}-${installId}-${todayDateStamp()}.zip`;
+}
+
+// Auto-backup filenames now embed a per-login install ID before the date, so a plain
+// string sort no longer sorts them chronologically — pull the trailing YYYY-MM-DD out instead.
+function extractAutoBackupDate(name: string): string {
+  const match = name.match(/-(\d{4}-\d{2}-\d{2})\.zip$/i);
+  return match ? match[1] : '';
 }
 
 async function writeAndShare(fileName: string, base64Data: string) {
@@ -162,8 +169,7 @@ async function cleanupOldAutoBackups(machineId: string, retention: number): Prom
     const autoFiles = res.files
       .map((f) => f.name)
       .filter((name) => name.startsWith(prefix) && name.toLowerCase().endsWith('.zip'))
-      .sort()
-      .reverse(); // newest first — the embedded YYYY-MM-DD sorts chronologically as a string
+      .sort((a, b) => extractAutoBackupDate(b).localeCompare(extractAutoBackupDate(a))); // newest first, by embedded date
 
     const toDelete = autoFiles.slice(Math.max(0, retention));
     for (const name of toDelete) {
@@ -187,7 +193,9 @@ export async function triggerAutoBackup(machineId: string): Promise<void> {
     if (!settings?.auto_backup_enabled) return;
 
     const retention = settings.auto_backup_retention_count ?? DEFAULT_AUTO_BACKUP_RETENTION;
-    const fileName = autoBackupFileName(machineId);
+    // Falls back to a fixed id for a session that logged in before this field existed.
+    const installId = settings.auto_backup_install_id ?? 'legacy';
+    const fileName = autoBackupFileName(machineId, installId);
     const relPath = `${BACKUPS_DIR}/${fileName}`;
 
     let isFirstToday = false;

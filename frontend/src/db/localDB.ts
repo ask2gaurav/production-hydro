@@ -61,6 +61,10 @@ export interface LocalSettings {
   // Auto Backup
   auto_backup_enabled?: boolean;
   auto_backup_retention_count?: number;
+  // Regenerated on every login — folded into the auto-backup filename so a fresh
+  // install/login never collides with a same-named file an old install left behind
+  // (e.g. an orphaned public-storage file the new install can't delete or overwrite).
+  auto_backup_install_id?: string;
 }
 
 export interface LocalTherapist {
