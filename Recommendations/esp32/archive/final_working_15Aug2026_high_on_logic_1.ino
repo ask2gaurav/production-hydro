@@ -6,6 +6,8 @@
 #include <ESPmDNS.h>
 #include <DallasTemperature.h>
 #include <HTTPClient.h>
+#include <OneButton.h>
+#include "esp_log.h"
 
 #define ONE_WIRE_BUS 4
 OneWire oneWire(ONE_WIRE_BUS);
@@ -20,35 +22,43 @@ DallasTemperature sensors(&oneWire);
 #define WATER_PUMP_OUT 32
 #define FLUSH_BUTTON 27
 #define POWER_ON 22
-#define EXTRA_PIN 18
+#define HARDWARE_PAUSE_RESUME_BUTTON 18
+
+OneButton button(HARDWARE_PAUSE_RESUME_BUTTON, true);
 
 // Replace with your network credentials
-const char* ssid = "Colonima5696";
-const char* password = "48knkio1a";
-const char* machineSerial = "COLONIMA_GJ05-2026-002";  // Hard-coded machine serial number
+const char* ssid = "Colonima7092";
+const char* password = "04n7khslc";
+const char* machineSerial = "DEL_TEST11";  // Hard-coded machine serial number
 float readSensorTemperature = 0;
 
 byte readLL, readLH, readButton, readHeader, readBlower, readFlush, readWaterInSq, readWaterPumpOut, readHeater;
-byte prepSession=0, startSession=0, sessionPause=0, sessionEnd=0;
+byte prepSession=0, startSession=0, sessionPause=0, sessionEnd=0, hardwareSessionEnd=0;
 byte flushAuto,  flushButtonHit, flushButtonHitFromTab=0, flushButtonHardwareHit=0, flushButtonHardwareHitPrev=0;
 byte blowerAuto,  blowerButtonHit;
 byte  flushFreqMode=0, blowerFreqMode=0; // 0 for continuous, 1 for interval based
-const byte MY_ON = LOW;
-const byte MY_OFF = HIGH;
-
+byte heater_from_app=2; // 0 for off, 1 for on
+const byte MY_OFF = LOW;
+const byte MY_ON = HIGH;
 
 unsigned long sessionDuration, flushDuration, flushInterval, blowerDuration, blowerInterval;
 unsigned long previousMillis=0, previousSessionMillis=0, previousFlushMillis=0;
 unsigned long previousBlowerIntervalMillis=0, previousBlowerMillis=0;
 unsigned long previousRegistrationMillis=0;
-const unsigned long REGISTRATION_INTERVAL = 30000;  // 30 seconds
+const unsigned long REGISTRATION_INTERVAL = 1000;  // 1 seconds
 int registrationFailCount = 0;
-
-int outputPins[] = {HEATER, BLOWER, FLUSH, WATER_IN_S1, WATER_PUMP_OUT,POWER_ON};
+int disconnectCount = 0;
+int outputPins[] = {HEATER, BLOWER, FLUSH, WATER_IN_S1, WATER_PUMP_OUT, POWER_ON};
 int inputPins[] = {WATER_LEVEL_UP, WATER_LEVEL_BOTTOM, FLUSH_BUTTON};
 int inputPinsLen = sizeof(inputPins) / sizeof(inputPins[0]);
 int outputPinsLen = sizeof(outputPins) / sizeof(outputPins[0]);
 int setTemperature = 35, maxTemperature = 45;
+ 
+// Hardware button (pin 18) state tracking
+byte hwButtonPrevState = MY_OFF;
+unsigned long hwButtonPressStart = 0;
+const unsigned long LONG_PRESS_DURATION = 5000;  // 5 seconds
+
 // Create AsyncWebServer object on port 80
 AsyncWebServer server(8091);
 
@@ -68,18 +78,55 @@ bool registerWithServer() {
 	return (httpCode >= 200 && httpCode < 300);
 }
 
+// Callback function for a short click
+void handleClick() {
+	if (startSession == 1 && sessionPause == 0) {
+		//pause session
+		PAUSE_SESSION();
+		sessionPause = 1;
+		
+	} else {
+		//resume session
+		sessionPause = 0;
+		RESUME_SESSION();
+	}
+}
+
+// Callback function for a long press
+void handleLongPress() {
+	//if(button.isLongPressed()==true){
+		startSession = 0;
+		prepSession = 0;
+		sessionPause = 0;
+		sessionEnd = 0;
+		hardwareSessionEnd=1;
+		END_SESSION();
+		
+	//}
+	button.reset();
+}
+
 void setup() {
-	// Serial port for debugging purposes
-	//Serial.begin(115200);
+	// Suppress ESP-IDF/Arduino-core internal logging (WiFi events, peripheral manager, etc.)
+	// at runtime, regardless of the IDE's Core Debug Level build setting — that logging
+	// writes to the same Serial/UART0 the USB-C command channel uses and corrupts the
+	// strict one-JSON-line-per-command protocol below. Must run before WiFi/Serial start.
+	esp_log_level_set("*", ESP_LOG_NONE);
+
+	// Serial port — used for the USB-C command channel (see pollSerialCommands()),
+	// not just debugging, so nothing else may write to Serial.
+	Serial.begin(115200);
 	reset_pins();
 	flushButtonHardwareHit = digitalRead(FLUSH_BUTTON);
 	flushButtonHardwareHitPrev = flushButtonHardwareHit;
 	// Connect to Wi-Fi
 	WiFi.mode(WIFI_STA);
 	WiFi.begin(ssid, password);
-	//WiFi.softAP(ssid, password);
+	// Service USB serial commands while (re)connecting — opening the USB port commonly
+	// resets the board via DTR/RTS, so the app may be polling over USB right here.
 	while (WiFi.status() != WL_CONNECTED) {
-		delay(1000);
+		pollSerialCommands();
+		delay(50);
 	}
 
 	registerWithServer();
@@ -91,22 +138,31 @@ void setup() {
 
 	sensors.begin();
 
+	// 1. Link the function to trigger on a quick short click
+  button.attachClick(handleClick);
+  // 2. Link the function to trigger as soon as the long press threshold is crossed
+  button.attachLongPressStart(handleLongPress);
+  // Optional: Adjust the long press duration threshold (defaults to 600ms)
+	button.setClickMs(50);
+  button.setPressMs(5000); // Set to 1000ms (1 seconds)
+
 	// Route for root / web page
 	server.on("/", HTTP_GET, [](AsyncWebServerRequest* request) {
-		String outputMessage = "{\"temp\": " + String(readSensorTemperature) + ", \"water_hl\": " + String(readLH) + ", \"water_ll\": " + String(readLL) + ", \"blower\": " + String(readBlower) + ", \"flush_valve\": " + String(readFlush) + ", \"water_in_valve\": " + String(readWaterInSq) + ", \"pump\": " + String(readWaterPumpOut) + ", \"flush_button_hardware\": " + String(flushButtonHardwareHit) + ",\"heater\": " + String(readHeater) + "}";
+		String outputMessage = "{\"temp\": " + String(readSensorTemperature) + ", \"water_hl\": " + String(readLH) + ", \"water_ll\": " + String(readLL) + ", \"blower\": " + String(readBlower) + ", \"flush_valve\": " + String(readFlush) + ", \"water_in_valve\": " + String(readWaterInSq) + ", \"pump\": " + String(readWaterPumpOut) + ", \"flush_button_hardware\": " + String(flushButtonHardwareHit) + ",\"heater\": " + String(readHeater) + ",\"sessionP\": " + String( sessionPause ) + ",\"hes\": " + String(0) + "}";
 		request->send(200, "text/html", outputMessage);
 	});
 
 	server.on("/machineinfo.html", HTTP_GET, [](AsyncWebServerRequest* request) {
+		disconnectCount = 0;
 		if (request->hasParam("session_duration") ) {
 			sessionDuration = request->getParam("session_duration")->value().toInt();
-		} 
+		}
 		if (request->hasParam("default_temperature") ) {
 			setTemperature = request->getParam("default_temperature")->value().toInt();
-		} 
+		}
 		if (request->hasParam("max_temperature") ) {
 			maxTemperature = request->getParam("max_temperature")->value().toInt();
-		} 
+		}
 		if (request->hasParam("auto_flush") ) {
 			flushAuto = request->getParam("auto_flush")->value().toInt();
 		}
@@ -152,27 +208,113 @@ void setup() {
 		if (request->hasParam("end_session") ) {
 			sessionEnd = request->getParam("end_session")->value().toInt();
 		}
+		if (request->hasParam("heater") ) {
+			heater_from_app = request->getParam("heater")->value().toInt();
+			if(heater_from_app == 1){
+				digitalWrite(HEATER, MY_ON);
+			}
+			else if(heater_from_app == 0){
+				digitalWrite(HEATER, MY_OFF);
+			}
+			heater_from_app=2;
+		}
 
 		read_pins();
-		String outputMessage = "{\"temp\": " + String(readSensorTemperature) + ", \"water_hl\": " + String(readLH) + ", \"water_ll\": " + String(readLL) + ", \"blower\": " + String(blowerButtonHit) + ", \"flush_valve\": " + String(flushButtonHitFromTab) + ", \"water_in_valve\": " + String(readWaterInSq) + ", \"pump\": " + String(readWaterPumpOut) + ", \"flush_button_hardware\": " + String(flushButtonHardwareHit) + ",\"heater\": " + String(readHeater) + "}";
-		//request->send(200, "text/plain", outputMessage);
+		String outputMessage = "{\"temp\": " + String(readSensorTemperature) + ", \"water_hl\": " + String(readLH) + ", \"water_ll\": " + String(readLL) + ", \"blower\": " + String(blowerButtonHit) + ", \"flush_valve\": " + String(flushButtonHitFromTab) + ", \"water_in_valve\": " + String(readWaterInSq) + ", \"pump\": " + String(readWaterPumpOut) + ", \"flush_button_hardware\": " + String(flushButtonHardwareHit) + ",\"heater\": " + String(readHeater) + ",\"sessionP\": " + String( sessionPause ) + ",\"hes\": " + String(0) + "}";
 
 		AsyncWebServerResponse *response = request->beginResponse(200, "text/plain", outputMessage);
 		response->addHeader("Access-Control-Allow-Origin", "*");
-		
 		response->addHeader("Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS");
 		response->addHeader("Access-Control-Allow-Headers", "Content-Type");
 		response->addHeader("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
 		request->send(response);
 	});
-	
+
 	// Start server
 	server.begin();
 	DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
 	DefaultHeaders::Instance().addHeader("Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS");
 	DefaultHeaders::Instance().addHeader("Access-Control-Allow-Headers", "Content-Type");
 	DefaultHeaders::Instance().addHeader("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
-	
+}
+
+// ---- USB-C / Serial command channel ----
+// Mirrors the /machineinfo.html HTTP handler above (same param names, same JSON
+// response shape) but reads/writes over Serial instead of the AsyncWebServer.
+// Kept fully separate from the WiFi handler so that path is never touched by this.
+String serialBuffer = "";
+
+// Applies one key=value pair from a serial command line to the same globals the
+// WiFi /machineinfo.html handler uses. Unknown keys (including the app's plain-poll
+// marker "poll=1") are silently ignored.
+void applySerialParam(String key, String value) {
+	if (key == "session_duration") sessionDuration = value.toInt();
+	else if (key == "default_temperature") setTemperature = value.toInt();
+	else if (key == "max_temperature") maxTemperature = value.toInt();
+	else if (key == "auto_flush") flushAuto = value.toInt();
+	else if (key == "flush_mode") flushFreqMode = value.toInt();
+	else if (key == "flush_frequency") flushInterval = value.toInt();
+	else if (key == "flush_duration") flushDuration = value.toInt();
+	else if (key == "flush_button_hit") flushButtonHitFromTab = value.toInt();
+	else if (key == "flush_valve") flushButtonHitFromTab = value.toInt();
+	else if (key == "blower_auto") blowerAuto = value.toInt();
+	else if (key == "blower_frequency_mode") blowerFreqMode = value.toInt();
+	else if (key == "blower_interval") blowerInterval = value.toInt();
+	else if (key == "blower_duration") blowerDuration = value.toInt();
+	else if (key == "blower") blowerButtonHit = value.toInt();
+	else if (key == "prepare_session") prepSession = value.toInt();
+	else if (key == "start_session") startSession = value.toInt();
+	else if (key == "pause_session") sessionPause = value.toInt();
+	else if (key == "end_session") sessionEnd = value.toInt();
+	else if (key == "heater") {
+		heater_from_app = value.toInt();
+		if (heater_from_app == 1) {
+			digitalWrite(HEATER, MY_ON);
+		} else if (heater_from_app == 0) {
+			digitalWrite(HEATER, MY_OFF);
+		}
+		heater_from_app = 2;
+	}
+}
+
+// Parses "key1=val1&key2=val2" (no leading '?'), applies each param, then returns
+// the same status JSON line the WiFi /machineinfo.html handler builds.
+String handleSerialCommand(String line) {
+	disconnectCount = 0;
+	int start = 0;
+	String keyValue;
+	while (start < (int)line.length()) {
+		int amp = line.indexOf('&', start);
+		String pair = (amp == -1) ? line.substring(start) : line.substring(start, amp);
+		int eq = pair.indexOf('=');
+		if (eq > 0) {
+			keyValue += pair.substring(0, eq) + "=" + pair.substring(eq + 1);
+			applySerialParam(pair.substring(0, eq), pair.substring(eq + 1));
+		}
+		if (amp == -1) break;
+		start = amp + 1;
+	}
+
+	read_pins();
+	return "{\"debug_serial_cmd\": \"" + keyValue + "\",\"temp\": " + String(readSensorTemperature) + ", \"water_hl\": " + String(readLH) + ", \"water_ll\": " + String(readLL) + ", \"blower\": " + String(blowerButtonHit) + ", \"flush_valve\": " + String(flushButtonHitFromTab) + ", \"water_in_valve\": " + String(readWaterInSq) + ", \"pump\": " + String(readWaterPumpOut) + ", \"flush_button_hardware\": " + String(flushButtonHardwareHit) + ",\"heater\": " + String(readHeater) + ",\"sessionP\": " + String( sessionPause ) + ",\"hes\": " + String(0) + "}";
+}
+
+// Non-blocking: drains whatever bytes are available, processes one command per
+// complete newline-terminated line, and writes exactly one JSON reply per line.
+void pollSerialCommands() {
+	while (Serial.available() > 0) {
+		char c = (char)Serial.read();
+		if (c == '\n') {
+			serialBuffer.trim();
+			if (serialBuffer.length() > 0) {
+				Serial.println(handleSerialCommand(serialBuffer));
+			}
+			serialBuffer = "";
+		} else if (c != '\r') {
+			serialBuffer += c;
+			if (serialBuffer.length() > 256) serialBuffer = ""; // guard against a garbled/unterminated line
+		}
+	}
 }
 
 void read_pins(){
@@ -186,21 +328,18 @@ void read_pins(){
 	readHeater = digitalRead(HEATER);
 }
 
-//reste all input and output pins to default state
+//reset all input and output pins to default state
 void reset_pins(){
 	for (int i = 0; i < inputPinsLen; i++) {
-		pinMode(inputPins[i], INPUT); // Sets pins WATER_LEVEL_UP, WATER_LEVEL_BOTTOM
+		pinMode(inputPins[i], INPUT);
 	}
 	for (int i = 0; i < outputPinsLen; i++) {
-		pinMode(outputPins[i], OUTPUT); // Sets pins HEATER, BLOWER, FLUSH, WATER_LEVEL_UP, WATER_LEVEL_BOTTOM, WATER_IN_S1, WATER_PUMP_OUT, BUTTON as INPUT
-		if(HEATER != outputPins[i] && EXTRA_PIN != outputPins[i]){ // keep power pins off at startup, other pins on at startup
-			digitalWrite(outputPins[i], MY_ON); // set all pins as off by default except power pins
-		}
+		pinMode(outputPins[i], OUTPUT);
+		digitalWrite(outputPins[i], MY_OFF); // set all pins as off by default except heater
 		
-		digitalWrite(HEATER, MY_OFF); // turn on power at startup
-		digitalWrite(EXTRA_PIN, MY_OFF); // turn on power at startup
+		//digitalWrite(HEATER, MY_ON); // keep heater off at startup
 	}
-	flushDuration=10; flushInterval=30;  sessionPause=0; sessionDuration=0;flushButtonHit=0;
+	flushDuration=10; flushInterval=30; sessionPause=0; sessionDuration=0; flushButtonHit=0;
 }
 
 //flush button logic
@@ -224,10 +363,10 @@ void fnFlushButtonHitInterval(unsigned long flushDuration){
 	if (currentMillis - previousMillis >= flushDuration){
 		previousMillis  = currentMillis;
 		byte pinCheckAndSet = digitalRead(FLUSH);
-		if (pinCheckAndSet == MY_ON){
-			pinCheckAndSet = MY_OFF;
-		} else {
+		if (pinCheckAndSet == MY_OFF){
 			pinCheckAndSet = MY_ON;
+		} else {
+			pinCheckAndSet = MY_OFF;
 		}
 		digitalWrite(FLUSH, pinCheckAndSet);
 		flushButtonHit = flushButtonHit+1;
@@ -247,7 +386,7 @@ void fnBlowerAuto(unsigned long blowerInterval){
 			if(blowerButtonHit == 0){
 				blowerButtonHit=1;
 			}else{
-				blowerButtonHit=0;	
+				blowerButtonHit=0;
 			}
 		}
 	}
@@ -258,10 +397,10 @@ void fnBlowerButtonHitInterval(unsigned long blowerDuration){
 	if (currentMillis - previousBlowerIntervalMillis >= blowerDuration){
 		previousBlowerIntervalMillis  = currentMillis;
 		byte blowerState = digitalRead(BLOWER);
-		if (blowerState == MY_ON){
-			blowerState = MY_OFF;
-		} else {
+		if (blowerState == MY_OFF){
 			blowerState = MY_ON;
+		} else {
+			blowerState = MY_OFF;
 		}
 		digitalWrite(BLOWER, blowerState);
 		blowerButtonHit = blowerButtonHit+1;
@@ -271,10 +410,9 @@ void fnBlowerButtonHitInterval(unsigned long blowerDuration){
 	}
 }
 
-
 void PREPARE_SESSION(){
 	//if water low level is reached then only start heater
-	if (readLL == MY_OFF){
+	if (readLL == MY_ON){
 		if (readSensorTemperature <= setTemperature){
 			digitalWrite(HEATER, MY_ON);
 		}
@@ -282,16 +420,17 @@ void PREPARE_SESSION(){
 			digitalWrite(HEATER, MY_OFF);
 		}
 	}else{
-		digitalWrite(WATER_IN_S1, MY_OFF);
-		digitalWrite(HEATER, MY_OFF);
-		digitalWrite(WATER_PUMP_OUT, MY_ON);
-	}
-	if (readLH == MY_ON || readLL == MY_ON){
-		digitalWrite(WATER_IN_S1, MY_OFF);
-	}else{
 		digitalWrite(WATER_IN_S1, MY_ON);
+		digitalWrite(HEATER, MY_OFF);
+		digitalWrite(WATER_PUMP_OUT, MY_OFF);
+	}
+	if (readLH == MY_OFF || readLL == MY_OFF){
+		digitalWrite(WATER_IN_S1, MY_ON);
+	}else{
+		digitalWrite(WATER_IN_S1, MY_OFF);
 	}
 }
+
 void START_SESSION(){
 	//blower settings
 	if(blowerAuto == 1){
@@ -305,7 +444,7 @@ void START_SESSION(){
 				fnBlowerButtonHitInterval(blowerDuration);
 			}
 		}else{
-			digitalWrite(BLOWER, MY_OFF);	//turn ON blower in continuous mode
+			digitalWrite(BLOWER, MY_ON);	//turn ON blower in continuous mode
 		}
 	}else{
 		if(blowerFreqMode == 1){
@@ -314,9 +453,9 @@ void START_SESSION(){
 			}
 		}else{
 			if(blowerButtonHit == 0){
-				digitalWrite(BLOWER, MY_ON);	//turn off the blower if auto blower is not selected
+				digitalWrite(BLOWER, MY_OFF);	//turn off the blower if auto blower is not selected
 			}else{
-				digitalWrite(BLOWER, MY_OFF);	//turn ON blower if blower button is hit but auto blower is not selected
+				digitalWrite(BLOWER, MY_ON);	//turn ON blower if blower button is hit but auto blower is not selected
 			}
 		}
 	}
@@ -336,12 +475,12 @@ void START_SESSION(){
 				}
 			}else{
 				fnFlushButtonHitInterval(flushDuration);
-			}	
+			}
 		}else{
-			digitalWrite(FLUSH, MY_OFF);	//turn ON flush in continuous mode
+			digitalWrite(FLUSH, MY_ON);	//turn ON flush in continuous mode
 		}
 	}else{
-		if(flushFreqMode == 1){ //non auto frequency mode,  flush will work based on the interval set by user
+		if(flushFreqMode == 1){ //non auto frequency mode, flush will work based on the interval set by user
 			if(flushButtonHitFromTab == 1){
 				flushButtonHit=1;
 				flushButtonHitFromTab=0;
@@ -352,59 +491,72 @@ void START_SESSION(){
 			}
 		}else{	//non auto continuous mode, flush button will work as a toggle switch
 			if(flushButtonHitFromTab == 0){
-				digitalWrite(FLUSH, MY_ON);	//turn off the flush if auto flush is not selected
+				digitalWrite(FLUSH, MY_OFF);	//turn off the flush if auto flush is not selected
 			}else{
 				if(flushButtonHitFromTab == 1){
-					digitalWrite(FLUSH, MY_OFF);	//turn ON flush if flush button is hit but auto flush is not selected
+					digitalWrite(FLUSH, MY_ON);	//turn ON flush if flush button is hit but auto flush is not selected
 				}
 			}
 		}
 	}
-	if(readLL == MY_OFF){
-		digitalWrite(WATER_PUMP_OUT, MY_OFF);
-	}else{
+	if(readLL == MY_ON){
 		digitalWrite(WATER_PUMP_OUT, MY_ON);
+	}else{
+		digitalWrite(WATER_PUMP_OUT, MY_OFF);
+	}
+
+	if (readSensorTemperature > maxTemperature){
+		digitalWrite(HEATER, MY_OFF);
+		PAUSE_SESSION();
 	}
 }
 
 void PAUSE_SESSION(){
-	digitalWrite(WATER_PUMP_OUT, MY_ON);
+	digitalWrite(WATER_PUMP_OUT, MY_OFF);
 }
 void RESUME_SESSION(){
-	if(readLL == MY_OFF){
-		digitalWrite(WATER_PUMP_OUT, MY_OFF);
-	}
-} 
-void END_SESSION(){
-	for (int i = 0; i < outputPinsLen; i++) {
-		if(outputPins[i] != HEATER && outputPins[i] != EXTRA_PIN){ // keep power pins on at end of session, other pins off at end of session
-			digitalWrite(outputPins[i], MY_ON); // set all pins as off by default except power pins
-		}else{
-			digitalWrite(outputPins[i], MY_OFF); // keep power pins on at end of session
-		}
+	if(readLL == MY_ON){
+		digitalWrite(WATER_PUMP_OUT, MY_ON);
 	}
 }
+void END_SESSION(){
+	for (int i = 0; i < outputPinsLen; i++) {
+			digitalWrite(outputPins[i], MY_OFF); // set all pins as off by default except power pins
+	}
+}
+
 void loop() {
-	// Periodically re-register with the app server every 30 seconds
+	
+
 	unsigned long currentMillis = millis();
 	if (currentMillis - previousRegistrationMillis >= REGISTRATION_INTERVAL) {
 		previousRegistrationMillis = currentMillis;
+		disconnectCount++;
 		bool regOk = registerWithServer();
 		if (regOk) {
 			registrationFailCount = 0;
+			disconnectCount = 0;
 		} else {
 			registrationFailCount++;
 			if (startSession == 1) {
 				sessionPause = 1;
 			}
-			if (registrationFailCount >= 10) {
+			if (registrationFailCount >= 5) {
 				sessionEnd = 1;
 			}
+		}
+		if(disconnectCount >= 2){
+			sessionPause = 1;
+		}
+		if(disconnectCount >= 5){
+			sessionEnd = 1;
 		}
 	}
 
 	sensors.requestTemperatures();
 	readSensorTemperature = sensors.getTempCByIndex(0);
+
+	button.tick();
 
 	read_pins();
 	if(prepSession == 1){
@@ -429,17 +581,19 @@ void loop() {
 	flushButtonHardwareHit = digitalRead(FLUSH_BUTTON);
 	if(flushButtonHardwareHit == 1 && flushButtonHardwareHitPrev != flushButtonHardwareHit){
 		flushButtonHardwareHitPrev = flushButtonHardwareHit;
-		digitalWrite(FLUSH, MY_OFF);
-		flushButtonHitFromTab = -1; // reset flush button hit from tab if hardware button is used in non auto continuous mode to avoid conflict between hardware and software button states
-		flushButtonHit = 0; // reset flush button hit if hardware button is useda
+		digitalWrite(FLUSH, MY_ON);
+		flushButtonHitFromTab = -1;
+		flushButtonHit = 0;
 	}else{
 		if(flushButtonHardwareHit == 0 && flushButtonHardwareHitPrev != flushButtonHardwareHit){
 			flushButtonHardwareHitPrev = flushButtonHardwareHit;
-			digitalWrite(FLUSH, MY_ON);
+			digitalWrite(FLUSH, MY_OFF);
 			if(flushAuto == 0 && flushFreqMode == 0){
-				flushButtonHitFromTab = -1; // reset flush button hit from tab if hardware button is used in non auto continuous mode to avoid conflict between hardware and software button states
-				flushButtonHit = 0; // reset flush button hit if hardware button is used in non auto continuous mode to avoid conflict between hardware and software button states
+				flushButtonHitFromTab = -1;
+				flushButtonHit = 0;
 			}
 		}
 	}
+
+	pollSerialCommands();
 }

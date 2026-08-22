@@ -3,21 +3,23 @@ import {
   IonContent, IonHeader, IonPage, IonTitle, IonToolbar,
   IonButton, IonIcon, IonBadge, useIonAlert
 } from '@ionic/react';
-import { arrowBack, wifiOutline/* , cloudOfflineOutline  */} from 'ionicons/icons';
+import { arrowBack, hardwareChipOutline, wifiOutline/* , cloudOfflineOutline  */} from 'ionicons/icons';
 import { localDB } from '../db/localDB';
 import { useStore } from '../store/useStore';
 import { useHistory } from 'react-router-dom';
 import { sendCommand, fetchMachineInfo } from '../services/esp32Service';
 import MachineInfoModal from '../components/MachineInfoModal';
+import ConnectionSettingsModal from '../components/ConnectionSettingsModal';
 
 // Debug panel imports — kept for reference, panel commented out for production release
 // import { getLog, clearLog, fmtTime, type LogEntry } from '../services/debugLog';
 
 const Settings: React.FC = () => {
   const [presentAlert] = useIonAlert();
-  const { machineId, machineConnected, machineInfo, setMachineInfo } = useStore();
+  const { machineId, machineConnected, machineInfo, setMachineInfo, activeTransport } = useStore();
   const history = useHistory();
   const [showMachineInfo, setShowMachineInfo] = useState(false);
+  const [showConnectionSettings, setShowConnectionSettings] = useState(false);
 
   const [settings, setSettings] = useState({
     default_session_minutes: 40,
@@ -205,7 +207,7 @@ const Settings: React.FC = () => {
             style={{ marginRight: '0.5rem', cursor: 'pointer' }}
             onClick={() => setShowMachineInfo(true)}
           >
-            <IonIcon icon={wifiOutline} style={{ fontSize: '0.7rem', marginRight:'10px',display:'inline-block' }} />
+          <IonIcon icon={activeTransport === 'usb' ? hardwareChipOutline : wifiOutline} style={{ fontSize: '0.7rem', marginRight: '10px', display: 'inline-block' }} />
             {machineConnected ? 'Machine Connected' : 'Machine Disconnected'}
           </IonBadge>
           <IonButton color="primary" slot="end" style={{ marginRight: '1rem' }} onClick={(e) => { (e.currentTarget as HTMLElement).blur(); history.goBack(); }}>
@@ -302,6 +304,15 @@ const Settings: React.FC = () => {
               <span>Reset</span>
               <span style={{ fontSize: '0.78rem', color: '#999' }}>No action</span>
             </div> */}
+
+            <IonButton
+              expand="block"
+              fill="outline"
+              style={{ marginTop: '1rem' }}
+              onClick={() => setShowConnectionSettings(true)}
+            >
+              Connection Settings
+            </IonButton>
           </div>
 
           {/* Column 3: Settings */}
@@ -630,6 +641,7 @@ const Settings: React.FC = () => {
         </div>
       </IonContent>
       <MachineInfoModal isOpen={showMachineInfo} onClose={() => setShowMachineInfo(false)} />
+      <ConnectionSettingsModal isOpen={showConnectionSettings} onClose={() => setShowConnectionSettings(false)} />
     </IonPage>
   );
 };

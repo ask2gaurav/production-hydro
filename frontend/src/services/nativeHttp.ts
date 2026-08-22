@@ -1,5 +1,7 @@
 import { Capacitor, CapacitorHttp } from '@capacitor/core';
 import { addLog } from './debugLog';
+import { isUsbActive, markUsbFailed, sendLine } from './usbTransport';
+import { useStore } from '../store/useStore';
 
 /**
  * Drop-in fetch wrapper that uses the built-in CapacitorHttp on Android
@@ -79,4 +81,50 @@ export function getEsp32BaseUrl(): string {
     return `http://${ip}:8091`;
   }
   return import.meta.env.VITE_ESP32_URL ?? 'http://advaithydro.local:8091';
+}
+
+export interface TransportResult {
+  body: string;
+  transport: 'usb' | 'wifi';
+}
+
+/**
+ * Routes each ESP32 request to USB or WiFi/HTTP according to the user's Connection
+ * Settings choice (Settings.tsx → ConnectionSettingsModal):
+ *  - 'wired': USB only, hard override — no fallback to WiFi even if USB is unavailable.
+ *  - 'wifi': WiFi/HTTP only, hard override — USB is never touched even if connected.
+ *  - 'auto' (default): prefer USB when connected, fall back to WiFi/HTTP on any USB
+ *    failure/timeout (which also marks USB as failed so later calls stop trying it
+ *    until a fresh connect event).
+ * `buildHttpUrl` is a thunk so the WiFi URL — which throws if no ESP32 IP has been
+ * registered yet — is only resolved when actually needed, not when USB is serving it.
+ * Returns which transport actually served the request — callers that need to know for
+ * sure (e.g. USB-only machine_id validation) can't reliably infer this after the fact
+ * from isUsbActive(), since 'auto' mode can fall back to WiFi mid-call.
+ */
+export async function transportSend(
+  buildHttpUrl: () => string,
+  usbQuery: string,
+  timeoutMs: number,
+  logType: 'poll' | 'command' = 'poll',
+): Promise<TransportResult> {
+  const connectionMode = useStore.getState().connectionMode;
+
+  if (connectionMode === 'wired') {
+    if (!isUsbActive()) throw new Error('USB not connected (Connection Settings is set to Wired)');
+    return { body: await sendLine(usbQuery, timeoutMs, logType), transport: 'usb' };
+  }
+
+  if (connectionMode === 'wifi') {
+    return { body: await nativeFetch(buildHttpUrl(), timeoutMs, logType), transport: 'wifi' };
+  }
+
+  if (isUsbActive()) {
+    try {
+      return { body: await sendLine(usbQuery, timeoutMs, logType), transport: 'usb' };
+    } catch (e: unknown) {
+      markUsbFailed(e instanceof Error ? e.message : String(e));
+    }
+  }
+  return { body: await nativeFetch(buildHttpUrl(), timeoutMs, logType), transport: 'wifi' };
 }

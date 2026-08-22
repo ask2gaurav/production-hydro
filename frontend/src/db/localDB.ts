@@ -65,6 +65,10 @@ export interface LocalSettings {
   // install/login never collides with a same-named file an old install left behind
   // (e.g. an orphaned public-storage file the new install can't delete or overwrite).
   auto_backup_install_id?: string;
+
+  // ESP32 connection transport preference — 'auto' (default) prefers USB, falls back to
+  // WiFi; 'wired'/'wifi' are hard overrides with no automatic fallback to the other.
+  connection_mode?: 'auto' | 'wired' | 'wifi';
 }
 
 export interface LocalTherapist {

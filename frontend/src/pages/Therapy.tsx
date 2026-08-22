@@ -10,7 +10,7 @@ import { KeepAwake } from '@capacitor-community/keep-awake';
 import {
   arrowBack, addOutline, personOutline, personCircleOutline,
   peopleOutline, pencilOutline, trashOutline, searchOutline,
-  wifiOutline, cloudOfflineOutline, checkmarkCircleOutline, playCircleOutline, pauseCircleOutline,
+  wifiOutline, hardwareChipOutline, cloudOfflineOutline, checkmarkCircleOutline, playCircleOutline, pauseCircleOutline,
   calendarOutline, closeOutline
 } from 'ionicons/icons';
 import { useHistory } from 'react-router';
@@ -198,7 +198,7 @@ type StatMap = Record<string, { total: number; last: Date | null }>;
 
 const Therapy: React.FC = () => {
   const [presentAlert] = useIonAlert();
-  const { modeStatus, machineId, machineConnected, machineInfo, setMachineConnected, setMachineInfo } = useStore();
+  const { modeStatus, machineId, machineConnected, machineInfo, setMachineConnected, setMachineInfo, activeTransport } = useStore();
   const history = useHistory();
   const [state, setState] = useState<SessionState>('INIT');
   const [totalSeconds, setTotalSeconds] = useState(DEFAULT_TOTAL_SECONDS);
@@ -1062,7 +1062,7 @@ const Therapy: React.FC = () => {
             style={{ marginRight: '0.5rem', cursor: 'pointer' }}
             onClick={() => setShowMachineInfo(true)}
           >
-            <IonIcon icon={wifiOutline} style={{ fontSize: '0.7rem', marginRight:'10px',display:'inline-block' }} />
+            <IonIcon icon={activeTransport === 'usb' ? hardwareChipOutline : wifiOutline} style={{ fontSize: '0.7rem', marginRight:'10px',display:'inline-block' }} />
             {machineConnected ? 'Machine Connected' : 'Machine Disconnected'}
           </IonBadge>
           {modeStatus && modeStatus.mode === 'demo' && (
@@ -1318,7 +1318,7 @@ const Therapy: React.FC = () => {
                         <p style={{ fontSize: '0.8rem', color: '#888', margin: 0 }}>Temperature</p>
                       </div>
                       <div>
-                        <IonIcon icon={wifiOutline} style={{ fontSize: '1.6rem', color: '#2dd36f' }} />
+                        <IonIcon icon={activeTransport === 'usb' ? hardwareChipOutline : wifiOutline} style={{ fontSize: '1.6rem', color: '#2dd36f' }} />
                         <p style={{ fontSize: '0.8rem', color: '#888', margin: 0 }}>Connected</p>
                       </div>
                     </div>

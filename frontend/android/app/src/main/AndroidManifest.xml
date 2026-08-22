@@ -37,4 +37,7 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+
+    <!-- Optional: lets the app run WiFi-only on tablets whose USB-C port has no USB host mode -->
+    <uses-feature android:name="android.hardware.usb.host" android:required="false" />
 </manifest>

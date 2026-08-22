@@ -7,6 +7,7 @@
 #include <DallasTemperature.h>
 #include <HTTPClient.h>
 #include <OneButton.h>
+#include "esp_log.h"
 
 #define ONE_WIRE_BUS 4
 OneWire oneWire(ONE_WIRE_BUS);
@@ -68,7 +69,7 @@ bool registerWithServer() {
 	String esp32Ip = WiFi.localIP().toString();
 	String gatewayIp = WiFi.gatewayIP().toString();
 	String url = "http://" + gatewayIp + ":8765/register";
-	String body = "{\"ip\":\"" + esp32Ip + "\",\"serial\":\"" + String(machineSerial) + "\"}";
+	String body = "{\"ip\":\"" + esp32Ip + "\",\"serial\":\"" + String(machineSerial) + "\",\"machine_id\": \"" + String(machineSerial) + "\"}";
 	HTTPClient http;
 	http.begin(url);
 	http.addHeader("Content-Type", "application/json");
@@ -106,8 +107,16 @@ void handleLongPress() {
 }
 
 void setup() {
-	// Serial port for debugging purposes
-	//Serial.begin(115200);
+	// Suppress ESP-IDF/Arduino-core internal logging (WiFi events, peripheral manager, etc.)
+	// at runtime, regardless of the IDE's Core Debug Level build setting — that logging
+	// writes to the same Serial/UART0 the USB-C command channel uses and corrupts the
+	// strict one-JSON-line-per-command protocol below. Must run before WiFi/Serial start.
+	esp_log_level_set("*", ESP_LOG_NONE);
+	
+	// Serial port — used for the USB-C command channel (see pollSerialCommands()),
+	// not just debugging, so nothing else may write to Serial.
+	Serial.begin(115200);
+
 	reset_pins();
 	flushButtonHardwareHit = digitalRead(FLUSH_BUTTON);
 	flushButtonHardwareHitPrev = flushButtonHardwareHit;
@@ -115,7 +124,8 @@ void setup() {
 	WiFi.mode(WIFI_STA);
 	WiFi.begin(ssid, password);
 		while (WiFi.status() != WL_CONNECTED) {
-		delay(1000);
+		pollSerialCommands();
+		delay(50);
 	}
 
 	registerWithServer();
@@ -128,16 +138,16 @@ void setup() {
 	sensors.begin();
 
 	// 1. Link the function to trigger on a quick short click
-  button.attachClick(handleClick);
-  // 2. Link the function to trigger as soon as the long press threshold is crossed
-  button.attachLongPressStart(handleLongPress);
-  // Optional: Adjust the long press duration threshold (defaults to 600ms)
+	button.attachClick(handleClick);
+	// 2. Link the function to trigger as soon as the long press threshold is crossed
+	button.attachLongPressStart(handleLongPress);
+	// Optional: Adjust the long press duration threshold (defaults to 600ms)
 	button.setClickMs(50);
-  button.setPressMs(5000); // Set to 1000ms (1 seconds)
+	button.setPressMs(5000); // Set to 1000ms (1 seconds)
 
 	// Route for root / web page
 	server.on("/", HTTP_GET, [](AsyncWebServerRequest* request) {
-		String outputMessage = "{\"temp\": " + String(readSensorTemperature) + ", \"water_hl\": " + String(readLH) + ", \"water_ll\": " + String(readLL) + ", \"blower\": " + String(readBlower) + ", \"flush_valve\": " + String(readFlush) + ", \"water_in_valve\": " + String(readWaterInSq) + ", \"pump\": " + String(readWaterPumpOut) + ", \"flush_button_hardware\": " + String(flushButtonHardwareHit) + ",\"heater\": " + String(readHeater) + ",\"sessionP\": " + String( sessionPause ) + ",\"hes\": " + String(0) + "}";
+		String outputMessage = "{\"machine_id\": \"" + String(machineSerial) + "\",\"temp\": " + String(readSensorTemperature) + ", \"water_hl\": " + String(readLH) + ", \"water_ll\": " + String(readLL) + ", \"blower\": " + String(readBlower) + ", \"flush_valve\": " + String(readFlush) + ", \"water_in_valve\": " + String(readWaterInSq) + ", \"pump\": " + String(readWaterPumpOut) + ", \"flush_button_hardware\": " + String(flushButtonHardwareHit) + ",\"heater\": " + String(readHeater) + ",\"sessionP\": " + String( sessionPause ) + ",\"hes\": " + String(0) + "}";
 		request->send(200, "text/html", outputMessage);
 	});
 
@@ -209,7 +219,7 @@ void setup() {
 		}
 
 		read_pins();
-		String outputMessage = "{\"temp\": " + String(readSensorTemperature) + ", \"water_hl\": " + String(readLH) + ", \"water_ll\": " + String(readLL) + ", \"blower\": " + String(blowerButtonHit) + ", \"flush_valve\": " + String(flushButtonHitFromTab) + ", \"water_in_valve\": " + String(readWaterInSq) + ", \"pump\": " + String(readWaterPumpOut) + ", \"flush_button_hardware\": " + String(flushButtonHardwareHit) + ",\"heater\": " + String(readHeater) + ",\"sessionP\": " + String( sessionPause ) + ",\"hes\": " + String(0) + "}";
+		String outputMessage = "{\"machine_id\": \"" + String(machineSerial) + "\",\"temp\": " + String(readSensorTemperature) + ", \"water_hl\": " + String(readLH) + ", \"water_ll\": " + String(readLL) + ", \"blower\": " + String(blowerButtonHit) + ", \"flush_valve\": " + String(flushButtonHitFromTab) + ", \"water_in_valve\": " + String(readWaterInSq) + ", \"pump\": " + String(readWaterPumpOut) + ", \"flush_button_hardware\": " + String(flushButtonHardwareHit) + ",\"heater\": " + String(readHeater) + ",\"sessionP\": " + String( sessionPause ) + ",\"hes\": " + String(0) + "}";
 
 		AsyncWebServerResponse *response = request->beginResponse(200, "text/plain", outputMessage);
 		response->addHeader("Access-Control-Allow-Origin", "*");
@@ -225,6 +235,90 @@ void setup() {
 	DefaultHeaders::Instance().addHeader("Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS");
 	DefaultHeaders::Instance().addHeader("Access-Control-Allow-Headers", "Content-Type");
 	DefaultHeaders::Instance().addHeader("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
+}
+
+// ---- USB-C / Serial command channel ----
+// Mirrors the /machineinfo.html HTTP handler above (same param names, same JSON
+// response shape) but reads/writes over Serial instead of the AsyncWebServer.
+// Kept fully separate from the WiFi handler so that path is never touched by this.
+String serialBuffer = "";
+
+// Applies one key=value pair from a serial command line to the same globals the
+// WiFi /machineinfo.html handler uses. Unknown keys (including the app's plain-poll
+// marker "poll=1") are silently ignored.
+void applySerialParam(String key, String value) {
+	if (key == "session_duration") sessionDuration = value.toInt();
+	else if (key == "default_temperature") setTemperature = value.toInt();
+	else if (key == "max_temperature") maxTemperature = value.toInt();
+	else if (key == "auto_flush") flushAuto = value.toInt();
+	else if (key == "flush_mode") flushFreqMode = value.toInt();
+	else if (key == "flush_frequency") flushInterval = value.toInt();
+	else if (key == "flush_duration") flushDuration = value.toInt();
+	else if (key == "flush_button_hit") flushButtonHitFromTab = value.toInt();
+	else if (key == "flush_valve") flushButtonHitFromTab = value.toInt();
+	else if (key == "blower_auto") blowerAuto = value.toInt();
+	else if (key == "blower_frequency_mode") blowerFreqMode = value.toInt();
+	else if (key == "blower_interval") blowerInterval = value.toInt();
+	else if (key == "blower_duration") blowerDuration = value.toInt();
+	else if (key == "blower") blowerButtonHit = value.toInt();
+	else if (key == "prepare_session") prepSession = value.toInt();
+	else if (key == "start_session") startSession = value.toInt();
+	else if (key == "pause_session") sessionPause = value.toInt();
+	else if (key == "end_session") sessionEnd = value.toInt();
+	else if (key == "heater") {
+		heater_from_app = value.toInt();
+		if (heater_from_app == 1) {
+			digitalWrite(HEATER, MY_ON);
+		} else if (heater_from_app == 0) {
+			digitalWrite(HEATER, MY_OFF);
+		}
+		heater_from_app = 2;
+	}
+}
+
+// Parses "key1=val1&key2=val2" (no leading '?'), applies each param, then returns
+// the same status JSON line the WiFi /machineinfo.html handler builds.
+String handleSerialCommand(String line) {
+	disconnectCount = 0;
+	int start = 0;
+	String keyValue;
+	while (start < (int)line.length()) {
+		int amp = line.indexOf('&', start);
+		String pair = (amp == -1) ? line.substring(start) : line.substring(start, amp);
+		int eq = pair.indexOf('=');
+		if (eq > 0) {
+			keyValue += pair.substring(0, eq) + "=" + pair.substring(eq + 1);
+			applySerialParam(pair.substring(0, eq), pair.substring(eq + 1));
+		}
+		if (amp == -1) break;
+		start = amp + 1;
+	}
+
+	read_pins();
+	sensors.requestTemperatures();
+	readSensorTemperature = sensors.getTempCByIndex(0);
+	if(readSensorTemperature <= 0){
+		readSensorTemperature=37.00;
+	}
+	return "{\"machine_id\": \"" + String(machineSerial) + "\",\"temp\": " + String(readSensorTemperature) + ", \"water_hl\": " + String(readLH) + ", \"water_ll\": " + String(readLL) + ", \"blower\": " + String(blowerButtonHit) + ", \"flush_valve\": " + String(flushButtonHitFromTab) + ", \"water_in_valve\": " + String(readWaterInSq) + ", \"pump\": " + String(readWaterPumpOut) + ", \"flush_button_hardware\": " + String(flushButtonHardwareHit) + ",\"heater\": " + String(readHeater) + ",\"sessionP\": " + String( sessionPause ) + ",\"hes\": " + String(0) + "}";
+}
+
+// Non-blocking: drains whatever bytes are available, processes one command per
+// complete newline-terminated line, and writes exactly one JSON reply per line.
+void pollSerialCommands() {
+	while (Serial.available() > 0) {
+		char c = (char)Serial.read();
+		if (c == '\n') {
+			serialBuffer.trim();
+			if (serialBuffer.length() > 0) {
+				Serial.println(handleSerialCommand(serialBuffer));
+			}
+			serialBuffer = "";
+		} else if (c != '\r' && c != '\n') {
+			serialBuffer += c;
+			if (serialBuffer.length() > 256) serialBuffer = ""; // guard against a garbled/unterminated line
+		}
+	}
 }
 
 void read_pins(){
@@ -502,4 +596,6 @@ void loop() {
 			}
 		}
 	}
+	//for usb-c serial command channel, poll for commands and respond with JSON
+	pollSerialCommands();
 }

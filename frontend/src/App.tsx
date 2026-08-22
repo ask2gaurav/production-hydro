@@ -4,6 +4,7 @@ import { IonReactRouter } from '@ionic/react-router';
 import { useEffect } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { EspServer } from './plugins/espServer';
+import { EspUsb } from './plugins/espUsb';
 
 /* Core CSS required for Ionic components to work properly */
 import '@ionic/react/css/core.css';
@@ -34,11 +35,13 @@ import { checkModeOnBoot } from './services/modeCheck';
 import { runSync } from './services/syncService';
 import { addLog } from './services/debugLog';
 import { useKeyboardScroll } from './hooks/useKeyboardScroll';
+import { localDB } from './db/localDB';
+import MachineIdMismatchModal from './components/MachineIdMismatchModal';
 
 setupIonicReact();
 
 const App: React.FC = () => {
-  const { machineId, modeStatus } = useStore();
+  const { machineId, modeStatus, connectionMode } = useStore();
   useKeyboardScroll();
 
   // Start the embedded HTTP server so the ESP32 can POST its LAN IP on connect
@@ -54,6 +57,10 @@ const App: React.FC = () => {
       if (serial) localStorage.setItem('esp32_serial', serial);
       addLog({ type: 'registration', ip, serial: serial ?? '' });
       useStore.getState().setMachineConnected(true);
+      // USB is preferred when active — don't let a WiFi registration downgrade the label.
+      if (useStore.getState().activeTransport !== 'usb') {
+        useStore.getState().setActiveTransport('wifi');
+      }
     });
     return () => {
       listenerPromise.then(l => l.remove());
@@ -61,8 +68,49 @@ const App: React.FC = () => {
     };
   }, []);
 
+  // Prefer a wired USB-C link to the ESP32 when available, falling back to the WiFi
+  // hotspot registration flow above (esp32Service/nativeHttp pick the transport per call)
+  // — unless the operator has explicitly set Connection Settings to WiFi-only, in which
+  // case the USB port is never opened at all (opening it resets the ESP32 via DTR/RTS).
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+
+    if (connectionMode === 'wifi') {
+      EspUsb.disconnect().catch(() => {});
+      return;
+    }
+
+    // In case a device is already attached when the app launches.
+    EspUsb.isAvailable().then(({ available }) => {
+      if (available) EspUsb.connect().catch(() => {});
+    });
+
+    const attachedPromise = EspUsb.addListener('usbDeviceAttached', () => {
+      EspUsb.connect().catch(() => {});
+    });
+    const connectedPromise = EspUsb.addListener('usbConnected', () => {
+      addLog({ type: 'info', message: 'ESP32 connected via USB' });
+      useStore.getState().setActiveTransport('usb');
+      useStore.getState().setMachineConnected(true);
+    });
+    const disconnectedPromise = EspUsb.addListener('usbDisconnected', ({ reason }) => {
+      addLog({ type: 'info', message: `USB disconnected: ${reason}` });
+      useStore.getState().setActiveTransport(localStorage.getItem('esp32_ip') ? 'wifi' : 'none');
+    });
+
+    return () => {
+      attachedPromise.then(l => l.remove());
+      connectedPromise.then(l => l.remove());
+      disconnectedPromise.then(l => l.remove());
+      EspUsb.disconnect();
+    };
+  }, [connectionMode]);
+
   useEffect(() => {
     if (!machineId) return;
+    localDB.settings.get(machineId).then((s) => {
+      useStore.getState().setConnectionMode(s?.connection_mode ?? 'auto');
+    });
     if (navigator.onLine) {
       runSync(machineId);
     } else {
@@ -72,6 +120,7 @@ const App: React.FC = () => {
 
   return (
     <IonApp>
+      <MachineIdMismatchModal />
       <IonReactRouter>
         <IonRouterOutlet>
           <Route exact path="/login" component={LoginPage} />
