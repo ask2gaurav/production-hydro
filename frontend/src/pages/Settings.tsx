@@ -10,6 +10,7 @@ import { useHistory } from 'react-router-dom';
 import { sendCommand, fetchMachineInfo } from '../services/esp32Service';
 import MachineInfoModal from '../components/MachineInfoModal';
 import ConnectionSettingsModal from '../components/ConnectionSettingsModal';
+import DebugLogModal from '../components/DebugLogModal';
 
 // Debug panel imports — kept for reference, panel commented out for production release
 // import { getLog, clearLog, fmtTime, type LogEntry } from '../services/debugLog';
@@ -20,6 +21,7 @@ const Settings: React.FC = () => {
   const history = useHistory();
   const [showMachineInfo, setShowMachineInfo] = useState(false);
   const [showConnectionSettings, setShowConnectionSettings] = useState(false);
+  const [showDebugLog, setShowDebugLog] = useState(false);
 
   const [settings, setSettings] = useState({
     default_session_minutes: 40,
@@ -313,6 +315,17 @@ const Settings: React.FC = () => {
             >
               Connection Settings
             </IonButton>
+
+            {import.meta.env.VITE_DEBUG === 'true' && (
+              <IonButton
+                expand="block"
+                fill="outline"
+                style={{ marginTop: '0.5rem' }}
+                onClick={() => setShowDebugLog(true)}
+              >
+                Show Debug
+              </IonButton>
+            )}
           </div>
 
           {/* Column 3: Settings */}
@@ -642,6 +655,7 @@ const Settings: React.FC = () => {
       </IonContent>
       <MachineInfoModal isOpen={showMachineInfo} onClose={() => setShowMachineInfo(false)} />
       <ConnectionSettingsModal isOpen={showConnectionSettings} onClose={() => setShowConnectionSettings(false)} />
+      <DebugLogModal isOpen={showDebugLog} onClose={() => setShowDebugLog(false)} />
     </IonPage>
   );
 };

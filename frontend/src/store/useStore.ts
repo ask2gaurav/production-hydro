@@ -30,6 +30,11 @@ interface AppState {
   // back to its normal disconnected-state handling; this flag only drives the explanatory modal.
   machineIdMismatch: { expected: string; actual: string } | null;
   setMachineIdMismatch: (mismatch: { expected: string; actual: string } | null) => void;
+  // Whether opening the USB port should perform a DTR/RTS reset pulse. Board-dependent —
+  // some ESP32 boards need it to leave reset, others are held in reset by it. Persisted
+  // in localDB.settings, loaded on boot, passed into EspUsb.connect() (App.tsx).
+  usbResetPulseEnabled: boolean;
+  setUsbResetPulseEnabled: (enabled: boolean) => void;
 }
 
 export const useStore = create<AppState>((set) => ({
@@ -70,6 +75,8 @@ export const useStore = create<AppState>((set) => ({
   setConnectionMode: (mode) => set({ connectionMode: mode }),
   machineIdMismatch: null,
   setMachineIdMismatch: (mismatch) => set({ machineIdMismatch: mismatch }),
+  usbResetPulseEnabled: true,
+  setUsbResetPulseEnabled: (enabled) => set({ usbResetPulseEnabled: enabled }),
 }));
 
 window.addEventListener('online', () => useStore.getState().setOnline(true));

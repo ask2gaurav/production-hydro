@@ -29,7 +29,8 @@ public class EspUsbPlugin extends Plugin implements EspUsbManager.Listener {
     @PluginMethod
     public void connect(PluginCall call) {
         try {
-            manager.connect();
+            boolean resetPulse = call.getBoolean("resetPulse", true);
+            manager.connect(resetPulse);
             call.resolve();
         } catch (Exception e) {
             // Never let a native USB error crash the app — worst case, USB stays

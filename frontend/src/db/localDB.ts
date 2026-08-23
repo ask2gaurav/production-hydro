@@ -69,6 +69,11 @@ export interface LocalSettings {
   // ESP32 connection transport preference — 'auto' (default) prefers USB, falls back to
   // WiFi; 'wired'/'wifi' are hard overrides with no automatic fallback to the other.
   connection_mode?: 'auto' | 'wired' | 'wifi';
+  // Whether to perform a DTR/RTS reset pulse after opening the USB serial port. Some
+  // ESP32 boards' auto-reset circuits need this to leave reset and respond at all;
+  // others have opposite polarity and are instead held in reset by it. Board-dependent,
+  // so this is a per-tablet toggle rather than a hardcoded choice. Default true.
+  usb_reset_pulse_enabled?: boolean;
 }
 
 export interface LocalTherapist {

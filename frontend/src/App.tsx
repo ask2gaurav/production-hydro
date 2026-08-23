@@ -41,7 +41,7 @@ import MachineIdMismatchModal from './components/MachineIdMismatchModal';
 setupIonicReact();
 
 const App: React.FC = () => {
-  const { machineId, modeStatus, connectionMode } = useStore();
+  const { machineId, modeStatus, connectionMode, usbResetPulseEnabled } = useStore();
   useKeyboardScroll();
 
   // Start the embedded HTTP server so the ESP32 can POST its LAN IP on connect
@@ -82,11 +82,11 @@ const App: React.FC = () => {
 
     // In case a device is already attached when the app launches.
     EspUsb.isAvailable().then(({ available }) => {
-      if (available) EspUsb.connect().catch(() => {});
+      if (available) EspUsb.connect({ resetPulse: usbResetPulseEnabled }).catch(() => {});
     });
 
     const attachedPromise = EspUsb.addListener('usbDeviceAttached', () => {
-      EspUsb.connect().catch(() => {});
+      EspUsb.connect({ resetPulse: usbResetPulseEnabled }).catch(() => {});
     });
     const connectedPromise = EspUsb.addListener('usbConnected', () => {
       addLog({ type: 'info', message: 'ESP32 connected via USB' });
@@ -104,12 +104,13 @@ const App: React.FC = () => {
       disconnectedPromise.then(l => l.remove());
       EspUsb.disconnect();
     };
-  }, [connectionMode]);
+  }, [connectionMode, usbResetPulseEnabled]);
 
   useEffect(() => {
     if (!machineId) return;
     localDB.settings.get(machineId).then((s) => {
       useStore.getState().setConnectionMode(s?.connection_mode ?? 'auto');
+      useStore.getState().setUsbResetPulseEnabled(s?.usb_reset_pulse_enabled ?? true);
     });
     if (navigator.onLine) {
       runSync(machineId);

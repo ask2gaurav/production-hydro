@@ -6,8 +6,8 @@
 | **Session ID** | `850bab2f-2f59-4d07-a582-e8d188f55f9e` |
 | **Working Dir** | `d:\projects\production-hydro-colon-therapy` |
 | **Started** | 8/14/2026, 7:09:26 PM |
-| **Last Updated** | 8/22/2026, 5:01:03 PM |
-| **Messages** | 824 |
+| **Last Updated** | 8/23/2026, 3:03:59 PM |
+| **Messages** | 1024 |
 
 ---
 
@@ -13117,6 +13117,3110 @@ Clean.
 - **`App.tsx`**: renders the modal globally, so it shows regardless of which page is active.
 
 No changes were needed in `Therapy.tsx`/`Settings.tsx` — since the mismatch throws from inside the same functions their existing poll loops already call, it's handled by their current disconnect logic (blocked buttons, "Machine Not Connected" panel, etc.) automatically. `npx tsc --noEmit` passes. This needs a real hardware test to confirm end-to-end (per the plan's verification steps) — I don't have a second mismatched board to test against here.
+
+
+---
+
+## User <sup>8/23/2026, 1:06:44 PM</sup>
+
+<ide_opened_file>The user opened the file d:\projects\production-hydro-colon-therapy\frontend\.env.prod in the IDE. This may or may not be related to the current task.</ide_opened_file>
+
+@frontend/src/services/debugLog.ts some tab do not have public document folder so we need to store the log file in our app storage and show the log list in the settings if debug is one show the show debug button under the connection settings button in @frontend/src/pages/Settings.tsx  verify you understood the task.
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:07:19 PM</sup>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:07:22 PM</sup>
+
+Let me verify my understanding before planning further — restating the request and flagging the ambiguous parts:
+
+1. **Storage change**: some tablets don't reliably have a public Documents folder — switch the debug log file from `Directory.Documents` to `Directory.Data` (private app-internal storage, always available — same location `backupService.ts` already uses as the reliable primary storage for backups).
+2. **"Show debug" button**: appears in `Settings.tsx`, Column 2, directly under "Connection Settings" — but *only* when `VITE_DEBUG === 'true'` (i.e. debug mode is on).
+3. **"Show the log list"**: opens something that lets you see the debug log.
+
+Two things I want to confirm before designing this, since they change the implementation significantly:
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:07:29 PM</sup>
+
+<details>
+<summary>Tool: <code>AskUserQuestion</code></summary>
+
+```json
+{
+  "questions": [
+    {
+      "question": "Once log files live in private app storage (Directory.Data), they're no longer reachable via a file manager on the tablet. Should \"show the log list\" mean a file browser inside the app (list of hydrotherapy-debug-*.log files by date/size, with view/share/delete — mirroring the existing SavedBackups.tsx pattern for backup files), or just the lightweight in-memory list of the last ~30 events (like the old commented-out Debug Panel in Settings.tsx, no file management)?",
+      "header": "What \"log list\" means",
+      "options": [
+        {
+          "label": "File browser (view/share/delete .log files) (Recommended)",
+          "description": "Since files are now in private storage, this is the only way to actually retrieve them (e.g. to send to support) — reuses the SavedBackups.tsx pattern already in the app (Filesystem list/read/share)."
+        },
+        {
+          "label": "Simple in-memory recent-events list",
+          "description": "Just reactivate the old commented-out Debug column's live list of the last 30 log entries — no persisted-file access, simplest to build, but you couldn't retrieve older days or export anything."
+        },
+        {
+          "label": "Both",
+          "description": "Show the live recent-events list AND let the user browse/export the persisted daily .log files."
+        }
+      ]
+    },
+    {
+      "question": "Should \"Show Debug\" open a modal (like Connection Settings/Machine Info), or navigate to a dedicated new page (like \"View Saved Backups\" does)?",
+      "header": "Modal or page",
+      "options": [
+        {
+          "label": "Modal (Recommended for a live event list)",
+          "description": "Consistent with the other Settings buttons (Connection Settings, Machine Info) — good fit if showing the in-memory recent-events list."
+        },
+        {
+          "label": "Dedicated page",
+          "description": "Better if browsing/managing multiple log files with paginat
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 1:08:48 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Your questions have been answered: "Once log files live in private app storage (Directory.Data), they're no longer reachable via a file manager on the tablet. Should "show the log list" mean a file browser inside the app (list of hydrotherapy-debug-*.log files by date/size, with view/share/delete — mirroring the existing SavedBackups.tsx pattern for backup files), or just the lightweight in-memory list of the last ~30 events (like the old commented-out Debug Panel in Settings.tsx, no file management)?"="File browser (view/share/delete .log files) (Recommended)", "Should "Show Debug" open a modal (like Connection Settings/Machine Info), or navigate to a dedicated new page (like "View Saved Backups" does)?"="Modal (Recommended for a live event list)". You can now continue with these answers in mind.
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:09:24 PM</sup>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:09:40 PM</sup>
+
+<details>
+<summary>Tool: <code>Write</code></summary>
+
+```json
+{
+  "file_path": "C:\\Users\\Gaurav\\.claude\\plans\\frontend-src-pages-therapy-tsx-right-no-jaunty-popcorn.md",
+  "content": "# Move debug log to app storage + in-app log file browser\n\n## Context\n\nThe debug log file (`hydrotherapy-debug-{date}.log`, written when `VITE_DEBUG=true`) currently goes to `Directory.Documents` (public storage). Some tablets don't reliably expose a public Documents folder, so the file silently fails to write there (the `appendFile` call is already wrapped in a best-effort try/catch). Need to move it to `Directory.Data` (private app storage — always available, same location `backupService.ts` already uses as the reliable primary store for backups).\n\nSince private storage isn't reachable via a file manager, the app needs its own way to retrieve these files. Confirmed with the user: build a file browser (list `.log` files with view/share/delete), presented as a **modal** (not a dedicated page), reached via a new \"Show Debug\" button in `Settings.tsx` — placed directly under the existing \"Connection Settings\" button (Column 2) — visible only when `VITE_DEBUG === 'true'`.\n\n## Approach\n\n### 1. `frontend/src/services/debugLog.ts`: switch storage + add file management\n- Change `appendToDebugLogFile`'s `directory: Directory.Documents` → `Directory.Data`, writing into a `debug-logs/` subfolder (mirrors `backupService.ts`'s `BACKUPS_DIR = 'backups'` convention). Since `Filesystem.appendFile` (unlike `writeFile`) has no `recursive` option to auto-create parent folders, defensively call `Filesystem.mkdir({ path: DEBUG_LOGS_DIR, directory: Directory.Data, recursive: true })` (try/catch, ignore \"already exists\") before each append — cheap, and logging is already best-effort/infrequent (gated off by default in production).\n- Add exported functions, mirroring `backupService.ts`'s existing `listLocalBackups`/`shareLocalFile`/`deleteLocalBackup` patterns exactly (same `Filesystem` calls, just pointed at `debug-logs/`):\n  - `listDebugLogFile
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 1:09:41 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file C:\Users\Gaurav\.claude\plans\frontend-src-pages-therapy-tsx-right-no-jaunty-popcorn.md has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:09:45 PM</sup>
+
+<details>
+<summary>Tool: <code>ExitPlanMode</code></summary>
+
+```json
+{
+  "plan": "# Move debug log to app storage + in-app log file browser\n\n## Context\n\nThe debug log file (`hydrotherapy-debug-{date}.log`, written when `VITE_DEBUG=true`) currently goes to `Directory.Documents` (public storage). Some tablets don't reliably expose a public Documents folder, so the file silently fails to write there (the `appendFile` call is already wrapped in a best-effort try/catch). Need to move it to `Directory.Data` (private app storage — always available, same location `backupService.ts` already uses as the reliable primary store for backups).\n\nSince private storage isn't reachable via a file manager, the app needs its own way to retrieve these files. Confirmed with the user: build a file browser (list `.log` files with view/share/delete), presented as a **modal** (not a dedicated page), reached via a new \"Show Debug\" button in `Settings.tsx` — placed directly under the existing \"Connection Settings\" button (Column 2) — visible only when `VITE_DEBUG === 'true'`.\n\n## Approach\n\n### 1. `frontend/src/services/debugLog.ts`: switch storage + add file management\n- Change `appendToDebugLogFile`'s `directory: Directory.Documents` → `Directory.Data`, writing into a `debug-logs/` subfolder (mirrors `backupService.ts`'s `BACKUPS_DIR = 'backups'` convention). Since `Filesystem.appendFile` (unlike `writeFile`) has no `recursive` option to auto-create parent folders, defensively call `Filesystem.mkdir({ path: DEBUG_LOGS_DIR, directory: Directory.Data, recursive: true })` (try/catch, ignore \"already exists\") before each append — cheap, and logging is already best-effort/infrequent (gated off by default in production).\n- Add exported functions, mirroring `backupService.ts`'s existing `listLocalBackups`/`shareLocalFile`/`deleteLocalBackup` patterns exactly (same `Filesystem` calls, just pointed at `debug-logs/`):\n  - `listDebugLogFiles(): Promise<{ name: string; size: number; modifiedAt: string }[]>`\n  - `readDebugLogFile(name: string): Promise<
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 1:16:39 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The user doesn't want to proceed with this tool use. The tool use was rejected (eg. if it was a file edit, the new_string was NOT written to the file). STOP what you are doing and wait for the user to tell you how to proceed.
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 1:16:39 PM</sup>
+
+[Request interrupted by user for tool use]
+
+
+---
+
+## User <sup>8/23/2026, 1:17:03 PM</sup>
+
+<ide_opened_file>The user opened the file d:\projects\production-hydro-colon-therapy\Recommendations\esp32\final\final_working_23Aug2026.ino in the IDE. This may or may not be related to the current task.</ide_opened_file>
+
+aslo add download log option in the list to download file on local tab storage
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:17:11 PM</sup>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:17:13 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "C:\\Users\\Gaurav\\.claude\\plans\\frontend-src-pages-therapy-tsx-right-no-jaunty-popcorn.md",
+  "old_string": "  - `shareDebugLogFile(name: string): Promise<void>` — `Filesystem.getUri` + `Share.share`.\n  - `deleteDebugLogFile(name: string): Promise<void>`.",
+  "new_string": "  - `shareDebugLogFile(name: string): Promise<void>` — `Filesystem.getUri` + `Share.share`.\n  - `deleteDebugLogFile(name: string): Promise<void>`.\n  - `downloadDebugLogFile(name: string): Promise<void>` — copies the file from private `Directory.Data` storage to public `Directory.Documents` (the closest available \"Downloads\"-equivalent on Android without extra native work), mirroring `backupService.ts`'s existing `copyLocalFileToDownloads` exactly (same read-then-write pattern, same best-effort public-copy rationale)."
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 1:17:14 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file C:\Users\Gaurav\.claude\plans\frontend-src-pages-therapy-tsx-right-no-jaunty-popcorn.md has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:17:23 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "C:\\Users\\Gaurav\\.claude\\plans\\frontend-src-pages-therapy-tsx-right-no-jaunty-popcorn.md",
+  "old_string": "Follows the existing modal pattern (`ConnectionSettingsModal.tsx`) for structure, and `SavedBackups.tsx`'s action set/icons (`eyeOutline` view, `shareSocialOutline` share, `trashOutline` delete) for behavior — just laid out as a simple list inside the modal instead of a full page (no pagination needed; at most one file per day while debug is enabled). Two simple states: file list, or viewing one file's content inline (scrollable `<pre>`, with a back button) — no need for a second modal layer. Delete uses a `useIonAlert` confirm, matching how `Settings.tsx` and other pages in this app already confirm destructive actions (not the separate backend-admin `DeleteConfirmModal`, which belongs to a different part of the codebase).",
+  "new_string": "Follows the existing modal pattern (`ConnectionSettingsModal.tsx`) for structure, and `SavedBackups.tsx`'s action set/icons (`eyeOutline` view, `shareSocialOutline` share, `downloadOutline` download-to-local-storage, `trashOutline` delete) for behavior — just laid out as a simple list inside the modal instead of a full page (no pagination needed; at most one file per day while debug is enabled). Two simple states: file list, or viewing one file's content inline (scrollable `<pre>`, with a back button) — no need for a second modal layer. Delete uses a `useIonAlert` confirm, matching how `Settings.tsx` and other pages in this app already confirm destructive actions (not the separate backend-admin `DeleteConfirmModal`, which belongs to a different part of the codebase). Download shows a toast/alert confirming the file was copied to the tablet's public Documents storage."
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 1:17:24 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file C:\Users\Gaurav\.claude\plans\frontend-src-pages-therapy-tsx-right-no-jaunty-popcorn.md has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:17:30 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "C:\\Users\\Gaurav\\.claude\\plans\\frontend-src-pages-therapy-tsx-right-no-jaunty-popcorn.md",
+  "old_string": "3. On a real device: generate some log activity (poll/connect/disconnect), open Show Debug, confirm the day's file is listed with a sensible size/date, view shows its content, share opens the OS share sheet, delete removes it (with confirmation) and the list updates.",
+  "new_string": "3. On a real device: generate some log activity (poll/connect/disconnect), open Show Debug, confirm the day's file is listed with a sensible size/date, view shows its content, share opens the OS share sheet, download copies it to public Documents storage (confirm it's actually retrievable there afterward), delete removes it (with confirmation) and the list updates."
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 1:17:31 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file C:\Users\Gaurav\.claude\plans\frontend-src-pages-therapy-tsx-right-no-jaunty-popcorn.md has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:17:33 PM</sup>
+
+<details>
+<summary>Tool: <code>ExitPlanMode</code></summary>
+
+```json
+{
+  "plan": "# Move debug log to app storage + in-app log file browser\n\n## Context\n\nThe debug log file (`hydrotherapy-debug-{date}.log`, written when `VITE_DEBUG=true`) currently goes to `Directory.Documents` (public storage). Some tablets don't reliably expose a public Documents folder, so the file silently fails to write there (the `appendFile` call is already wrapped in a best-effort try/catch). Need to move it to `Directory.Data` (private app storage — always available, same location `backupService.ts` already uses as the reliable primary store for backups).\n\nSince private storage isn't reachable via a file manager, the app needs its own way to retrieve these files. Confirmed with the user: build a file browser (list `.log` files with view/share/delete), presented as a **modal** (not a dedicated page), reached via a new \"Show Debug\" button in `Settings.tsx` — placed directly under the existing \"Connection Settings\" button (Column 2) — visible only when `VITE_DEBUG === 'true'`.\n\n## Approach\n\n### 1. `frontend/src/services/debugLog.ts`: switch storage + add file management\n- Change `appendToDebugLogFile`'s `directory: Directory.Documents` → `Directory.Data`, writing into a `debug-logs/` subfolder (mirrors `backupService.ts`'s `BACKUPS_DIR = 'backups'` convention). Since `Filesystem.appendFile` (unlike `writeFile`) has no `recursive` option to auto-create parent folders, defensively call `Filesystem.mkdir({ path: DEBUG_LOGS_DIR, directory: Directory.Data, recursive: true })` (try/catch, ignore \"already exists\") before each append — cheap, and logging is already best-effort/infrequent (gated off by default in production).\n- Add exported functions, mirroring `backupService.ts`'s existing `listLocalBackups`/`shareLocalFile`/`deleteLocalBackup` patterns exactly (same `Filesystem` calls, just pointed at `debug-logs/`):\n  - `listDebugLogFiles(): Promise<{ name: string; size: number; modifiedAt: string }[]>`\n  - `readDebugLogFile(name: string): Promise<
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 1:18:58 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+User has approved your plan. You can now start coding. Start with updating your todo list if applicable
+
+Your plan has been saved to: C:\Users\Gaurav\.claude\plans\frontend-src-pages-therapy-tsx-right-no-jaunty-popcorn.md
+You can refer back to it if needed during implementation.
+
+## Approved Plan:
+# Move debug log to app storage + in-app log file browser
+
+## Context
+
+The debug log file (`hydrotherapy-debug-{date}.log`, written when `VITE_DEBUG=true`) currently goes to `Directory.Documents` (public storage). Some tablets don't reliably expose a public Documents folder, so the file silently fails to write there (the `appendFile` call is already wrapped in a best-effort try/catch). Need to move it to `Directory.Data` (private app storage — always available, same location `backupService.ts` already uses as the reliable primary store for backups).
+
+Since private storage isn't reachable via a file manager, the app needs its own way to retrieve these files. Confirmed with the user: build a fi
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:19:01 PM</sup>
+
+Implementing now. Let's look at `backupService.ts` for the exact patterns to mirror.
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:19:02 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\services\\backupService.ts",
+  "offset": 218,
+  "limit": 50
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 1:19:02 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+218	      } catch {
+219	        // Nothing to delete (first backup of the day) — proceed to write.
+220	      }
+221	      await Filesystem.writeFile({ path: fileName, data: base64, directory: Directory.Documents, recursive: true });
+222	    } catch {
+223	      // Non-fatal — the file is still safely stored under Directory.Data.
+224	    }
+225	
+226	    if (isFirstToday) {
+227	      await cleanupOldAutoBackups(machineId, retention);
+228	    }
+229	  } catch {
+230	    // Swallow all errors — auto backup is a best-effort background action.
+231	  }
+232	}
+233	
+234	export async function listLocalBackups(): Promise<LocalBackupFile[]> {
+235	  try {
+236	    const res = await Filesystem.readdir({ path: BACKUPS_DIR, directory: Directory.Data });
+237	    const files = await Promise.all(res.files.map(async (f) => {
+238	      const stat = await Filesystem.stat({ path: `${BACKUPS_DIR}/${f.name}`, directory: Directory.Data });
+239	      return {
+240	        name: f.name,
+241	        type: f.name.toLowerCa
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:19:06 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\services\\backupService.ts",
+  "offset": 265,
+  "limit": 15
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 1:19:06 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+265	  await Share.share({
+266	    title: name,
+267	    url: uri,
+268	    dialogTitle: 'Save or share backup file',
+269	  });
+270	}
+271	
+272	// Capacitor's Filesystem plugin has no dedicated "Downloads" directory constant; Directory.Documents
+273	// is the closest available public, cross-app-visible location on Android without extra native work.
+274	export async function copyLocalFileToDownloads(name: string): Promise<void> {
+275	  const read = await Filesystem.readFile({ path: `${BACKUPS_DIR}/${name}`, directory: Directory.Data });
+276	  await Filesystem.writeFile({
+277	    path: name,
+278	    data: read.data,
+279	    directory: Directory.Documents,
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:19:09 PM</sup>
+
+Now let's update `debugLog.ts` with the new storage location and file-management functions.
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:19:10 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\services\\debugLog.ts"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 1:19:10 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Wasted call — file unchanged since your last Read. Refer to that earlier tool_result instead.
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:19:28 PM</sup>
+
+<details>
+<summary>Tool: <code>Write</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\services\\debugLog.ts",
+  "content": "/**\n * In-memory circular debug log — keeps the last MAX_ENTRIES events.\n * Written by nativeHttp, esp32Service, and the EspServer registration listener.\n * Read by the Settings debug panel.\n *\n * When VITE_DEBUG=true (native only), every entry is also appended to a daily log\n * file under this app's private storage (Directory.Data — some tablets don't reliably\n * expose a public Documents folder), so ESP32 traffic/timeouts can be inspected after\n * the fact without an attached debugger. Since private storage isn't reachable via a\n * file manager, listDebugLogFiles/readDebugLogFile/etc. below back the in-app browser\n * (DebugLogModal) that lets an operator view/share/download/delete these files.\n */\n\nimport { Capacitor } from '@capacitor/core';\nimport { Filesystem, Directory, Encoding } from '@capacitor/filesystem';\nimport { Share } from '@capacitor/share';\n\nexport type LogInput =\n  | { type: 'registration'; ip: string; serial: string }\n  | { type: 'poll'; url: string; status: 'ok' | 'error'; body?: string; error?: string }\n  | { type: 'command'; url: string; status: 'ok' | 'error'; body?: string; error?: string }\n  | { type: 'info'; message: string };\n\nexport type LogEntry = LogInput & { ts: number };\n\nexport interface DebugLogFile {\n  name: string;\n  size: number;\n  modifiedAt: string;\n}\n\nconst MAX_ENTRIES = 30;\nconst log: LogEntry[] = [];\n\nconst DEBUG_LOGS_DIR = 'debug-logs';\n\nfunction debugLogFileName(): string {\n  const d = new Date();\n  const yyyy = d.getFullYear();\n  const mm = String(d.getMonth() + 1).padStart(2, '0');\n  const dd = String(d.getDate()).padStart(2, '0');\n  return `hydrotherapy-debug-${yyyy}-${mm}-${dd}.log`;\n}\n\nasync function appendToDebugLogFile(entry: LogEntry, line: string): Promise<void> {\n  try {\n    try {\n      await Filesystem.mkdir({ path: DEBUG_LOGS_DIR, directory: Director
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 1:19:29 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\services\debugLog.ts has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:19:34 PM</sup>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:19:35 PM</sup>
+
+<details>
+<summary>Tool: <code>Grep</code></summary>
+
+```json
+{
+  "pattern": "from 'ionicons/icons'",
+  "path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\SavedBackups.tsx",
+  "output_mode": "content",
+  "-A": 3
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 1:19:35 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+9:} from 'ionicons/icons';
+10-import { useHistory } from 'react-router';
+11-import { useStore } from '../store/useStore';
+12-import {
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:19:39 PM</sup>
+
+Good enough — I already know the icon names used (`eyeOutline`, `shareSocialOutline`, `downloadOutline`, `trashOutline`) from earlier context in this session. Now creating the modal.
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:19:53 PM</sup>
+
+<details>
+<summary>Tool: <code>Write</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\components\\DebugLogModal.tsx",
+  "content": "import React, { useEffect, useState } from 'react';\nimport {\n  IonModal, IonHeader, IonToolbar, IonTitle, IonButton, IonContent, IonIcon, useIonAlert, useIonToast,\n} from '@ionic/react';\nimport { eyeOutline, shareSocialOutline, downloadOutline, trashOutline, arrowBack } from 'ionicons/icons';\nimport {\n  listDebugLogFiles, readDebugLogFile, shareDebugLogFile, downloadDebugLogFile, deleteDebugLogFile,\n  type DebugLogFile,\n} from '../services/debugLog';\n\ninterface Props {\n  isOpen: boolean;\n  onClose: () => void;\n}\n\nconst rowStyle: React.CSSProperties = {\n  display: 'flex',\n  justifyContent: 'space-between',\n  alignItems: 'center',\n  padding: '0.6rem 0.75rem',\n  borderBottom: '1px solid #f0f0f0',\n  fontSize: '0.85rem',\n};\n\nfunction formatSize(bytes: number): string {\n  if (bytes < 1024) return `${bytes} B`;\n  return `${(bytes / 1024).toFixed(1)} KB`;\n}\n\nconst DebugLogModal: React.FC<Props> = ({ isOpen, onClose }) => {\n  const [presentAlert] = useIonAlert();\n  const [presentToast] = useIonToast();\n  const [files, setFiles] = useState<DebugLogFile[]>([]);\n  const [viewing, setViewing] = useState<{ name: string; content: string } | null>(null);\n\n  const refresh = () => {\n    listDebugLogFiles().then(setFiles);\n  };\n\n  useEffect(() => {\n    if (isOpen) {\n      setViewing(null);\n      refresh();\n    }\n  }, [isOpen]);\n\n  const handleView = async (name: string) => {\n    try {\n      const content = await readDebugLogFile(name);\n      setViewing({ name, content });\n    } catch {\n      presentToast({ message: 'Failed to read log file.', duration: 2500, color: 'danger' });\n    }\n  };\n\n  const handleShare = async (name: string) => {\n    try {\n      await shareDebugLogFile(name);\n    } catch {\n      presentToast({ message: 'Failed to share log file.', duration: 2500, color: 'danger' });\n    }\n  };\n
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 1:19:54 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+File created successfully at: d:\projects\production-hydro-colon-therapy\frontend\src\components\DebugLogModal.tsx (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:19:57 PM</sup>
+
+Now wire it into `Settings.tsx`.
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:19:59 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Settings.tsx",
+  "old_string": "import MachineInfoModal from '../components/MachineInfoModal';\nimport ConnectionSettingsModal from '../components/ConnectionSettingsModal';",
+  "new_string": "import MachineInfoModal from '../components/MachineInfoModal';\nimport ConnectionSettingsModal from '../components/ConnectionSettingsModal';\nimport DebugLogModal from '../components/DebugLogModal';"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 1:20:00 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\Settings.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:20:04 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Settings.tsx",
+  "old_string": "  const [showConnectionSettings, setShowConnectionSettings] = useState(false);",
+  "new_string": "  const [showConnectionSettings, setShowConnectionSettings] = useState(false);\n  const [showDebugLog, setShowDebugLog] = useState(false);"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 1:20:05 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\Settings.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:20:08 PM</sup>
+
+Expected — wiring the button and modal now.
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:20:11 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Settings.tsx",
+  "old_string": "            <IonButton\n              expand=\"block\"\n              fill=\"outline\"\n              style={{ marginTop: '1rem' }}\n              onClick={() => setShowConnectionSettings(true)}\n            >\n              Connection Settings\n            </IonButton>\n          </div>",
+  "new_string": "            <IonButton\n              expand=\"block\"\n              fill=\"outline\"\n              style={{ marginTop: '1rem' }}\n              onClick={() => setShowConnectionSettings(true)}\n            >\n              Connection Settings\n            </IonButton>\n\n            {import.meta.env.VITE_DEBUG === 'true' && (\n              <IonButton\n                expand=\"block\"\n                fill=\"outline\"\n                style={{ marginTop: '0.5rem' }}\n                onClick={() => setShowDebugLog(true)}\n              >\n                Show Debug\n              </IonButton>\n            )}\n          </div>"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 1:20:12 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\Settings.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:20:19 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Settings.tsx",
+  "old_string": "      <MachineInfoModal isOpen={showMachineInfo} onClose={() => setShowMachineInfo(false)} />\n      <ConnectionSettingsModal isOpen={showConnectionSettings} onClose={() => setShowConnectionSettings(false)} />",
+  "new_string": "      <MachineInfoModal isOpen={showMachineInfo} onClose={() => setShowMachineInfo(false)} />\n      <ConnectionSettingsModal isOpen={showConnectionSettings} onClose={() => setShowConnectionSettings(false)} />\n      <DebugLogModal isOpen={showDebugLog} onClose={() => setShowDebugLog(false)} />"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 1:20:20 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\pages\Settings.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:20:24 PM</sup>
+
+Now typecheck.
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:20:24 PM</sup>
+
+<details>
+<summary>Tool: <code>Bash</code></summary>
+
+```json
+{
+  "command": "cd \"d:/projects/production-hydro-colon-therapy/frontend\" && npx tsc --noEmit -p . ; echo \"exit:$?\"",
+  "description": "Typecheck frontend after debug log storage/browser feature"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 1:20:34 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+exit:0
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:20:41 PM</sup>
+
+Clean.
+
+## Summary
+
+- **`debugLog.ts`**: debug log files now write to `Directory.Data` (private app storage, always available) under a `debug-logs/` subfolder, instead of `Directory.Documents`. Added `listDebugLogFiles`, `readDebugLogFile`, `shareDebugLogFile`, `deleteDebugLogFile`, and `downloadDebugLogFile` (copies to public Documents on demand — the actual "save to local tablet storage" action you asked for).
+- **New `DebugLogModal.tsx`**: lists log files (name, size, date) with view/share/download/delete actions, following `SavedBackups.tsx`'s icon conventions. View shows the file content inline; delete confirms via `useIonAlert`.
+- **`Settings.tsx`**: "Show Debug" button added directly under "Connection Settings" (Column 2), rendered only when `VITE_DEBUG === 'true'`.
+
+`npx tsc --noEmit` passes. Needs on-device testing per the plan's verification steps — I can't exercise Filesystem/Share on a real tablet from here.
+
+
+---
+
+## User <sup>8/23/2026, 1:34:27 PM</sup>
+
+<ide_selection>The user selected the lines 1 to 7 from c:\Users\Gaurav\Downloads\hydrotherapy-debug-2026-08-23.log:
+2026-08-23T07:56:10.937Z [HydroDebug][INFO] ESP32 connected via USB
+2026-08-23T07:56:15.069Z [HydroDebug][POLL] usb:poll=1 FAILED: USB request timed out
+2026-08-23T07:56:15.093Z [HydroDebug][INFO] USB request failed (1/3): USB request timed out
+2026-08-23T07:56:18.101Z [HydroDebug][POLL] usb:poll=1 FAILED: USB request timed out
+2026-08-23T07:56:18.102Z [HydroDebug][INFO] USB request failed (2/3): USB request timed out
+2026-08-23T07:56:21.103Z [HydroDebug][POLL] usb:poll=1 FAILED: USB request timed out
+2026-08-23T07:56:21.237Z [HydroDebug][INFO] USB disconnected: Disconnected by app
+
+This may or may not be related to the current task.</ide_selection>
+
+@frontend/src/services/usbTransport.ts again it is now giving this error: 2026-08-23T07:56:10.937Z [HydroDebug][INFO] ESP32 connected via USB
+2026-08-23T07:56:15.069Z [HydroDebug][POLL] usb:poll=1 FAILED: USB request timed out
+2026-08-23T07:56:15.093Z [HydroDebug][INFO] USB request failed (1/3): USB request timed out
+2026-08-23T07:56:18.101Z [HydroDebug][POLL] usb:poll=1 FAILED: USB request timed out
+2026-08-23T07:56:18.102Z [HydroDebug][INFO] USB request failed (2/3): USB request timed out
+2026-08-23T07:56:21.103Z [HydroDebug][POLL] usb:poll=1 FAILED: USB request timed out
+2026-08-23T07:56:21.237Z [HydroDebug][INFO] USB disconnected: Disconnected by app
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:34:55 PM</sup>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:34:56 PM</sup>
+
+Let me check the firmware file that's actually been flashed today (a newer one than what I last reviewed) — the timeout pattern looks identical to the earlier reset/boot issue, so something may have regressed there rather than in `usbTransport.ts` itself.
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:34:56 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\Recommendations\\esp32\\final\\final_working_23Aug2026.ino"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 1:34:56 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+1	// Import required libraries
+2	#include <WiFi.h>
+3	#include <AsyncTCP.h>
+4	#include <ESPAsyncWebServer.h>
+5	#include <OneWire.h>
+6	#include <ESPmDNS.h>
+7	#include <DallasTemperature.h>
+8	#include <HTTPClient.h>
+9	#include <OneButton.h>
+10	#include "esp_log.h"
+11	
+12	#define ONE_WIRE_BUS 4
+13	OneWire oneWire(ONE_WIRE_BUS);
+14	DallasTemperature sensors(&oneWire);
+15	
+16	#define HEATER 5
+17	#define BLOWER 26
+18	#define FLUSH 25
+19	#define WATER_LEVEL_UP 19
+20	#define WATER_LEVEL_BOTTOM 21
+21	#define WATER_IN_S1 33
+22	#define WATER_PUMP_OUT 32
+23	#define FLUSH_BUTTON 27
+24	#define POWER_ON 22
+25	#define HARDWARE_PAUSE_RESUME_BUTTON 18
+26	
+27	OneButton button(HARDWARE_PAUSE_RESUME_BUTTON, false, false);
+28	
+29	// Replace with your network credentials
+30	const char* ssid = "Colonima9423";
+31	const char* password = "wh7b5ix1r";
+32	const char* machineSerial = "COLONIMA-GJ05-2026-005";  // Hard-coded machine serial number
+33	float readSensorTemperature = 0;
+34	
+35	byte readLL, readLH, readBut
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:35:28 PM</sup>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:35:31 PM</sup>
+
+Looking at `usbTransport.ts`, it's behaving exactly as designed here — it's not the source of the bug. The log shows: connect → first poll times out at the full 3000ms → two more timeouts ~3s apart (the failure-tolerance logic correctly waits for 3 strikes) → disconnect. That only happens when the ESP32 genuinely never answers on Serial at all, which is the same signature as the original "board never responds" issue we traced to the DTR/RTS reset handling in `EspUsbManager.java` (native, not this file) — not a logic bug in the queueing/retry code itself.
+
+Two questions to pin down whether this is a recurrence of that exact issue or something new:
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:35:37 PM</sup>
+
+<details>
+<summary>Tool: <code>AskUserQuestion</code></summary>
+
+```json
+{
+  "questions": [
+    {
+      "question": "Since I added the DTR/RTS reset-pulse fix in EspUsbManager.java (a native/Java change), was the app fully rebuilt and reinstalled on the tablet afterward (e.g. npx cap sync android + a fresh Android Studio/gradlew build+install), or was this test run on a build from before that fix — e.g. only the web assets were refreshed/live-reloaded?",
+      "header": "Rebuilt natively?",
+      "options": [
+        {
+          "label": "Yes, fully rebuilt and reinstalled since that fix",
+          "description": "Confirms the native fix is actually running on-device — means the reset-pulse timing/approach itself isn't fully working for this board and needs revisiting."
+        },
+        {
+          "label": "Not sure / only refreshed the web bundle",
+          "description": "The native APK may still be running old code without the reset-pulse fix — a full native rebuild+reinstall would need to happen before we know if it's actually fixed or not."
+        }
+      ]
+    },
+    {
+      "question": "Right now, does pressing the physical EN button on the ESP32 immediately fix it (machine starts responding), same as before that fix was added?",
+      "header": "EN still fixes it?",
+      "options": [
+        {
+          "label": "Yes, pressing EN fixes it immediately",
+          "description": "Confirms this is the same root cause recurring — the board is still coming up held in reset/bootloader mode when the USB port opens."
+        },
+        {
+          "label": "No / haven't tried",
+          "description": "If EN doesn't help this time, it's likely a different cause — I'll need to look elsewhere (e.g. genuinely intermittent hardware/cable issue)."
+        }
+      ]
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 1:36:16 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Your questions have been answered: "Since I added the DTR/RTS reset-pulse fix in EspUsbManager.java (a native/Java change), was the app fully rebuilt and reinstalled on the tablet afterward (e.g. npx cap sync android + a fresh Android Studio/gradlew build+install), or was this test run on a build from before that fix — e.g. only the web assets were refreshed/live-reloaded?"="Yes, fully rebuilt and reinstalled since that fix", "Right now, does pressing the physical EN button on the ESP32 immediately fix it (machine starts responding), same as before that fix was added?"="No / haven't tried". You can now continue with these answers in mind.
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:36:23 PM</sup>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:36:24 PM</sup>
+
+One more quick diagnostic before I make further changes — this will tell us a lot:
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:36:25 PM</sup>
+
+<details>
+<summary>Tool: <code>AskUserQuestion</code></summary>
+
+```json
+{
+  "questions": [
+    {
+      "question": "Can you try pressing the physical EN button on the ESP32 right now (while it's still connected via USB and showing disconnected/timing out), and tell me what happens?",
+      "header": "Try EN now",
+      "options": [
+        {
+          "label": "I'll try it and report back",
+          "description": "This tells us whether the board is stuck in reset/bootloader (EN fixes it — same root cause as before, reset-pulse timing needs adjusting) or something else entirely (EN doesn't help — different cause, e.g. cable/hardware/firmware)."
+        }
+      ]
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 1:36:25 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+<tool_use_error>InputValidationError: [
+  {
+    "origin": "array",
+    "code": "too_small",
+    "minimum": 2,
+    "inclusive": true,
+    "path": [
+      "questions",
+      0,
+      "options"
+    ],
+    "message": "Too small: expected array to have >=2 items"
+  }
+]
+
+This call included a question with fewer than 2 options, so it was rejected and the person never saw it. A question with a single option has no decision in it. Do not retry this call and do not invent a filler second option. Instead, state the one path you were going to offer as the approach you are taking, then continue with the task. If this call also contained questions with 2 to 4 options (each with distinct labels), you may re-ask those questions alone in a new call. Ask a question only when the person has at least two genuinely distinct choices.</tool_use_error>
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:36:29 PM</sup>
+
+Could you press the physical EN button on the ESP32 right now (while it's still connected via USB and timing out) and tell me what happens — does it immediately start responding, or does it stay disconnected? That'll tell us whether this is the same reset/bootloader-stuck issue recurring (reset-pulse timing needs adjusting) or something new I need to look at differently.
+
+
+---
+
+## User <sup>8/23/2026, 1:36:45 PM</sup>
+
+<ide_opened_file>The user opened the file c:\Users\Gaurav\Downloads\hydrotherapy-debug-2026-08-23.log in the IDE. This may or may not be related to the current task.</ide_opened_file>
+
+Also do we need to set baud rate in our app?
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:36:53 PM</sup>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:36:53 PM</sup>
+
+No code change is needed here — this is a factual check. The baud rate is already set on the native Android side, and it matches the firmware.
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:36:55 PM</sup>
+
+<details>
+<summary>Tool: <code>Grep</code></summary>
+
+```json
+{
+  "pattern": "BAUD_RATE|setParameters",
+  "path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\android\\app\\src\\main\\java\\com\\advaitsolutions\\hydrocolon\\EspUsbManager.java",
+  "output_mode": "content",
+  "-n": true
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 1:36:55 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+32:    private static final int BAUD_RATE = 115200;
+173:            openedPort.setParameters(BAUD_RATE, UsbSerialPort.DATABITS_8,
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:37:01 PM</sup>
+
+**Yes, and it's already done — no additional app-side change needed.**
+
+- `EspUsbManager.java` (native Android layer): `BAUD_RATE = 115200`, applied via `openedPort.setParameters(BAUD_RATE, UsbSerialPort.DATABITS_8, UsbSerialPort.STOPBITS_1, UsbSerialPort.PARITY_NONE)` right after opening the port.
+- Firmware (`final_working_23Aug2026.ino`): `Serial.begin(115200)`.
+
+Both sides agree on 115200/8N1, so a baud mismatch isn't the cause of the timeout issue we're debugging. There's no separate "baud rate" setting anywhere in the TypeScript/JS layer (`esp32Service.ts`, `usbTransport.ts`) — it's purely a native concern, handled once at port-open time in `EspUsbManager.java`, and it's already correct.
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:37:01 PM</sup>
+
+<details>
+<summary>Tool: <code>ExitPlanMode</code></summary>
+
+```json
+{
+  "plan": "# Move debug log to app storage + in-app log file browser\n\n## Context\n\nThe debug log file (`hydrotherapy-debug-{date}.log`, written when `VITE_DEBUG=true`) currently goes to `Directory.Documents` (public storage). Some tablets don't reliably expose a public Documents folder, so the file silently fails to write there (the `appendFile` call is already wrapped in a best-effort try/catch). Need to move it to `Directory.Data` (private app storage — always available, same location `backupService.ts` already uses as the reliable primary store for backups).\n\nSince private storage isn't reachable via a file manager, the app needs its own way to retrieve these files. Confirmed with the user: build a file browser (list `.log` files with view/share/delete), presented as a **modal** (not a dedicated page), reached via a new \"Show Debug\" button in `Settings.tsx` — placed directly under the existing \"Connection Settings\" button (Column 2) — visible only when `VITE_DEBUG === 'true'`.\n\n## Approach\n\n### 1. `frontend/src/services/debugLog.ts`: switch storage + add file management\n- Change `appendToDebugLogFile`'s `directory: Directory.Documents` → `Directory.Data`, writing into a `debug-logs/` subfolder (mirrors `backupService.ts`'s `BACKUPS_DIR = 'backups'` convention). Since `Filesystem.appendFile` (unlike `writeFile`) has no `recursive` option to auto-create parent folders, defensively call `Filesystem.mkdir({ path: DEBUG_LOGS_DIR, directory: Directory.Data, recursive: true })` (try/catch, ignore \"already exists\") before each append — cheap, and logging is already best-effort/infrequent (gated off by default in production).\n- Add exported functions, mirroring `backupService.ts`'s existing `listLocalBackups`/`shareLocalFile`/`deleteLocalBackup` patterns exactly (same `Filesystem` calls, just pointed at `debug-logs/`):\n  - `listDebugLogFiles(): Promise<{ name: string; size: number; modifiedAt: string }[]>`\n  - `readDebugLogFile(name: string): Promise<
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 1:38:31 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+User has approved your plan. You can now start coding. Start with updating your todo list if applicable
+
+Your plan has been saved to: C:\Users\Gaurav\.claude\plans\frontend-src-pages-therapy-tsx-right-no-jaunty-popcorn.md
+You can refer back to it if needed during implementation.
+
+## Approved Plan:
+# Move debug log to app storage + in-app log file browser
+
+## Context
+
+The debug log file (`hydrotherapy-debug-{date}.log`, written when `VITE_DEBUG=true`) currently goes to `Directory.Documents` (public storage). Some tablets don't reliably expose a public Documents folder, so the file silently fails to write there (the `appendFile` call is already wrapped in a best-effort try/catch). Need to move it to `Directory.Data` (private app storage — always available, same location `backupService.ts` already uses as the reliable primary store for backups).
+
+Since private storage isn't reachable via a file manager, the app needs its own way to retrieve these files. Confirmed with the user: build a fi
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:38:38 PM</sup>
+
+That plan shown is the previously-completed debug log feature (already implemented and merged — no new action needed there). To reiterate on the actual question: baud rate is already correctly set (115200/8N1) on both sides and isn't the cause of the current USB timeout issue. Still waiting on your EN-button test result to narrow down the next fix.
+
+
+---
+
+## User <sup>8/23/2026, 1:40:11 PM</sup>
+
+<ide_opened_file>The user opened the file d:\projects\production-hydro-colon-therapy\frontend\src\services\esp32Service.ts in the IDE. This may or may not be related to the current task.</ide_opened_file>
+
+Why it is still showing not conneced? @Recommendations/esp32/final/final_working_22Aug2026_high_on_logic_1.ino is the new file with new hardware.
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:40:27 PM</sup>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:40:29 PM</sup>
+
+This new board (`COLONIMA-GJ05-2026-005`) being different hardware raises a real possibility I should rule out first: the machine ID mismatch feature we built recently would *correctly* show "disconnected" if this board's serial doesn't match the serial your logged-in account expects (`modeStatus.serial_number`) — that wouldn't be a bug, just the safety check doing its job for genuinely different hardware.
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:40:33 PM</sup>
+
+<details>
+<summary>Tool: <code>AskUserQuestion</code></summary>
+
+```json
+{
+  "questions": [
+    {
+      "question": "When you connect this new board via USB, does the \"Machine ID Mismatch\" warning modal (added recently) appear at all?",
+      "header": "Mismatch modal?",
+      "options": [
+        {
+          "label": "Yes, it shows a mismatch warning",
+          "description": "Expected behavior then — this board's serial (COLONIMA-GJ05-2026-005) doesn't match what your logged-in account expects. The fix would be updating the account's registered machine serial on the backend, not an app bug."
+        },
+        {
+          "label": "No modal appears at all",
+          "description": "Rules out the mismatch feature — points back to the same connection-level issue (timeout/reset) as before, just recurring on this new board."
+        }
+      ]
+    },
+    {
+      "question": "What does the current debug log show for this latest attempt with the new board — same \"USB request timed out\" pattern as before, or something different (e.g. a machine_id mismatch error, or a different failure)?",
+      "header": "What log shows now",
+      "options": [
+        {
+          "label": "Same \"USB request timed out\" pattern",
+          "description": "Same underlying connection issue as before, just on new hardware — continue down the reset/timing investigation path."
+        },
+        {
+          "label": "Different error / haven't checked yet",
+          "description": "I'll need the actual log content to diagnose — please paste it if you have it, or check Show Debug in Settings."
+        }
+      ]
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 1:41:35 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The user answered: "When you connect this new board via USB, does the "Machine ID Mismatch" warning modal (added recently) appear at all?"="No modal appears at all", "What does the current debug log show for this latest attempt with the new board — same "USB request timed out" pattern as before, or something different (e.g. a machine_id mismatch error, or a different failure)?"="Same USB request timeed out pattern, but this hardware does not have any EN button in it. Only Reboot button". Read the answers carefully — they may request clarification, changes, or that you not proceed — and follow what they actually say.
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:41:44 PM</sup>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:41:46 PM</sup>
+
+Good — that rules out the mismatch feature; same underlying connection issue as before, now on hardware with a differently-labeled reset control. Since it has a "Reboot" button instead of "EN," let's use that for the same diagnostic:
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:41:48 PM</sup>
+
+<details>
+<summary>Tool: <code>AskUserQuestion</code></summary>
+
+```json
+{
+  "questions": [
+    {
+      "question": "While it's connected via USB and timing out, can you press the \"Reboot\" button on this new board and tell me what happens?",
+      "header": "Try Reboot button",
+      "options": [
+        {
+          "label": "It starts responding immediately after Reboot",
+          "description": "Confirms the board is coming up held in reset/bootloader when the USB port opens, same root cause as before — the reset-pulse timing/sequence in EspUsbManager.java needs adjusting for this board's reset circuit."
+        },
+        {
+          "label": "Reboot doesn't fix it / still times out",
+          "description": "Different cause on this hardware — could be a wiring difference (no auto-reset circuit at all on this custom board), a cable/port issue, or something else I need to look at from a different angle."
+        }
+      ]
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 1:42:18 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Your questions have been answered: "While it's connected via USB and timing out, can you press the "Reboot" button on this new board and tell me what happens?"="Reboot doesn't fix it / still times out". You can now continue with these answers in mind.
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:42:56 PM</sup>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:42:57 PM</sup>
+
+That's an important data point — pressing Reboot **while still connected via USB** not fixing it suggests something about the USB connection itself might be continuously holding the board down (not just a one-time reset-on-connect issue). One more test to isolate this:
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:43:00 PM</sup>
+
+<details>
+<summary>Tool: <code>AskUserQuestion</code></summary>
+
+```json
+{
+  "questions": [
+    {
+      "question": "Unplug the USB-C cable from the tablet entirely (board still powered, e.g. via its own power or just running standalone), then press Reboot. Does the board come up and run normally on its own (e.g. WiFi connects, or you can tell it's alive) when USB is NOT connected at all?",
+      "header": "Reboot without USB",
+      "options": [
+        {
+          "label": "Yes, it boots/runs fine standalone without USB",
+          "description": "Confirms the USB connection itself is holding the board down continuously (likely a DTR/RTS polarity mismatch for this board's reset circuit — my reset-pulse code's final resting state is probably wrong for this chip). Fix is on the app/native side."
+        },
+        {
+          "label": "No, it still doesn't come up even without USB connected",
+          "description": "Rules out USB/DTR-RTS entirely — this is a firmware or hardware issue on this specific new board unrelated to the USB work, needs a different investigation."
+        }
+      ]
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 1:43:21 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Your questions have been answered: "Unplug the USB-C cable from the tablet entirely (board still powered, e.g. via its own power or just running standalone), then press Reboot. Does the board come up and run normally on its own (e.g. WiFi connects, or you can tell it's alive) when USB is NOT connected at all?"="Yes, it boots/runs fine standalone without USB". You can now continue with these answers in mind.
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:44:01 PM</sup>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:44:03 PM</sup>
+
+That fully confirms it: the board is fine standalone, and breaks specifically when our code touches the USB control lines — meaning our `setDTR`/`setRTS` reset-pulse handling has the wrong polarity for *this* board's reset circuit and is continuously holding it down while the port stays open. This is a known, genuinely hard problem in the ESP32/esptool world — different board vendors wire their auto-reset transistor circuits with opposite polarity, and there's no way to detect this from software. Since we now have two boards that need *opposite* behavior (one needs the pulse to work at all, this one breaks because of it), a single hardcoded choice can't serve both — this needs to become a configurable setting.
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:44:22 PM</sup>
+
+<details>
+<summary>Tool: <code>Write</code></summary>
+
+```json
+{
+  "file_path": "C:\\Users\\Gaurav\\.claude\\plans\\frontend-src-pages-therapy-tsx-right-no-jaunty-popcorn.md",
+  "content": "# Make the USB reset-pulse behavior configurable (board-dependent polarity)\n\n## Context\n\nDiagnostic sequence on the new board (`COLONIMA-GJ05-2026-005`, no EN button, only \"Reboot\"):\n1. Same \"USB request timed out\" pattern as the original board.\n2. Pressing Reboot **while still connected via USB** does not fix it.\n3. Unplugging USB entirely and pressing Reboot: **the board boots and runs completely fine standalone.**\n\nThis proves the board itself and firmware are fine — the USB connection is actively holding it down. `EspUsbManager.openFirstAvailableDriverBlocking()` currently always performs a fixed reset-pulse sequence after opening the port (`setDTR(false)→setRTS(true)→sleep→setDTR(true)→setRTS(false)→sleep→setDTR(false)`), added earlier because the *original* board never responded at all without it (its chip needed the pulse to leave reset). This new board's auto-reset transistor circuit is evidently wired with different polarity, so the same sequence — or its final resting level — instead keeps *this* board's EN/GPIO0 continuously held, and no physical button can override a line the host is still actively driving.\n\nThis is a well-known, genuinely hardware-dependent problem (esptool itself ships multiple selectable \"reset strategies\" for exactly this reason — board vendors don't agree on polarity). Since we now have concrete evidence of two boards needing opposite behavior, there is no single hardcoded choice that works for both. The fix is to make it a per-connection **setting** a technician can toggle for the board currently in hand, rather than another blind guess at a \"better\" hardcoded polarity.\n\n## Approach\n\n### 1. New setting: USB reset pulse on/off\n- `frontend/src/db/localDB.ts` — add `usb_reset_pulse_enabled?: boolean` to `LocalSettings` (default treated as `true` when unset, preserving today's behavior f
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 1:44:23 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file C:\Users\Gaurav\.claude\plans\frontend-src-pages-therapy-tsx-right-no-jaunty-popcorn.md has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:44:26 PM</sup>
+
+<details>
+<summary>Tool: <code>ExitPlanMode</code></summary>
+
+```json
+{
+  "plan": "# Make the USB reset-pulse behavior configurable (board-dependent polarity)\n\n## Context\n\nDiagnostic sequence on the new board (`COLONIMA-GJ05-2026-005`, no EN button, only \"Reboot\"):\n1. Same \"USB request timed out\" pattern as the original board.\n2. Pressing Reboot **while still connected via USB** does not fix it.\n3. Unplugging USB entirely and pressing Reboot: **the board boots and runs completely fine standalone.**\n\nThis proves the board itself and firmware are fine — the USB connection is actively holding it down. `EspUsbManager.openFirstAvailableDriverBlocking()` currently always performs a fixed reset-pulse sequence after opening the port (`setDTR(false)→setRTS(true)→sleep→setDTR(true)→setRTS(false)→sleep→setDTR(false)`), added earlier because the *original* board never responded at all without it (its chip needed the pulse to leave reset). This new board's auto-reset transistor circuit is evidently wired with different polarity, so the same sequence — or its final resting level — instead keeps *this* board's EN/GPIO0 continuously held, and no physical button can override a line the host is still actively driving.\n\nThis is a well-known, genuinely hardware-dependent problem (esptool itself ships multiple selectable \"reset strategies\" for exactly this reason — board vendors don't agree on polarity). Since we now have concrete evidence of two boards needing opposite behavior, there is no single hardcoded choice that works for both. The fix is to make it a per-connection **setting** a technician can toggle for the board currently in hand, rather than another blind guess at a \"better\" hardcoded polarity.\n\n## Approach\n\n### 1. New setting: USB reset pulse on/off\n- `frontend/src/db/localDB.ts` — add `usb_reset_pulse_enabled?: boolean` to `LocalSettings` (default treated as `true` when unset, preserving today's behavior for boards that need it).\n- `frontend/src/store/useStore.ts` — add `usbResetPulseEnabled: boolean` (default `true`
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 1:45:34 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+User has approved your plan. You can now start coding. Start with updating your todo list if applicable
+
+Your plan has been saved to: C:\Users\Gaurav\.claude\plans\frontend-src-pages-therapy-tsx-right-no-jaunty-popcorn.md
+You can refer back to it if needed during implementation.
+
+## Approved Plan:
+# Make the USB reset-pulse behavior configurable (board-dependent polarity)
+
+## Context
+
+Diagnostic sequence on the new board (`COLONIMA-GJ05-2026-005`, no EN button, only "Reboot"):
+1. Same "USB request timed out" pattern as the original board.
+2. Pressing Reboot **while still connected via USB** does not fix it.
+3. Unplugging USB entirely and pressing Reboot: **the board boots and runs completely fine standalone.**
+
+This proves the board itself and firmware are fine — the USB connection is actively holding it down. `EspUsbManager.openFirstAvailableDriverBlocking()` currently always performs a fixed reset-pulse sequence after opening the port (`setDTR(false)→setRTS(true)→sleep→setDTR(true)→s
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:45:38 PM</sup>
+
+Implementing now.
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:45:39 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\db\\localDB.ts",
+  "offset": 60,
+  "limit": 12
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 1:45:39 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+60	
+61	  // Auto Backup
+62	  auto_backup_enabled?: boolean;
+63	  auto_backup_retention_count?: number;
+64	  // Regenerated on every login — folded into the auto-backup filename so a fresh
+65	  // install/login never collides with a same-named file an old install left behind
+66	  // (e.g. an orphaned public-storage file the new install can't delete or overwrite).
+67	  auto_backup_install_id?: string;
+68	
+69	  // ESP32 connection transport preference — 'auto' (default) prefers USB, falls back to
+70	  // WiFi; 'wired'/'wifi' are hard overrides with no automatic fallback to the other.
+71	  connection_mode?: 'auto' | 'wired' | 'wifi';
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:45:43 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\db\\localDB.ts",
+  "offset": 71,
+  "limit": 5
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 1:45:43 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+71	  connection_mode?: 'auto' | 'wired' | 'wifi';
+72	}
+73	
+74	export interface LocalTherapist {
+75	  id?: number;
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:45:48 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\db\\localDB.ts",
+  "old_string": "  connection_mode?: 'auto' | 'wired' | 'wifi';\n}",
+  "new_string": "  connection_mode?: 'auto' | 'wired' | 'wifi';\n  // Whether to perform a DTR/RTS reset pulse after opening the USB serial port. Some\n  // ESP32 boards' auto-reset circuits need this to leave reset and respond at all;\n  // others have opposite polarity and are instead held in reset by it. Board-dependent,\n  // so this is a per-tablet toggle rather than a hardcoded choice. Default true.\n  usb_reset_pulse_enabled?: boolean;\n}"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 1:45:49 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\db\localDB.ts has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:45:54 PM</sup>
+
+Now `useStore.ts`.
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:45:54 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\store\\useStore.ts"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 1:45:54 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+1	import { create } from 'zustand';
+2	import type { MachineInfo } from '../services/esp32Service';
+3	
+4	interface AppState {
+5	  machineId: string;
+6	  token: string;
+7	  modeStatus: any;
+8	  setModeStatus: (status: any) => void;
+9	  setMachineId: (id: string) => void;
+10	  setToken: (token: string) => void;
+11	  logout: () => void;
+12	  online: boolean;
+13	  setOnline: (status: boolean) => void;
+14	  machineConnected: boolean;
+15	  machineInfo: MachineInfo | null;
+16	  setMachineConnected: (connected: boolean) => void;
+17	  setMachineInfo: (info: MachineInfo | null) => void;
+18	  // Informational only — which link last carried a successful ESP32 request/registration.
+19	  // The actual per-call transport choice lives in usbTransport.ts, not this flag.
+20	  activeTransport: 'usb' | 'wifi' | 'none';
+21	  setActiveTransport: (transport: 'usb' | 'wifi' | 'none') => void;
+22	  // User-selected transport preference (persisted in localDB.settings, loaded on boot).
+23	  // 'auto' = today's pr
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:46:01 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\store\\useStore.ts",
+  "old_string": "  machineIdMismatch: { expected: string; actual: string } | null;\n  setMachineIdMismatch: (mismatch: { expected: string; actual: string } | null) => void;\n}",
+  "new_string": "  machineIdMismatch: { expected: string; actual: string } | null;\n  setMachineIdMismatch: (mismatch: { expected: string; actual: string } | null) => void;\n  // Whether opening the USB port should perform a DTR/RTS reset pulse. Board-dependent —\n  // some ESP32 boards need it to leave reset, others are held in reset by it. Persisted\n  // in localDB.settings, loaded on boot, passed into EspUsb.connect() (App.tsx).\n  usbResetPulseEnabled: boolean;\n  setUsbResetPulseEnabled: (enabled: boolean) => void;\n}"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 1:46:02 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\store\useStore.ts has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:46:08 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\store\\useStore.ts",
+  "old_string": "  machineIdMismatch: null,\n  setMachineIdMismatch: (mismatch) => set({ machineIdMismatch: mismatch }),\n}));",
+  "new_string": "  machineIdMismatch: null,\n  setMachineIdMismatch: (mismatch) => set({ machineIdMismatch: mismatch }),\n  usbResetPulseEnabled: true,\n  setUsbResetPulseEnabled: (enabled) => set({ usbResetPulseEnabled: enabled }),\n}));"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 1:46:09 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\store\useStore.ts has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:46:13 PM</sup>
+
+Now `App.tsx` — load the setting on boot, and pass it into both `EspUsb.connect()` call sites.
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:46:13 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\App.tsx"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 1:46:13 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+1	import { Redirect, Route } from 'react-router-dom';
+2	import { IonApp, IonRouterOutlet, setupIonicReact } from '@ionic/react';
+3	import { IonReactRouter } from '@ionic/react-router';
+4	import { useEffect } from 'react';
+5	import { Capacitor } from '@capacitor/core';
+6	import { EspServer } from './plugins/espServer';
+7	import { EspUsb } from './plugins/espUsb';
+8	
+9	/* Core CSS required for Ionic components to work properly */
+10	import '@ionic/react/css/core.css';
+11	import '@ionic/react/css/normalize.css';
+12	import '@ionic/react/css/structure.css';
+13	import '@ionic/react/css/typography.css';
+14	import '@ionic/react/css/padding.css';
+15	import '@ionic/react/css/float-elements.css';
+16	import '@ionic/react/css/text-alignment.css';
+17	import '@ionic/react/css/text-transformation.css';
+18	import '@ionic/react/css/flex-utils.css';
+19	import '@ionic/react/css/display.css';
+20	import './theme/variables.css';
+21	
+22	import Dashboard from './pages/Dashboard';
+23	import Therapy from './page
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:46:17 PM</sup>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:46:19 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\App.tsx",
+  "old_string": "  const { machineId, modeStatus, connectionMode } = useStore();",
+  "new_string": "  const { machineId, modeStatus, connectionMode, usbResetPulseEnabled } = useStore();"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 1:46:20 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\App.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:46:27 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\App.tsx",
+  "old_string": "    // In case a device is already attached when the app launches.\n    EspUsb.isAvailable().then(({ available }) => {\n      if (available) EspUsb.connect().catch(() => {});\n    });\n\n    const attachedPromise = EspUsb.addListener('usbDeviceAttached', () => {\n      EspUsb.connect().catch(() => {});\n    });",
+  "new_string": "    // In case a device is already attached when the app launches.\n    EspUsb.isAvailable().then(({ available }) => {\n      if (available) EspUsb.connect({ resetPulse: usbResetPulseEnabled }).catch(() => {});\n    });\n\n    const attachedPromise = EspUsb.addListener('usbDeviceAttached', () => {\n      EspUsb.connect({ resetPulse: usbResetPulseEnabled }).catch(() => {});\n    });"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 1:46:28 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\App.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:46:34 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\App.tsx",
+  "old_string": "      EspUsb.disconnect();\n    };\n  }, [connectionMode]);\n\n  useEffect(() => {\n    if (!machineId) return;\n    localDB.settings.get(machineId).then((s) => {\n      useStore.getState().setConnectionMode(s?.connection_mode ?? 'auto');\n    });",
+  "new_string": "      EspUsb.disconnect();\n    };\n  }, [connectionMode, usbResetPulseEnabled]);\n\n  useEffect(() => {\n    if (!machineId) return;\n    localDB.settings.get(machineId).then((s) => {\n      useStore.getState().setConnectionMode(s?.connection_mode ?? 'auto');\n      useStore.getState().setUsbResetPulseEnabled(s?.usb_reset_pulse_enabled ?? true);\n    });"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 1:46:35 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\App.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:46:40 PM</sup>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:46:40 PM</sup>
+
+Now `espUsb.ts` plugin interface.
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:46:40 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\plugins\\espUsb.ts"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 1:46:40 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+1	import { registerPlugin } from '@capacitor/core';
+2	
+3	export interface EspUsbPlugin {
+4	  isAvailable(): Promise<{ available: boolean }>;
+5	  connect(): Promise<void>;
+6	  disconnect(): Promise<void>;
+7	  writeLine(options: { data: string }): Promise<void>;
+8	  addListener(
+9	    eventName: 'usbDeviceAttached',
+10	    listenerFunc: (data: { vendorId: number; productId: number }) => void
+11	  ): Promise<{ remove: () => void }>;
+12	  addListener(
+13	    eventName: 'usbConnected',
+14	    listenerFunc: () => void
+15	  ): Promise<{ remove: () => void }>;
+16	  addListener(
+17	    eventName: 'usbDisconnected',
+18	    listenerFunc: (data: { reason: string }) => void
+19	  ): Promise<{ remove: () => void }>;
+20	  addListener(
+21	    eventName: 'usbDataReceived',
+22	    listenerFunc: (data: { line: string }) => void
+23	  ): Promise<{ remove: () => void }>;
+24	}
+25	
+26	// No-op web implementation used during browser dev / PWA mode — there is no USB host
+27	// bridge outside the native Android a
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:46:46 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\plugins\\espUsb.ts",
+  "old_string": "  isAvailable(): Promise<{ available: boolean }>;\n  connect(): Promise<void>;",
+  "new_string": "  isAvailable(): Promise<{ available: boolean }>;\n  connect(options: { resetPulse: boolean }): Promise<void>;"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 1:46:47 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\plugins\espUsb.ts has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:46:51 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\plugins\\espUsb.ts",
+  "old_string": "  isAvailable: async () => ({ available: false }),\n  connect: async () => {},",
+  "new_string": "  isAvailable: async () => ({ available: false }),\n  connect: async (_options: { resetPulse: boolean }) => {},"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 1:46:52 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\plugins\espUsb.ts has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:46:57 PM</sup>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:46:57 PM</sup>
+
+Now the native side — `EspUsbPlugin.java`.
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:46:58 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\android\\app\\src\\main\\java\\com\\advaitsolutions\\hydrocolon\\EspUsbPlugin.java"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 1:46:58 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+1	package com.advaitsolutions.hydrocolon;
+2	
+3	import com.getcapacitor.JSObject;
+4	import com.getcapacitor.Plugin;
+5	import com.getcapacitor.PluginCall;
+6	import com.getcapacitor.PluginMethod;
+7	import com.getcapacitor.annotation.CapacitorPlugin;
+8	
+9	@CapacitorPlugin(name = "EspUsb")
+10	public class EspUsbPlugin extends Plugin implements EspUsbManager.Listener {
+11	    private EspUsbManager manager;
+12	
+13	    @Override
+14	    public void load() {
+15	        manager = new EspUsbManager(getContext(), this);
+16	    }
+17	
+18	    @PluginMethod
+19	    public void isAvailable(PluginCall call) {
+20	        try {
+21	            JSObject result = new JSObject();
+22	            result.put("available", manager.isAvailable());
+23	            call.resolve(result);
+24	        } catch (Exception e) {
+25	            call.reject("Failed to check USB availability: " + e.getMessage());
+26	        }
+27	    }
+28	
+29	    @PluginMethod
+30	    public void connect(PluginCall call) {
+31	        try {
+32	      
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:47:05 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\android\\app\\src\\main\\java\\com\\advaitsolutions\\hydrocolon\\EspUsbPlugin.java",
+  "old_string": "    @PluginMethod\n    public void connect(PluginCall call) {\n        try {\n            manager.connect();\n            call.resolve();\n        } catch (Exception e) {\n            // Never let a native USB error crash the app — worst case, USB stays\n            // unavailable and the app keeps using WiFi.\n            call.reject(\"Failed to connect to USB device: \" + e.getMessage());\n        }\n    }",
+  "new_string": "    @PluginMethod\n    public void connect(PluginCall call) {\n        try {\n            boolean resetPulse = call.getBoolean(\"resetPulse\", true);\n            manager.connect(resetPulse);\n            call.resolve();\n        } catch (Exception e) {\n            // Never let a native USB error crash the app — worst case, USB stays\n            // unavailable and the app keeps using WiFi.\n            call.reject(\"Failed to connect to USB device: \" + e.getMessage());\n        }\n    }"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 1:47:06 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\android\app\src\main\java\com\advaitsolutions\hydrocolon\EspUsbPlugin.java has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:47:12 PM</sup>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:47:12 PM</sup>
+
+Now `EspUsbManager.java`.
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:47:12 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\android\\app\\src\\main\\java\\com\\advaitsolutions\\hydrocolon\\EspUsbManager.java"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 1:47:12 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+1	package com.advaitsolutions.hydrocolon;
+2	
+3	import android.app.PendingIntent;
+4	import android.content.BroadcastReceiver;
+5	import android.content.Context;
+6	import android.content.Intent;
+7	import android.content.IntentFilter;
+8	import android.hardware.usb.UsbDevice;
+9	import android.hardware.usb.UsbDeviceConnection;
+10	import android.hardware.usb.UsbManager;
+11	import android.os.Build;
+12	import android.util.Log;
+13	
+14	import com.hoho.android.usbserial.driver.UsbSerialDriver;
+15	import com.hoho.android.usbserial.driver.UsbSerialPort;
+16	import com.hoho.android.usbserial.driver.UsbSerialProber;
+17	import com.hoho.android.usbserial.util.SerialInputOutputManager;
+18	
+19	import java.io.IOException;
+20	import java.util.List;
+21	import java.util.concurrent.ExecutorService;
+22	import java.util.concurrent.Executors;
+23	
+24	/**
+25	 * Wraps the usb-serial-for-android lifecycle (permission request, port open/close, async
+26	 * read loop) for a single ESP32-over-USB connection. One command p
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:47:19 PM</sup>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:47:24 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\android\\app\\src\\main\\java\\com\\advaitsolutions\\hydrocolon\\EspUsbManager.java",
+  "old_string": "    // Opening the port involves a reset-pulse sequence with short sleeps (see\n    // openFirstAvailableDriver) — this can be triggered from permissionReceiver.onReceive,\n    // which runs on the main thread, so the work is offloaded here to avoid blocking it.\n    private final ExecutorService ioExecutor = Executors.newSingleThreadExecutor();",
+  "new_string": "    // Opening the port involves a reset-pulse sequence with short sleeps (see\n    // openFirstAvailableDriver) — this can be triggered from permissionReceiver.onReceive,\n    // which runs on the main thread, so the work is offloaded here to avoid blocking it.\n    private final ExecutorService ioExecutor = Executors.newSingleThreadExecutor();\n    // Set by connect(boolean) and read later by openFirstAvailableDriverBlocking(), since\n    // permission grant (and therefore the actual port-open) happens asynchronously after\n    // connect() returns — board-dependent: some ESP32 auto-reset circuits need this pulse\n    // to leave reset, others have opposite polarity and are held in reset by it instead.\n    private volatile boolean pendingResetPulse = true;"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 1:47:25 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\android\app\src\main\java\com\advaitsolutions\hydrocolon\EspUsbManager.java has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:47:30 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\android\\app\\src\\main\\java\\com\\advaitsolutions\\hydrocolon\\EspUsbManager.java",
+  "old_string": "    /** Requests permission (if needed) and opens the first matching USB serial device. */\n    public void connect() {\n        List<UsbSerialDriver> drivers = findDrivers();",
+  "new_string": "    /** Requests permission (if needed) and opens the first matching USB serial device. */\n    public void connect(boolean resetPulse) {\n        this.pendingResetPulse = resetPulse;\n        List<UsbSerialDriver> drivers = findDrivers();"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 1:47:31 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\android\app\src\main\java\com\advaitsolutions\hydrocolon\EspUsbManager.java has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:47:42 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\android\\app\\src\\main\\java\\com\\advaitsolutions\\hydrocolon\\EspUsbManager.java",
+  "old_string": "            // Many ESP32 boards (CP2102/CH340) wire DTR/RTS into the auto-reset/bootloader\n            // circuit. A static \"release\" level isn't enough if EN is already held low going\n            // into this call — there's no edge to force it high. Instead, replicate the same\n            // reset pulse esptool/Arduino IDE perform on every upload to hand the board back\n            // to running its sketch, so it boots into run mode regardless of the prior state.\n            try {\n                openedPort.setDTR(false);\n                openedPort.setRTS(true);\n                Thread.sleep(100);\n                openedPort.setDTR(true);\n                openedPort.setRTS(false);\n                Thread.sleep(50);\n                openedPort.setDTR(false);\n            } catch (Exception e) {\n                // Not all drivers/devices support control lines — non-fatal either way.\n                Log.w(TAG, \"Could not perform reset pulse after opening USB port\", e);\n            }",
+  "new_string": "            // Many ESP32 boards (CP2102/CH340) wire DTR/RTS into the auto-reset/bootloader\n            // circuit. A static \"release\" level isn't enough if EN is already held low going\n            // into this call — there's no edge to force it high. Instead, replicate the same\n            // reset pulse esptool/Arduino IDE perform on every upload to hand the board back\n            // to running its sketch, so it boots into run mode regardless of the prior state.\n            // Board-dependent: some boards' reset circuits have the opposite polarity and are\n            // instead held in reset by this pulse, so it's skipped entirely when disabled via\n            // Connection Settings, leaving the lines exactly as the driver's open() left them.\n     
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 1:47:43 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\android\app\src\main\java\com\advaitsolutions\hydrocolon\EspUsbManager.java has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:47:46 PM</sup>
+
+Now let's compile the Android side.
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:47:47 PM</sup>
+
+<details>
+<summary>Tool: <code>Bash</code></summary>
+
+```json
+{
+  "command": "cd \"d:/projects/production-hydro-colon-therapy/frontend/android\" && ./gradlew.bat compileDebugJavaWithJavac -q 2>&1 | tail -80",
+  "description": "Compile Android Java sources after making reset-pulse configurable",
+  "timeout": 300000
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 1:47:57 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Note: Some input files use or override a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:48:00 PM</sup>
+
+Compiles cleanly. Now the `ConnectionSettingsModal.tsx` toggle.
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:48:00 PM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\components\\ConnectionSettingsModal.tsx"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 1:48:00 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+1	import React from 'react';
+2	import { IonModal, IonHeader, IonToolbar, IonTitle, IonButton, IonContent } from '@ionic/react';
+3	import { useStore } from '../store/useStore';
+4	import { localDB } from '../db/localDB';
+5	
+6	interface Props {
+7	  isOpen: boolean;
+8	  onClose: () => void;
+9	}
+10	
+11	type ConnectionMode = 'auto' | 'wired' | 'wifi';
+12	
+13	const OPTIONS: { mode: ConnectionMode; label: string; description: string }[] = [
+14	  {
+15	    mode: 'auto',
+16	    label: 'Auto',
+17	    description: 'Prefer the USB-C cable when connected, and automatically fall back to WiFi if it becomes unavailable.',
+18	  },
+19	  {
+20	    mode: 'wired',
+21	    label: 'Wired (USB-C)',
+22	    description: 'Only use the USB-C cable. If it is disconnected or fails, the machine will show as disconnected — it will not fall back to WiFi.',
+23	  },
+24	  {
+25	    mode: 'wifi',
+26	    label: 'WiFi',
+27	    description: 'Only use the WiFi hotspot connection. The USB-C cable is ignored even if it is plugged in
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:48:06 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\components\\ConnectionSettingsModal.tsx",
+  "old_string": "import React from 'react';\nimport { IonModal, IonHeader, IonToolbar, IonTitle, IonButton, IonContent } from '@ionic/react';\nimport { useStore } from '../store/useStore';\nimport { localDB } from '../db/localDB';",
+  "new_string": "import React from 'react';\nimport { IonModal, IonHeader, IonToolbar, IonTitle, IonButton, IonContent, IonToggle } from '@ionic/react';\nimport { useStore } from '../store/useStore';\nimport { localDB } from '../db/localDB';"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 1:48:07 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\components\ConnectionSettingsModal.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:48:14 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\components\\ConnectionSettingsModal.tsx",
+  "old_string": "const ConnectionSettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {\n  const { machineId, connectionMode, setConnectionMode } = useStore();\n\n  const selectMode = async (mode: ConnectionMode) => {\n    setConnectionMode(mode);\n    const existing = await localDB.settings.get(machineId);\n    await localDB.settings.put({ ...existing, machine_id: machineId, connection_mode: mode });\n  };",
+  "new_string": "const ConnectionSettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {\n  const { machineId, connectionMode, setConnectionMode, usbResetPulseEnabled, setUsbResetPulseEnabled } = useStore();\n\n  const selectMode = async (mode: ConnectionMode) => {\n    setConnectionMode(mode);\n    const existing = await localDB.settings.get(machineId);\n    await localDB.settings.put({ ...existing, machine_id: machineId, connection_mode: mode });\n  };\n\n  const toggleResetPulse = async (enabled: boolean) => {\n    setUsbResetPulseEnabled(enabled);\n    const existing = await localDB.settings.get(machineId);\n    await localDB.settings.put({ ...existing, machine_id: machineId, usb_reset_pulse_enabled: enabled });\n  };"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 1:48:15 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\components\ConnectionSettingsModal.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:48:19 PM</sup>
+
+Now adding the toggle UI below the options list.
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:48:24 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\components\\ConnectionSettingsModal.tsx",
+  "old_string": "        {OPTIONS.map(({ mode, label, description }) => (\n          <div key={mode} style={optionStyle(connectionMode === mode)} onClick={() => selectMode(mode)}>\n            <span style={{ fontWeight: 700, color: connectionMode === mode ? '#1a7a45' : '#333', fontSize: '0.95rem' }}>\n              {label}\n            </span>\n            <span style={{ fontSize: '0.8rem', color: '#666' }}>{description}</span>\n          </div>\n        ))}\n      </IonContent>",
+  "new_string": "        {OPTIONS.map(({ mode, label, description }) => (\n          <div key={mode} style={optionStyle(connectionMode === mode)} onClick={() => selectMode(mode)}>\n            <span style={{ fontWeight: 700, color: connectionMode === mode ? '#1a7a45' : '#333', fontSize: '0.95rem' }}>\n              {label}\n            </span>\n            <span style={{ fontSize: '0.8rem', color: '#666' }}>{description}</span>\n          </div>\n        ))}\n\n        <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #eee' }}>\n          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>\n            <span style={{ fontWeight: 600, color: '#333', fontSize: '0.9rem' }}>Apply reset pulse on USB connect</span>\n            <IonToggle\n              checked={usbResetPulseEnabled}\n              onIonChange={(e) => toggleResetPulse(e.detail.checked)}\n            />\n          </div>\n          <p style={{ fontSize: '0.78rem', color: '#888', marginTop: '0.4rem' }}>\n            Some ESP32 boards need this to respond over USB-C; others are instead held in reset by it.\n            If a board won't connect over USB, try turning this off.\n          </p>\n        </div>\n      </IonContent>"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 1:48:25 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\components\ConnectionSettingsModal.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:48:30 PM</sup>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:48:31 PM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\components\\ConnectionSettingsModal.tsx",
+  "old_string": "    <IonModal isOpen={isOpen} onDidDismiss={onClose} style={{ '--width': '460px', '--height': '440px', '--border-radius': '12px' } as React.CSSProperties}>",
+  "new_string": "    <IonModal isOpen={isOpen} onDidDismiss={onClose} style={{ '--width': '460px', '--height': '560px', '--border-radius': '12px' } as React.CSSProperties}>"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 1:48:32 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\frontend\src\components\ConnectionSettingsModal.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:48:36 PM</sup>
+
+Now typecheck the full frontend.
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:48:37 PM</sup>
+
+<details>
+<summary>Tool: <code>Bash</code></summary>
+
+```json
+{
+  "command": "cd \"d:/projects/production-hydro-colon-therapy/frontend\" && npx tsc --noEmit -p . ; echo \"exit:$?\"",
+  "description": "Typecheck frontend after configurable reset-pulse feature"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 1:48:44 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+exit:0
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:48:53 PM</sup>
+
+Clean.
+
+## Summary
+
+Made the USB reset-pulse behavior a per-tablet toggle instead of a hardcoded assumption:
+
+- **`localDB.ts`**: new `usb_reset_pulse_enabled?: boolean` setting.
+- **`useStore.ts`**: `usbResetPulseEnabled` (default `true`) + setter.
+- **`App.tsx`**: loads the setting on boot; passes `{ resetPulse: usbResetPulseEnabled }` into both `EspUsb.connect()` call sites; the USB lifecycle effect now also re-runs when the toggle changes.
+- **`espUsb.ts`**: `connect()` now takes `{ resetPulse: boolean }` (web stub updated too).
+- **`EspUsbPlugin.java`**: reads `resetPulse` from the call, passes it to `manager.connect(resetPulse)`.
+- **`EspUsbManager.java`**: `connect(boolean resetPulse)` stores it (`pendingResetPulse`, since permission grant is async), and `openFirstAvailableDriverBlocking()` now only runs the DTR/RTS pulse sequence when enabled — when disabled, the control lines are left completely untouched, matching the state that lets your new board run fine.
+- **`ConnectionSettingsModal.tsx`**: new toggle — "Apply reset pulse on USB connect" — with an explanation, persisting immediately.
+
+Both `tsc --noEmit` and `compileDebugJavaWithJavac` pass. To fix the new board right now: open Connection Settings and turn this toggle **off**, then reconnect via USB — per the diagnostic, that should let it respond instead of timing out, while the original board keeps working with the toggle left on (its default).
+
+
+---
+
+## User <sup>8/23/2026, 1:56:28 PM</sup>
+
+<ide_selection>The user selected the lines 182 to 198 from d:\projects\production-hydro-colon-therapy\frontend\android\app\src\main\java\com\advaitsolutions\hydrocolon\EspUsbManager.java:
+  // Many ESP32 boards (CP2102/CH340) wire DTR/RTS into the auto-reset/bootloader
+            // circuit. A static "release" level isn't enough if EN is already held low going
+            // into this call — there's no edge to force it high. Instead, replicate the same
+            // reset pulse esptool/Arduino IDE perform on every upload to hand the board back
+            // to running its sketch, so it boots into run mode regardless of the prior state.
+            // Board-dependent: some boards' reset circuits have the opposite polarity and are
+            // instead held in reset by this pulse, so it's skipped entirely when disabled via
+            // Connection Settings, leaving the lines exactly as the driver's open() left them.
+            if (pendingResetPulse) {
+                try {
+                    openedPort.setDTR(false);
+                    openedPort.setRTS(true);
+                    Thread.sleep(100);
+                    openedPort.setDTR(true);
+                    openedPort.setRTS(false);
+                    Thread.sleep(50);
+                    openedPort.setDTR(false);
+
+This may or may not be related to the current task.</ide_selection>
+
+@frontend/android/app/src/main/java/com/advaitsolutions/hydrocolon/EspUsbManager.java there is code for EN already held low, but in this new hardware EN pin is already high so do we need to change code. The log still showing time out for both option On and Off for "Apply reset pulse on USB connect" settings.
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:57:06 PM</sup>
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:57:10 PM</sup>
+
+This new information rules out the DTR/RTS theory for this board entirely: if the toggle **off** (control lines left completely untouched) still times out, and you've confirmed EN is already high (not held in reset), then our reset-pulse code isn't the cause here — there's nothing left in `EspUsbManager.java`'s DTR/RTS handling that could explain it, since with the toggle off that whole block is skipped.
+
+Given: USB enumerates fine (permission dialog appears, port opens without error, `usbConnected` fires — so a real USB-to-serial bridge chip is present and responds to Android's USB layer), but literally zero bytes ever pass in either direction regardless of reset handling, and the board runs fine standalone — this now looks like it could be a wiring/hardware issue on this specific board revision (the bridge chip's UART pins possibly not connected to the ESP32's UART0 pins), or a chip-compatibility issue with the `usb-serial-for-android` library for whatever adapter chip this new board uses. Both are outside what I can fix in `EspUsbManager.java`'s logic — I need one more data point to tell which:
+
+
+---
+
+## Assistant <sup>8/23/2026, 1:57:13 PM</sup>
+
+<details>
+<summary>Tool: <code>AskUserQuestion</code></summary>
+
+```json
+{
+  "questions": [
+    {
+      "question": "Can you test this new board's USB-C port with a generic third-party Android serial terminal app (e.g. \"Serial USB Terminal\" by Kai Morich, or similar) — completely independent of our app — to see if it can send/receive ANY data at all over that connection?",
+      "header": "Independent test",
+      "options": [
+        {
+          "label": "Yes, I'll test with a generic terminal app and report back",
+          "description": "If a generic app also gets zero response, that confirms a hardware/wiring issue on this board (or a chip our library doesn't support), not something fixable in our app code. If a generic app DOES get a response, that tells me our library/driver selection is the problem and I can dig into that specifically."
+        },
+        {
+          "label": "I can't test independently right now",
+          "description": "I'll note this as an open item — without that data point, I can't distinguish a hardware wiring problem from an app/library compatibility problem, so further app-side changes would just be guessing again."
+        }
+      ]
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 2:08:07 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Your questions have been answered: "Can you test this new board's USB-C port with a generic third-party Android serial terminal app (e.g. "Serial USB Terminal" by Kai Morich, or similar) — completely independent of our app — to see if it can send/receive ANY data at all over that connection?"="I can't test independently right now". You can now continue with these answers in mind.
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 2:08:23 PM</sup>
+
+[Request interrupted by user]
+
+
+---
+
+## User <sup>8/23/2026, 2:09:52 PM</sup>
+
+device conneced through usb serial terminal app
+
+
+---
+
+## Assistant <sup>8/23/2026, 2:10:06 PM</sup>
+
+
+---
+
+## Assistant <sup>8/23/2026, 2:10:06 PM</sup>
+
+That's a very important result — let me get the precise detail, since "connected" in a generic terminal app could mean the same thing our app already achieves (port opens successfully) without proving actual data exchange works.
+
+
+---
+
+## Assistant <sup>8/23/2026, 2:10:09 PM</sup>
+
+<details>
+<summary>Tool: <code>AskUserQuestion</code></summary>
+
+```json
+{
+  "questions": [
+    {
+      "question": "In that generic serial terminal app, after it showed \"connected\" — were you able to actually send something (e.g. type poll=1 and hit enter/send) and see a real reply come back from the ESP32, or did it just show \"connected\" without you sending/receiving any actual data?",
+      "header": "Real data exchanged?",
+      "options": [
+        {
+          "label": "Yes, sent a command and got a real response back",
+          "description": "Confirms the hardware/wiring is completely fine and two-way UART communication genuinely works over this USB-C port — the bug must be specifically in our EspUsbManager.java code or driver/chip handling, not the board."
+        },
+        {
+          "label": "It only showed \"connected\" — didn't actually send/receive data",
+          "description": "Same as what our own app already achieves (port opens without error) — doesn't yet prove real communication works, so this wouldn't rule out a hardware/wiring issue after all."
+        }
+      ]
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 2:11:22 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Your questions have been answered: "In that generic serial terminal app, after it showed "connected" — were you able to actually send something (e.g. type poll=1 and hit enter/send) and see a real reply come back from the ESP32, or did it just show "connected" without you sending/receiving any actual data?"="It only showed "connected" — didn't actually send/receive data". You can now continue with these answers in mind.
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/23/2026, 2:11:28 PM</sup>
+
+
+---
+
+## Assistant <sup>8/23/2026, 2:11:30 PM</sup>
+
+That result doesn't tell us anything new yet — it's the same as what our own app already does (port opens without error). The crucial missing step: while still connected in that terminal app, can you actually **type a command and hit send** (e.g. `poll=1` then Enter, matching the format the ESP32 expects) and see whether anything comes back?
+
+
+---
+
+## Assistant <sup>8/23/2026, 2:11:32 PM</sup>
+
+<details>
+<summary>Tool: <code>AskUserQuestion</code></summary>
+
+```json
+{
+  "questions": [
+    {
+      "question": "While still connected in the generic serial terminal app, type poll=1 and send it (with a newline/Enter, since the ESP32 firmware reads line-by-line). Does anything come back?",
+      "header": "Send poll=1 now",
+      "options": [
+        {
+          "label": "Yes, got a JSON response back",
+          "description": "Proves the hardware and wiring are completely fine — the bug is specifically in our app's EspUsbManager.java/driver handling for this chip, not the board itself."
+        },
+        {
+          "label": "No response, same timeout behavior",
+          "description": "Confirms this is a hardware/wiring issue on this board (or firmware not actually running/listening), independent of our app entirely — not something fixable in app code."
+        }
+      ]
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 2:11:44 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Your questions have been answered: "While still connected in the generic serial terminal app, type poll=1 and send it (with a newline/Enter, since the ESP32 firmware reads line-by-line). Does anything come back?"="No response, same timeout behavior". You can now continue with these answers in mind.
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/23/2026, 2:12:06 PM</sup>
+
+
+---
+
+## Assistant <sup>8/23/2026, 2:12:08 PM</sup>
+
+That's the conclusive test. A completely independent, generic serial terminal app also got **zero response** to `poll=1` — this rules out our app entirely (`EspUsbManager.java`, the reset-pulse logic, `usbTransport.ts`, all of it). The problem is not in any code I can change; it's on the hardware/firmware side of this specific physical board.
+
+
+---
+
+## Assistant <sup>8/23/2026, 2:12:20 PM</sup>
+
+<details>
+<summary>Tool: <code>Write</code></summary>
+
+```json
+{
+  "file_path": "C:\\Users\\Gaurav\\.claude\\plans\\frontend-src-pages-therapy-tsx-right-no-jaunty-popcorn.md",
+  "content": "# Diagnostic conclusion: new board's USB-C serial issue is not an app bug\n\n## Findings (no code change indicated)\n\nOn the new board (`COLONIMA-GJ05-2026-005`, no EN button, only \"Reboot\"):\n1. Same \"USB request timed out\" with the reset-pulse setting both **on and off** — rules out the DTR/RTS polarity theory for this board (the code path that theory implicated is fully skipped when the setting is off, and it still fails).\n2. User confirmed EN is already high (board not held in reset) — consistent with #1.\n3. Board runs completely fine standalone (WiFi, etc.) with USB unplugged.\n4. **Conclusive test**: a completely independent, generic third-party Android serial terminal app (not this codebase's code at all) connected to the same USB-C port, sent `poll=1`, and got **zero response** — identical symptom, with none of this app's code involved.\n\nSince a generic app talking to the same port gets the same \"connects but never exchanges data\" result, the cause is outside anything in `EspUsbManager.java`, `usbTransport.ts`, or the reset-pulse handling — none of that code was in the path for the generic app's test. This points to one of:\n- **Hardware/wiring**: the USB-to-serial bridge chip's UART TX/RX pins may not actually be connected to the ESP32's UART0 (GPIO1/GPIO3) pins on this board revision — the chip enumerates over USB (hence \"connected\" in both apps) but its serial side may not reach the ESP32 at all.\n- **Firmware not actually listening**: possible this specific physical unit isn't running the firmware version we think it is (the same \"wasn't actually reflashed\" gotcha hit earlier in this project) — worth re-confirming by other means (e.g. Arduino IDE's own Serial Monitor during a fresh upload to this exact board, which would show the ROM boot banner / any prints if Serial genuinely works).\n\n## Recommended next steps 
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 2:12:21 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file C:\Users\Gaurav\.claude\plans\frontend-src-pages-therapy-tsx-right-no-jaunty-popcorn.md has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/23/2026, 2:12:24 PM</sup>
+
+<details>
+<summary>Tool: <code>ExitPlanMode</code></summary>
+
+```json
+{
+  "plan": "# Diagnostic conclusion: new board's USB-C serial issue is not an app bug\n\n## Findings (no code change indicated)\n\nOn the new board (`COLONIMA-GJ05-2026-005`, no EN button, only \"Reboot\"):\n1. Same \"USB request timed out\" with the reset-pulse setting both **on and off** — rules out the DTR/RTS polarity theory for this board (the code path that theory implicated is fully skipped when the setting is off, and it still fails).\n2. User confirmed EN is already high (board not held in reset) — consistent with #1.\n3. Board runs completely fine standalone (WiFi, etc.) with USB unplugged.\n4. **Conclusive test**: a completely independent, generic third-party Android serial terminal app (not this codebase's code at all) connected to the same USB-C port, sent `poll=1`, and got **zero response** — identical symptom, with none of this app's code involved.\n\nSince a generic app talking to the same port gets the same \"connects but never exchanges data\" result, the cause is outside anything in `EspUsbManager.java`, `usbTransport.ts`, or the reset-pulse handling — none of that code was in the path for the generic app's test. This points to one of:\n- **Hardware/wiring**: the USB-to-serial bridge chip's UART TX/RX pins may not actually be connected to the ESP32's UART0 (GPIO1/GPIO3) pins on this board revision — the chip enumerates over USB (hence \"connected\" in both apps) but its serial side may not reach the ESP32 at all.\n- **Firmware not actually listening**: possible this specific physical unit isn't running the firmware version we think it is (the same \"wasn't actually reflashed\" gotcha hit earlier in this project) — worth re-confirming by other means (e.g. Arduino IDE's own Serial Monitor during a fresh upload to this exact board, which would show the ROM boot banner / any prints if Serial genuinely works).\n\n## Recommended next steps (not app changes)\n1. Re-confirm via Arduino IDE's own Serial Monitor (during/after a fresh upload to this exact p
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 2:13:08 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+User has approved your plan. You can now start coding. Start with updating your todo list if applicable
+
+Your plan has been saved to: C:\Users\Gaurav\.claude\plans\frontend-src-pages-therapy-tsx-right-no-jaunty-popcorn.md
+You can refer back to it if needed during implementation.
+
+## Approved Plan:
+# Diagnostic conclusion: new board's USB-C serial issue is not an app bug
+
+## Findings (no code change indicated)
+
+On the new board (`COLONIMA-GJ05-2026-005`, no EN button, only "Reboot"):
+1. Same "USB request timed out" with the reset-pulse setting both **on and off** — rules out the DTR/RTS polarity theory for this board (the code path that theory implicated is fully skipped when the setting is off, and it still fails).
+2. User confirmed EN is already high (board not held in reset) — consistent with #1.
+3. Board runs completely fine standalone (WiFi, etc.) with USB unplugged.
+4. **Conclusive test**: a completely independent, generic third-party Android serial terminal app (not this codebase
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/23/2026, 2:13:15 PM</sup>
+
+## Summary
+
+The evidence now conclusively rules out our app code: a generic, unrelated serial terminal app sending `poll=1` to the same USB-C port got the exact same "connects but zero response" result — with none of `EspUsbManager.java`, `usbTransport.ts`, or the reset-pulse logic involved at all. That means further changes to this app's USB code wouldn't fix it, since the same failure reproduces without any of that code running.
+
+**Most likely causes now**, both outside this codebase:
+1. **Firmware not actually running on this physical unit** — worth re-confirming with Arduino IDE's own Serial Monitor during/after a fresh upload to this exact board (bypassing our app and any Android terminal app entirely).
+2. **Hardware/wiring** — the USB-to-serial bridge chip enumerates fine over USB (both apps get "connected"), but its TX/RX pins may not actually be wired to the ESP32's UART0 pins on this board revision, or there's a physical fault.
+
+I'd suggest step 1 first since it's the fastest to check and would immediately tell you whether it's firmware or hardware. Let me know what you find and I can pick back up from there if it turns out to be something in the app after all.
+
+
+---
+
+## User <sup>8/23/2026, 3:00:48 PM</sup>
+
+<ide_selection>The user selected the lines 298 to 298 from d:\projects\production-hydro-colon-therapy\Recommendations\esp32\final\final_working_23Aug2026.ino:
+readSensorTemperature
+
+This may or may not be related to the current task.</ide_selection>
+
+@Recommendations/esp32/final/final_working_23Aug2026.ino readSensorTemperature is always showing 0 while connected through usb c serial port, working fine with wifi. Also Prepare session, start session are not working.
+
+
+---
+
+## Assistant <sup>8/23/2026, 3:02:13 PM</sup>
+
+
+---
+
+## Assistant <sup>8/23/2026, 3:02:14 PM</sup>
+
+Found a strong, concrete lead for the "Prepare/Start not working" issue — let me verify the actual param string length against the firmware's buffer guard.
+
+
+---
+
+## Assistant <sup>8/23/2026, 3:02:15 PM</sup>
+
+<details>
+<summary>Tool: <code>Grep</code></summary>
+
+```json
+{
+  "pattern": "buildAllParams = useCallback\" -A 40",
+  "path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Therapy.tsx",
+  "output_mode": "content"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 3:02:15 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+No matches found
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/23/2026, 3:02:19 PM</sup>
+
+<details>
+<summary>Tool: <code>Grep</code></summary>
+
+```json
+{
+  "pattern": "const buildAllParams",
+  "path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src\\pages\\Therapy.tsx",
+  "output_mode": "content",
+  "-A": 40
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 3:02:19 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+310:  const buildAllParams = useCallback(async (): Promise<Record<string, number>> => {
+311-    const s = await localDB.settings.get(machineId);
+312-    return {
+313-      session_duration: s?.default_session_minutes ?? 40,
+314-      therapy_min_temp: s?.therapy_min_temp ?? 30,
+315-      default_temperature: s?.default_temperature ?? defaultTemp,
+316-      max_temperature: s?.max_temperature ?? 40,
+317-      auto_flush: s?.auto_flush ? 1 : 0,
+318-      flush_mode: s?.flush_mode === 'interval' ? 1 : 0,
+319-      flush_frequency: s?.flush_frequency ?? 30,
+320-      flush_duration: s?.flush_duration ?? 10,
+321-      blower_auto: s?.blower_auto ? 1 : 0,
+322-      blower_frequency_mode: s?.blower_frequency_mode === 'interval' ? 1 : 0,
+323-      blower_interval: s?.blower_interval ?? blowerInterval,
+324-      blower_duration: s?.blower_duration ?? blowerDuration,
+325-    };
+326-  }, [machineId, defaultTemp, blowerInterval, blowerDuration]);
+327-
+328-  // ---------- Data loading ----------
+32
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/23/2026, 3:02:37 PM</sup>
+
+
+---
+
+## Assistant <sup>8/23/2026, 3:02:42 PM</sup>
+
+I found a strong, well-evidenced cause for the "Prepare/Start session not working" part. Let me verify the numbers: `buildAllParams()` in `Therapy.tsx` produces 12 key=value pairs, and a typical `sendPrepareParams({...params, start_session: 1})` call for **Start** builds a query string of roughly **247 characters** just for the base params — and `pollSerialCommands()` in the firmware silently discards (`serialBuffer = ""`, no response sent) any line over **256 characters**:
+
+```cpp
+if (serialBuffer.length() > 256) serialBuffer = ""; // guard against a garbled/unterminated line
+```
+
+Real calls almost always add extra flags on top of the base 12 (e.g. `prepare_session`, `pause_session`, `heater`), easily pushing well past 256 — meaning the ESP32 never even sees these commands, and the app just times out waiting for a response. A plain `poll=1` or a single `heater=1` toggle stays comfortably under the limit, which is consistent with basic polling/toggles already working while Prepare/Start don't.
+
+**Fix**: raise that 256-char guard to something safely larger (e.g. 1024) in `pollSerialCommands()`.
+
+For the `temp` always showing `0` over USB — I don't yet have a clean code-level explanation, since `readSensorTemperature` is a single global read once per `loop()` iteration and used identically by both the WiFi handler and `handleSerialCommand()`. One question to narrow it down:
+
+
+---
+
+## Assistant <sup>8/23/2026, 3:02:46 PM</sup>
+
+<details>
+<summary>Tool: <code>AskUserQuestion</code></summary>
+
+```json
+{
+  "questions": [
+    {
+      "question": "Does temp show 0 on every USB response, including a plain status poll (no session commands), or does it only show 0 specifically after/during a Prepare Session or Start Session attempt (which — per the buffer-truncation bug — may currently be silently failing and never actually reaching the ESP32 at all)?",
+      "header": "When temp=0 happens",
+      "options": [
+        {
+          "label": "Every USB response shows temp=0, even plain polls",
+          "description": "A separate, genuine sensor-reading issue independent of the session-command bug — needs its own investigation once the buffer fix is in."
+        },
+        {
+          "label": "Only around Prepare/Start attempts, not plain polls",
+          "description": "Likely just a symptom of the same buffer-truncation bug — fixing the 256-char limit may resolve both issues at once, since the real response (with real temp) would then actually reach the app."
+        }
+      ]
+    }
+  ]
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 3:03:04 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Your questions have been answered: "Does temp show 0 on every USB response, including a plain status poll (no session commands), or does it only show 0 specifically after/during a Prepare Session or Start Session attempt (which — per the buffer-truncation bug — may currently be silently failing and never actually reaching the ESP32 at all)?"="Every USB response shows temp=0, even plain polls". You can now continue with these answers in mind.
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/23/2026, 3:03:35 PM</sup>
+
+
+---
+
+## Assistant <sup>8/23/2026, 3:03:39 PM</sup>
+
+That confirms it's a separate issue — not explained by the buffer bug, since a plain `poll=1` is short and reaches the handler fine. I've checked the code closely and can't find a software cause: `readSensorTemperature` is a single global, set once per `loop()` iteration (in `sensors.requestTemperatures()`/`getTempCByIndex(0)`, now the very first lines of `loop()`), and both the WiFi handler and `handleSerialCommand()` read that exact same variable with identical `String(readSensorTemperature)` construction — there's no code path where USB would see a different value than WiFi. Given a "new hardware" board that's already shown other unusual electrical behavior (the earlier reset-circuit issue), the most likely explanation left is **hardware interference**: the DS18B20 OneWire bus (GPIO4) picking up electrical noise from the USB connection/cable on this board's layout, causing the sensor read to fail (returning 0) only while USB is physically connected — not something fixable in firmware code.
+
+Let me write this up as the plan: fix the buffer bug (concrete), document the temp finding as a hardware lead to check.
+
+
+---
+
+## Assistant <sup>8/23/2026, 3:03:55 PM</sup>
+
+<details>
+<summary>Tool: <code>Write</code></summary>
+
+```json
+{
+  "file_path": "C:\\Users\\Gaurav\\.claude\\plans\\frontend-src-pages-therapy-tsx-right-no-jaunty-popcorn.md",
+  "content": "# Fix USB Prepare/Start session failure (buffer truncation); temp=0 is likely hardware\n\n## Context\n\nUSB communication is now working (per the earlier diagnostic session — real responses come back for polls and simple toggles). Two remaining issues reported:\n1. **Prepare Session / Start Session don't work over USB** (fine over WiFi).\n2. **`temp` always shows 0 over USB** on every response, including plain polls (fine over WiFi).\n\n### Issue 1 — root cause found: 256-char line buffer truncation\n\n`pollSerialCommands()` in `Recommendations/esp32/final/final_working_23Aug2026.ino` silently discards any incoming line longer than 256 characters, with no response sent at all:\n```cpp\nif (serialBuffer.length() > 256) serialBuffer = \"\"; // guard against a garbled/unterminated line\n```\n`buildAllParams()` (`frontend/src/pages/Therapy.tsx`) produces 12 key=value pairs; a plain `start_session` call (`sendPrepareParams({...params, start_session: 1})`) already builds a query string of **~247 characters** just from the base params. Real calls (Prepare, low-water-pause, heater-safety cutoffs, etc.) add 1–3 more flags (`prepare_session`, `pause_session`, `heater`) on top, comfortably exceeding 256. Once truncated, the ESP32 never sees the command and never responds — the app just times out. Simple short commands (`poll=1`, a lone `heater=1` toggle) stay well under the limit, which matches why basic connectivity already works while these specific multi-param commands don't.\n\n### Issue 2 — temp=0 over USB: no code-level cause found, likely hardware\n\n`readSensorTemperature` is a single global set once per `loop()` iteration (`sensors.requestTemperatures()` + `getTempCByIndex(0)`, now the first two lines of `loop()`), and both the WiFi handler (`/machineinfo.html`) and `handleSerialCommand()` read that same variable with identical `String(readSen
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/23/2026, 3:03:56 PM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file C:\Users\Gaurav\.claude\plans\frontend-src-pages-therapy-tsx-right-no-jaunty-popcorn.md has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/23/2026, 3:03:59 PM</sup>
+
+<details>
+<summary>Tool: <code>ExitPlanMode</code></summary>
+
+```json
+{
+  "plan": "# Fix USB Prepare/Start session failure (buffer truncation); temp=0 is likely hardware\n\n## Context\n\nUSB communication is now working (per the earlier diagnostic session — real responses come back for polls and simple toggles). Two remaining issues reported:\n1. **Prepare Session / Start Session don't work over USB** (fine over WiFi).\n2. **`temp` always shows 0 over USB** on every response, including plain polls (fine over WiFi).\n\n### Issue 1 — root cause found: 256-char line buffer truncation\n\n`pollSerialCommands()` in `Recommendations/esp32/final/final_working_23Aug2026.ino` silently discards any incoming line longer than 256 characters, with no response sent at all:\n```cpp\nif (serialBuffer.length() > 256) serialBuffer = \"\"; // guard against a garbled/unterminated line\n```\n`buildAllParams()` (`frontend/src/pages/Therapy.tsx`) produces 12 key=value pairs; a plain `start_session` call (`sendPrepareParams({...params, start_session: 1})`) already builds a query string of **~247 characters** just from the base params. Real calls (Prepare, low-water-pause, heater-safety cutoffs, etc.) add 1–3 more flags (`prepare_session`, `pause_session`, `heater`) on top, comfortably exceeding 256. Once truncated, the ESP32 never sees the command and never responds — the app just times out. Simple short commands (`poll=1`, a lone `heater=1` toggle) stay well under the limit, which matches why basic connectivity already works while these specific multi-param commands don't.\n\n### Issue 2 — temp=0 over USB: no code-level cause found, likely hardware\n\n`readSensorTemperature` is a single global set once per `loop()` iteration (`sensors.requestTemperatures()` + `getTempCByIndex(0)`, now the first two lines of `loop()`), and both the WiFi handler (`/machineinfo.html`) and `handleSerialCommand()` read that same variable with identical `String(readSensorTemperature)` construction — there is no code path where the transport could affect this value. Confirmed it ha
+...(truncated)
+```
+
+</details>
 
 
 ---

@@ -50,6 +50,11 @@ public class EspUsbManager {
     // openFirstAvailableDriver) — this can be triggered from permissionReceiver.onReceive,
     // which runs on the main thread, so the work is offloaded here to avoid blocking it.
     private final ExecutorService ioExecutor = Executors.newSingleThreadExecutor();
+    // Set by connect(boolean) and read later by openFirstAvailableDriverBlocking(), since
+    // permission grant (and therefore the actual port-open) happens asynchronously after
+    // connect() returns — board-dependent: some ESP32 auto-reset circuits need this pulse
+    // to leave reset, others have opposite polarity and are held in reset by it instead.
+    private volatile boolean pendingResetPulse = true;
 
     public EspUsbManager(Context context, Listener listener) {
         this.context = context;
@@ -126,7 +131,8 @@ public class EspUsbManager {
     }
 
     /** Requests permission (if needed) and opens the first matching USB serial device. */
-    public void connect() {
+    public void connect(boolean resetPulse) {
+        this.pendingResetPulse = resetPulse;
         List<UsbSerialDriver> drivers = findDrivers();
         if (drivers.isEmpty()) {
             listener.onDisconnected("No USB serial device found");
@@ -178,17 +184,24 @@ public class EspUsbManager {
             // into this call — there's no edge to force it high. Instead, replicate the same
             // reset pulse esptool/Arduino IDE perform on every upload to hand the board back
             // to running its sketch, so it boots into run mode regardless of the prior state.
-            try {
-                openedPort.setDTR(false);
-                openedPort.setRTS(true);
-                Thread.sleep(100);
-                openedPort.setDTR(true);
-                openedPort.setRTS(false);
-                Thread.sleep(50);
-                openedPort.setDTR(false);
-            } catch (Exception e) {
-                // Not all drivers/devices support control lines — non-fatal either way.
-                Log.w(TAG, "Could not perform reset pulse after opening USB port", e);
+            // Board-dependent: some boards' reset circuits have the opposite polarity and are
+            // instead held in reset by this pulse, so it's skipped entirely when disabled via
+            // Connection Settings, leaving the lines exactly as the driver's open() left them.
+            if (pendingResetPulse) {
+                try {
+                    // openedPort.setDTR(false);
+                    // openedPort.setRTS(true);
+                    // Thread.sleep(100);
+                    // openedPort.setDTR(true);
+                    // openedPort.setRTS(false);
+                    // Thread.sleep(50);
+                    // openedPort.setDTR(false);
+                    openedPort.setDTR(false);
+                    openedPort.setRTS(false);
+                } catch (Exception e) {
+                    // Not all drivers/devices support control lines — non-fatal either way.
+                    Log.w(TAG, "Could not perform reset pulse after opening USB port", e);
+                }
             }
 
             this.port = openedPort;

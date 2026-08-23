@@ -2,7 +2,7 @@ import { registerPlugin } from '@capacitor/core';
 
 export interface EspUsbPlugin {
   isAvailable(): Promise<{ available: boolean }>;
-  connect(): Promise<void>;
+  connect(options: { resetPulse: boolean }): Promise<void>;
   disconnect(): Promise<void>;
   writeLine(options: { data: string }): Promise<void>;
   addListener(
@@ -27,7 +27,7 @@ export interface EspUsbPlugin {
 // bridge outside the native Android app.
 const webImpl: EspUsbPlugin = {
   isAvailable: async () => ({ available: false }),
-  connect: async () => {},
+  connect: async (_options: { resetPulse: boolean }) => {},
   disconnect: async () => {},
   writeLine: async () => {},
   addListener: async (_event: any, _handler: any) => ({ remove: () => {} }),

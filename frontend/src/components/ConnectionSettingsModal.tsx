@@ -1,5 +1,5 @@
 import React from 'react';
-import { IonModal, IonHeader, IonToolbar, IonTitle, IonButton, IonContent } from '@ionic/react';
+import { IonModal, IonHeader, IonToolbar, IonTitle, IonButton, IonContent, IonToggle } from '@ionic/react';
 import { useStore } from '../store/useStore';
 import { localDB } from '../db/localDB';
 
@@ -41,7 +41,7 @@ const optionStyle = (active: boolean): React.CSSProperties => ({
 });
 
 const ConnectionSettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
-  const { machineId, connectionMode, setConnectionMode } = useStore();
+  const { machineId, connectionMode, setConnectionMode, usbResetPulseEnabled, setUsbResetPulseEnabled } = useStore();
 
   const selectMode = async (mode: ConnectionMode) => {
     setConnectionMode(mode);
@@ -49,8 +49,14 @@ const ConnectionSettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
     await localDB.settings.put({ ...existing, machine_id: machineId, connection_mode: mode });
   };
 
+  const toggleResetPulse = async (enabled: boolean) => {
+    setUsbResetPulseEnabled(enabled);
+    const existing = await localDB.settings.get(machineId);
+    await localDB.settings.put({ ...existing, machine_id: machineId, usb_reset_pulse_enabled: enabled });
+  };
+
   return (
-    <IonModal isOpen={isOpen} onDidDismiss={onClose} style={{ '--width': '460px', '--height': '440px', '--border-radius': '12px' } as React.CSSProperties}>
+    <IonModal isOpen={isOpen} onDidDismiss={onClose} style={{ '--width': '460px', '--height': '560px', '--border-radius': '12px' } as React.CSSProperties}>
       <IonHeader>
         <IonToolbar color="primary">
           <IonTitle>Connection Settings</IonTitle>
@@ -69,6 +75,20 @@ const ConnectionSettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
             <span style={{ fontSize: '0.8rem', color: '#666' }}>{description}</span>
           </div>
         ))}
+
+        <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #eee' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontWeight: 600, color: '#333', fontSize: '0.9rem' }}>Apply reset pulse on USB connect</span>
+            <IonToggle
+              checked={usbResetPulseEnabled}
+              onIonChange={(e) => toggleResetPulse(e.detail.checked)}
+            />
+          </div>
+          <p style={{ fontSize: '0.78rem', color: '#888', marginTop: '0.4rem' }}>
+            Some ESP32 boards need this to respond over USB-C; others are instead held in reset by it.
+            If a board won't connect over USB, try turning this off.
+          </p>
+        </div>
       </IonContent>
     </IonModal>
   );

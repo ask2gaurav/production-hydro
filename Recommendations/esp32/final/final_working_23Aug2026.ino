@@ -24,12 +24,12 @@ DallasTemperature sensors(&oneWire);
 #define POWER_ON 22
 #define HARDWARE_PAUSE_RESUME_BUTTON 18
 
-OneButton button(HARDWARE_PAUSE_RESUME_BUTTON, true);
+OneButton button(HARDWARE_PAUSE_RESUME_BUTTON, false, false);
 
 // Replace with your network credentials
-const char* ssid = "Colonima8299";
-const char* password = "iyst3y9ew";
-const char* machineSerial = "COLONIMA-GJ05-2026-003";  // Hard-coded machine serial number
+const char* ssid = "Colonima9423";
+const char* password = "wh7b5ix1r";
+const char* machineSerial = "COLONIMA-GJ05-2026-005";  // Hard-coded machine serial number
 float readSensorTemperature = 0;
 
 byte readLL, readLH, readButton, readHeader, readBlower, readFlush, readWaterInSq, readWaterPumpOut, readHeater;
@@ -38,6 +38,7 @@ byte flushAuto,  flushButtonHit, flushButtonHitFromTab=0, flushButtonHardwareHit
 byte blowerAuto,  blowerButtonHit;
 byte  flushFreqMode=0, blowerFreqMode=0; // 0 for continuous, 1 for interval based
 byte heater_from_app=2; // 0 for off, 1 for on
+byte connection_type=1; // 1 for wifi, 2 for usb-c
 const byte MY_OFF = LOW;
 const byte MY_ON = HIGH;
 
@@ -84,7 +85,6 @@ void handleClick() {
 		//pause session
 		PAUSE_SESSION();
 		sessionPause = 1;
-		
 	} else {
 		//resume session
 		sessionPause = 0;
@@ -94,29 +94,29 @@ void handleClick() {
 
 // Callback function for a long press
 void handleLongPress() {
-	//if(button.isLongPressed()==true){
-		startSession = 0;
-		prepSession = 0;
-		sessionPause = 0;
-		sessionEnd = 0;
-		hardwareSessionEnd=1;
-		END_SESSION();
+	// //if(button.isLongPressed()==true){
+	// 	startSession = 0;
+	// 	prepSession = 0;
+	// 	sessionPause = 0;
+	// 	sessionEnd = 0;
+	// 	hardwareSessionEnd=1;
+	// 	END_SESSION();
 		
-	//}
-	button.reset();
+	// //}
+	
 }
 
 void setup() {
 	// Suppress ESP-IDF/Arduino-core internal logging (WiFi events, peripheral manager, etc.)
-	// at runtime, regardless of the IDE's Core Debug Level build setting — that logging
+	// at runtime, regardless of the IDE's Core Debug Level build setting  that logging
 	// writes to the same Serial/UART0 the USB-C command channel uses and corrupts the
 	// strict one-JSON-line-per-command protocol below. Must run before WiFi/Serial start.
 	esp_log_level_set("*", ESP_LOG_NONE);
 	
-	// Serial port — used for the USB-C command channel (see pollSerialCommands()),
+	// Serial port  used for the USB-C command channel (see pollSerialCommands()),
 	// not just debugging, so nothing else may write to Serial.
 	Serial.begin(115200);
-
+	sensors.begin();
 	reset_pins();
 	flushButtonHardwareHit = digitalRead(FLUSH_BUTTON);
 	flushButtonHardwareHitPrev = flushButtonHardwareHit;
@@ -125,7 +125,10 @@ void setup() {
 	WiFi.begin(ssid, password);
 		while (WiFi.status() != WL_CONNECTED) {
 		pollSerialCommands();
-		delay(50);
+		if(connection_type==2){
+			break; // if usb-c is connected then break the wifi connection loop
+		}
+		delay(1000);
 	}
 
 	registerWithServer();
@@ -135,15 +138,15 @@ void setup() {
 	}
 	MDNS.addService("_http", "_tcp", 8091);
 
-	sensors.begin();
+	
 
 	// 1. Link the function to trigger on a quick short click
-	button.attachClick(handleClick);
-	// 2. Link the function to trigger as soon as the long press threshold is crossed
-	button.attachLongPressStart(handleLongPress);
-	// Optional: Adjust the long press duration threshold (defaults to 600ms)
-	button.setClickMs(50);
-	button.setPressMs(5000); // Set to 1000ms (1 seconds)
+  button.attachClick(handleClick);
+  // 2. Link the function to trigger as soon as the long press threshold is crossed
+  button.attachLongPressStart(handleLongPress);
+  // Optional: Adjust the long press duration threshold (defaults to 600ms)
+	//button.setClickMs(50);
+  button.setPressMs(5000); // Set to 5000ms (5 seconds)
 
 	// Route for root / web page
 	server.on("/", HTTP_GET, [](AsyncWebServerRequest* request) {
@@ -287,20 +290,14 @@ String handleSerialCommand(String line) {
 		String pair = (amp == -1) ? line.substring(start) : line.substring(start, amp);
 		int eq = pair.indexOf('=');
 		if (eq > 0) {
-			keyValue += pair.substring(0, eq) + "=" + pair.substring(eq + 1);
+			keyValue += pair.substring(0, eq) + "=" + pair.substring(eq + 1)+"&";
 			applySerialParam(pair.substring(0, eq), pair.substring(eq + 1));
 		}
 		if (amp == -1) break;
 		start = amp + 1;
 	}
-
 	read_pins();
-	sensors.requestTemperatures();
-	readSensorTemperature = sensors.getTempCByIndex(0);
-	if(readSensorTemperature <= 0){
-		readSensorTemperature=37.00;
-	}
-	return "{\"machine_id\": \"" + String(machineSerial) + "\",\"temp\": " + String(readSensorTemperature) + ", \"water_hl\": " + String(readLH) + ", \"water_ll\": " + String(readLL) + ", \"blower\": " + String(blowerButtonHit) + ", \"flush_valve\": " + String(flushButtonHitFromTab) + ", \"water_in_valve\": " + String(readWaterInSq) + ", \"pump\": " + String(readWaterPumpOut) + ", \"flush_button_hardware\": " + String(flushButtonHardwareHit) + ",\"heater\": " + String(readHeater) + ",\"sessionP\": " + String( sessionPause ) + ",\"hes\": " + String(0) + "}";
+	return "{\"machine_id\": \"" + String(machineSerial) + "\",\"debug_val\": \"" + String(keyValue) + "\",\"temp\": " + String(readSensorTemperature) + ", \"water_hl\": " + String(readLH) + ", \"water_ll\": " + String(readLL) + ", \"blower\": " + String(blowerButtonHit) + ", \"flush_valve\": " + String(flushButtonHitFromTab) + ", \"water_in_valve\": " + String(readWaterInSq) + ", \"pump\": " + String(readWaterPumpOut) + ", \"flush_button_hardware\": " + String(flushButtonHardwareHit) + ",\"heater\": " + String(readHeater) + ",\"sessionP\": " + String( sessionPause ) + ",\"hes\": " + String(0) + "}";
 }
 
 // Non-blocking: drains whatever bytes are available, processes one command per
@@ -312,11 +309,14 @@ void pollSerialCommands() {
 			serialBuffer.trim();
 			if (serialBuffer.length() > 0) {
 				Serial.println(handleSerialCommand(serialBuffer));
+				connection_type=2; // if usb-c is connected then set connection type to 2
 			}
 			serialBuffer = "";
 		} else if (c != '\r' && c != '\n') {
 			serialBuffer += c;
-			if (serialBuffer.length() > 256) serialBuffer = ""; // guard against a garbled/unterminated line
+			//if (serialBuffer.length() > 2560) serialBuffer = ""; // guard against a garbled/unterminated line
+		}if (c == '\r' || c == '\n' || serialBuffer.length() > 2560 || c == '\0') {
+			break; // exit the loop to avoid blocking on Serial
 		}
 	}
 }
@@ -341,8 +341,9 @@ void reset_pins(){
 		pinMode(outputPins[i], OUTPUT);
 		digitalWrite(outputPins[i], MY_OFF); // set all pins as off by default except heater
 		
-		//digitalWrite(HEATER, MY_ON); // keep heater off at startup
 	}
+	// pinMode(POWER_ON, OUTPUT);
+	// digitalWrite(POWER_ON, MY_ON); // keep heater off at startup
 	flushDuration=10; flushInterval=30; sessionPause=0; sessionDuration=0; flushButtonHit=0;
 }
 
@@ -387,7 +388,7 @@ void fnBlowerAuto(unsigned long blowerInterval){
 		blowerInterval = blowerInterval*1000;
 		if (currentMillis - previousBlowerMillis >= blowerInterval){
 			previousBlowerMillis  = currentMillis;
-			if(blowerButtonHit == 0){
+			if(blowerButtonHit == 1){
 				blowerButtonHit=1;
 			}else{
 				blowerButtonHit=0;
@@ -408,11 +409,13 @@ void fnBlowerButtonHitInterval(unsigned long blowerDuration){
 		}
 		digitalWrite(BLOWER, blowerState);
 		blowerButtonHit = blowerButtonHit+1;
-	}
-	if(blowerButtonHit > 2){
-		blowerButtonHit = 0;
+	
+		if(blowerButtonHit > 2){
+			blowerButtonHit = 0;
+		}
 	}
 }
+
 
 void PREPARE_SESSION(){
 	//if water low level is reached then only start heater
@@ -511,7 +514,7 @@ void START_SESSION(){
 
 	if (readSensorTemperature > maxTemperature){
 		digitalWrite(HEATER, MY_OFF);
-		PAUSE_SESSION()
+		PAUSE_SESSION();
 	}
 }
 
@@ -530,8 +533,15 @@ void END_SESSION(){
 }
 
 void loop() {
+	//for usb-c serial command channel, poll for commands and respond with JSON
+	pollSerialCommands();
+
+	sensors.requestTemperatures();
+	readSensorTemperature = sensors.getTempCByIndex(0);
+
+
 	unsigned long currentMillis = millis();
-	if (currentMillis - previousRegistrationMillis >= REGISTRATION_INTERVAL) {
+	if (connection_type == 1 && currentMillis - previousRegistrationMillis >= REGISTRATION_INTERVAL) {
 		previousRegistrationMillis = currentMillis;
 		disconnectCount++;
 		bool regOk = registerWithServer();
@@ -555,8 +565,7 @@ void loop() {
 		}
 	}
 
-	sensors.requestTemperatures();
-	readSensorTemperature = sensors.getTempCByIndex(0);
+	
 
 	button.tick();
 
@@ -584,8 +593,8 @@ void loop() {
 	if(flushButtonHardwareHit == 1 && flushButtonHardwareHitPrev != flushButtonHardwareHit){
 		flushButtonHardwareHitPrev = flushButtonHardwareHit;
 		digitalWrite(FLUSH, MY_ON);
-		flushButtonHitFromTab = -1;
-		flushButtonHit = 0;
+		flushButtonHitFromTab = 1;
+		flushButtonHit = 1;
 	}else{
 		if(flushButtonHardwareHit == 0 && flushButtonHardwareHitPrev != flushButtonHardwareHit){
 			flushButtonHardwareHitPrev = flushButtonHardwareHit;
@@ -596,6 +605,4 @@ void loop() {
 			}
 		}
 	}
-	//for usb-c serial command channel, poll for commands and respond with JSON
-	pollSerialCommands();
 }
