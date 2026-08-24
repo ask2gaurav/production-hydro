@@ -74,6 +74,13 @@ export interface LocalSettings {
   // others have opposite polarity and are instead held in reset by it. Board-dependent,
   // so this is a per-tablet toggle rather than a hardcoded choice. Default true.
   usb_reset_pulse_enabled?: boolean;
+
+  // Operator-chosen backup folder (Storage Access Framework tree URI) — persists across
+  // uninstall/reinstall since it's real shared storage, unlike Directory.Data/External.
+  // The persisted URI grant itself needs re-picking after a fresh install, but files
+  // already written there remain untouched.
+  backup_folder_uri?: string;
+  backup_folder_name?: string;
 }
 
 export interface LocalTherapist {

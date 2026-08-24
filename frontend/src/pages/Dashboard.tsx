@@ -21,7 +21,7 @@ const Dashboard: React.FC = () => {
       <IonContent fullscreen className="ion-padding">
         <IonGrid style={{ height: '100%' }}>
           <IonRow style={{ height: '50%' }}>
-            <IonCol size="4">
+            <IonCol size="6">
               <IonCard button onClick={() => history.push('/therapy')} style={{ width: 'auto', textAlign: 'center', height: '90%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', backgroundColor: '#eef5f9' }}>
                 <IonIcon icon={waterOutline} style={{ fontSize: '4rem', color: '#0a5c99' }} />
                 <IonCardHeader>
@@ -29,7 +29,7 @@ const Dashboard: React.FC = () => {
                 </IonCardHeader>
               </IonCard>
             </IonCol>
-            <IonCol size="4">
+            <IonCol size="6">
               <IonCard button onClick={() => history.push('/logs')} style={{ width: 'auto', textAlign: 'center', height: '90%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', backgroundColor: '#eef5f9' }}>
                 <IonIcon icon={listOutline} style={{ fontSize: '4rem', color: '#0a5c99' }} />
                 <IonCardHeader>
@@ -38,7 +38,19 @@ const Dashboard: React.FC = () => {
               </IonCard>
             </IonCol>
 
-            <IonCol size="4">
+            
+            
+          </IonRow>
+          <IonRow style={{ height: '50%' }}>
+            <IonCol size="6">
+              <IonCard button onClick={() => history.push('/resources')} style={{ width: 'auto', textAlign: 'center', height: '90%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', backgroundColor: '#eef5f9' }}>
+                <IonIcon icon={bookOutline} style={{ fontSize: '4rem', color: '#0a5c99' }} />
+                <IonCardHeader>
+                  <IonCardTitle>Resources</IonCardTitle>
+                </IonCardHeader>
+              </IonCard>
+            </IonCol>
+            <IonCol size="6">
               <IonCard button onClick={() => history.push('/settings')} style={{ width: 'auto', textAlign: 'center', height: '90%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', backgroundColor: '#eef5f9' }}>
                 <IonIcon icon={settingsOutline} style={{ fontSize: '4rem', color: '#0a5c99' }} />
                 <IonCardHeader>
@@ -47,19 +59,9 @@ const Dashboard: React.FC = () => {
               </IonCard>
             </IonCol>
             
-          </IonRow>
-          <IonRow style={{ height: '50%' }}>
             
-            <IonCol size="4">
-              <IonCard button onClick={() => history.push('/resources')} style={{ width: 'auto', textAlign: 'center', height: '90%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', backgroundColor: '#eef5f9' }}>
-                <IonIcon icon={bookOutline} style={{ fontSize: '4rem', color: '#0a5c99' }} />
-                <IonCardHeader>
-                  <IonCardTitle>Resources</IonCardTitle>
-                </IonCardHeader>
-              </IonCard>
-            </IonCol>
 
-            <IonCol size="4">
+            {/* <IonCol size="4">
               <IonCard button onClick={() => history.push('/data-export-import')} style={{ width: 'auto', textAlign: 'center', height: '90%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', backgroundColor: '#eef5f9' }}>
                 <IonIcon icon={cloudDownloadOutline} style={{ fontSize: '4rem', color: '#0a5c99', marginRight: '1rem' }} />
                 <IonIcon icon={cloudUploadOutline} style={{ fontSize: '4rem', color: '#0a5c99' }} />
@@ -67,7 +69,7 @@ const Dashboard: React.FC = () => {
                   <IonCardTitle>Data Export Import</IonCardTitle>
                 </IonCardHeader>
               </IonCard>
-            </IonCol>
+            </IonCol> */}
 
             {/* <IonCol size="4">
               <IonCard button onClick={() => history.push('/notifications')} style={{ width: 'auto', textAlign: 'center', height: '90%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', backgroundColor: '#eef5f9' }}>

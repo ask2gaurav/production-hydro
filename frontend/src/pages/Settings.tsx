@@ -3,7 +3,7 @@ import {
   IonContent, IonHeader, IonPage, IonTitle, IonToolbar,
   IonButton, IonIcon, IonBadge, useIonAlert
 } from '@ionic/react';
-import { arrowBack, hardwareChipOutline, wifiOutline/* , cloudOfflineOutline  */} from 'ionicons/icons';
+import { arrowBack, cloudDownloadOutline, cloudUploadOutline, hardwareChipOutline, wifiOutline/* , cloudOfflineOutline  */} from 'ionicons/icons';
 import { localDB } from '../db/localDB';
 import { useStore } from '../store/useStore';
 import { useHistory } from 'react-router-dom';
@@ -37,7 +37,7 @@ const Settings: React.FC = () => {
     auto_flush: false,
     flush_duration: 10,
     flush_mode: 'continuous' as 'continuous' | 'interval',
-    blower_auto: false,
+    blower_auto: true,
     blower_frequency_mode: 'continuous' as 'continuous' | 'interval',
     blower_interval: 30,
     blower_duration: 10,
@@ -84,7 +84,7 @@ const Settings: React.FC = () => {
         setMachineInfo(null);
       }
     };
-    console.log ('Starting ESP32 polling...');
+    //console.log ('Starting ESP32 polling...');
     poll();
     const id = setInterval(poll, interval);
     return () => clearInterval(id);
@@ -278,57 +278,9 @@ const Settings: React.FC = () => {
             )}
           </div>
 
-          {/* Column 2: Hardware Controls */}
-          <div style={cardStyle}>
-            <p style={colHeaderStyle}>Hardware Controls</p>
+        
 
-            {[
-              { label: 'Heater', param: 'heater', infoKey: 'heater' as const },
-              { label: 'Pump', param: 'pump', infoKey: 'pump' as const },
-              { label: 'Blower', param: 'blower', infoKey: 'blower' as const },
-              { label: 'Water In Valve', param: 'water_in_valve', infoKey: 'water_in_valve' as const },
-              { label: 'Flush Valve', param: 'flush_valve', infoKey: 'flush_valve' as const },
-            ].map(({ label, param, infoKey }) => {
-              const active = machineInfo ? machineInfo[infoKey] === 1 : false;
-              return (
-                <div
-                  key={param}
-                  style={hwButtonStyle(active)}
-                  onClick={() => handleHardwareToggle(param, !active)}
-                >
-                  <span>{label}</span>
-                  {toggleDot(active)}
-                </div>
-              );
-            })}
-
-            {/* <div style={{ ...hwButtonStyle(false), cursor: 'default', opacity: 0.5, marginTop: '1rem' }}>
-              <span>Reset</span>
-              <span style={{ fontSize: '0.78rem', color: '#999' }}>No action</span>
-            </div> */}
-
-            <IonButton
-              expand="block"
-              fill="outline"
-              style={{ marginTop: '1rem' }}
-              onClick={() => setShowConnectionSettings(true)}
-            >
-              Connection Settings
-            </IonButton>
-
-            {import.meta.env.VITE_DEBUG === 'true' && (
-              <IonButton
-                expand="block"
-                fill="outline"
-                style={{ marginTop: '0.5rem' }}
-                onClick={() => setShowDebugLog(true)}
-              >
-                Show Debug
-              </IonButton>
-            )}
-          </div>
-
-          {/* Column 3: Settings */}
+          {/* Column 2: Settings */}
           <div style={cardStyle}>
             <p style={colHeaderStyle}>Session Settings</p>
 
@@ -568,7 +520,71 @@ const Settings: React.FC = () => {
             </p>
           </div>
 
+          {/* Column 3: Hardware Controls */}
+          <div style={cardStyle}>
+            <p style={colHeaderStyle}>Hardware Controls</p>
 
+            {[
+              { label: 'Heater', param: 'heater', infoKey: 'heater' as const },
+              { label: 'Pump', param: 'pump', infoKey: 'pump' as const },
+              { label: 'Blower', param: 'blower', infoKey: 'blower' as const },
+              { label: 'Water In Valve', param: 'water_in_valve', infoKey: 'water_in_valve' as const },
+              { label: 'Flush Valve', param: 'flush_valve', infoKey: 'flush_valve' as const },
+            ].map(({ label, param, infoKey }) => {
+              const active = machineInfo ? machineInfo[infoKey] === 1 : false;
+              return (
+                <div
+                  key={param}
+                  style={hwButtonStyle(active)}
+                  onClick={() => handleHardwareToggle(param, !active)}
+                >
+                  <span>{label}</span>
+                  {toggleDot(active)}
+                </div>
+              );
+            })}
+
+            {/* <div style={{ ...hwButtonStyle(false), cursor: 'default', opacity: 0.5, marginTop: '1rem' }}>
+              <span>Reset</span>
+              <span style={{ fontSize: '0.78rem', color: '#999' }}>No action</span>
+            </div> */}
+
+            <IonButton
+              expand="block"
+              color="medium"
+              size="small"
+              fill="outline"
+              style={{ marginTop: '1rem' }}
+              onClick={() => setShowConnectionSettings(true)}
+            >
+              Connection Settings
+            </IonButton>
+            <br/>
+            <p style={colHeaderStyle}>Data Export and Data Import</p>
+            <IonButton
+              expand="block"
+              fill="outline"
+              color="medium"
+              size="small"
+              style={{ marginTop: '0.5rem' }}
+              onClick={() => history.push('/data-export-import')}
+            >
+              <IonIcon icon={cloudDownloadOutline} style={{ fontSize: '1rem', marginRight: '0.21rem' }} />
+              <IonIcon icon={cloudUploadOutline} style={{ fontSize: '1rem', marginRight: '0.31rem' }} />
+              Data Export / Import
+            </IonButton>
+
+            {import.meta.env.VITE_DEBUG === 'true' && (
+              <IonButton
+                expand="block"
+                fill="outline"
+                style={{ marginTop: '0.5rem' }}
+                onClick={() => setShowDebugLog(true)}
+              >
+                Show Debug
+              </IonButton>
+            )}
+          </div>
           {/* Column 4: Debug Panel — commented out for production release
           <div style={{ ...cardStyle, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', paddingBottom: '0.5rem', borderBottom: '2px solid #f0f0f0' }}>

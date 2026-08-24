@@ -21,7 +21,6 @@ import { onSessionComplete } from '../services/modeCheck';
 import { fetchMachineInfo, sendPrepareParams/* , sendCommand */ } from '../services/esp32Service';
 import { triggerAutoBackup } from '../services/backupService';
 import MachineInfoModal from '../components/MachineInfoModal';
-import DobPicker from '../components/DobPicker';
 
 // ---------- Helpers ----------
 
@@ -33,6 +32,19 @@ const toInputDateString = (d: Date): string => {
   const dd = String(d.getDate()).padStart(2, '0');
   return `${yyyy}-${mm}-${dd}`;
 };
+
+// Approximates a date of birth from an age: today's month/day, year shifted back by
+// `age` years — the real birth month/day isn't known, only the age in whole years.
+const ageToDob = (age: number): string => {
+  const today = new Date();
+  return toInputDateString(new Date(today.getFullYear() - age, today.getMonth(), today.getDate()));
+};
+
+// Patients/therapists are now entered as a single Name field stored in first_name,
+// leaving last_name empty — this joins non-empty parts so old records (with a real
+// last_name) and new ones (last_name '') both display without a trailing space.
+const fullName = (x: { first_name: string; last_name?: string }): string =>
+  [x.first_name, x.last_name].filter(Boolean).join(' ');
 
 const computeAge = (dob?: string): string => {
   if (!dob) return '—';
@@ -218,9 +230,7 @@ const Therapy: React.FC = () => {
   // Add therapist modal
   const [showAddTherapist, setShowAddTherapist] = useState(false);
   const [tFirstName, setTFirstName] = useState('');
-  const [tLastName, setTLastName] = useState('');
   const [tPhone, setTPhone] = useState('');
-  const [tEmail, setTEmail] = useState('');
   const [tGender, setTGender] = useState('');
   const [tSaving, setTSaving] = useState(false);
   const [tError, setTError] = useState('');
@@ -228,11 +238,11 @@ const Therapy: React.FC = () => {
   // Add patient modal
   const [showAddPatient, setShowAddPatient] = useState(false);
   const [pFirstName, setPFirstName] = useState('');
-  const [pLastName, setPLastName] = useState('');
   const [pPhone, setPPhone] = useState('');
   const [pEmail, setPEmail] = useState('');
   const [pGender, setPGender] = useState('');
   const [pDob, setPDob] = useState('');
+  const [pAge, setPAge] = useState('');
   const [pNotes, setPNotes] = useState('');
   const [pSaving, setPSaving] = useState(false);
   const [pError, setPError] = useState('');
@@ -241,9 +251,7 @@ const Therapy: React.FC = () => {
   const [tManageSearch, setTManageSearch] = useState('');
   const [editTherapist, setEditTherapist] = useState<LocalTherapist | null>(null);
   const [etFirstName, setEtFirstName] = useState('');
-  const [etLastName, setEtLastName] = useState('');
   const [etPhone, setEtPhone] = useState('');
-  const [etEmail, setEtEmail] = useState('');
   const [etGender, setEtGender] = useState('');
   const [etSaving, setEtSaving] = useState(false);
   const [etError, setEtError] = useState('');
@@ -253,11 +261,11 @@ const Therapy: React.FC = () => {
   const [pManageSearch, setPManageSearch] = useState('');
   const [editPatient, setEditPatient] = useState<LocalPatient | null>(null);
   const [epFirstName, setEpFirstName] = useState('');
-  const [epLastName, setEpLastName] = useState('');
   const [epPhone, setEpPhone] = useState('');
   const [epEmail, setEpEmail] = useState('');
   const [epGender, setEpGender] = useState('');
   const [epDob, setEpDob] = useState('');
+  const [epAge, setEpAge] = useState('');
   const [epNotes, setEpNotes] = useState('');
   const [epSaving, setEpSaving] = useState(false);
   const [epError, setEpError] = useState('');
@@ -799,15 +807,14 @@ const Therapy: React.FC = () => {
   // ---------- Add therapist ----------
 
   const openAddTherapist = () => {
-    setTFirstName(''); setTLastName(''); setTPhone(''); setTEmail(''); setTGender(''); setTError('');
+    setTFirstName(''); setTPhone(''); setTGender(''); setTError('');
     setShowAddTherapist(true);
   };
 
   const saveTherapist = async () => {
-    // if (!tFirstName.trim() || !tLastName.trim() || !tPhone.trim() || !tEmail.trim()) 
-    if (!tFirstName.trim() || !tLastName.trim() || !tPhone.trim() ) 
+    if (!tFirstName.trim() || !tPhone.trim())
     {
-      setTError('First name, last name and phone  are required.');
+      setTError('Name and phone are required.');
       return;
     }
     setTSaving(true);
@@ -815,9 +822,9 @@ const Therapy: React.FC = () => {
       const id = await localDB.therapists.add({
         machine_id: machineId,
         first_name: tFirstName.trim(),
-        last_name: tLastName.trim(),
+        last_name: '',
         phone: tPhone.trim(),
-        email: tEmail.trim(),
+        email: '',
         gender: tGender,
         is_active: true,
         synced: 0,
@@ -836,15 +843,26 @@ const Therapy: React.FC = () => {
   // ---------- Add patient ----------
 
   const openAddPatient = () => {
-    setPFirstName(''); setPLastName(''); setPPhone(''); setPEmail(''); setPGender(''); setPDob(''); setPNotes(''); setPError('');
+    setPFirstName(''); setPPhone(''); setPEmail(''); setPGender(''); setPDob(''); setPAge(''); setPNotes(''); setPError('');
     setShowAddPatient(true);
   };
 
+  const handlePAge = (value: string) => {
+    setPAge(value);
+    const parsed = parseInt(value, 10);
+    setPDob(!isNaN(parsed) && parsed >= 0 ? ageToDob(parsed) : '');
+  };
+
+  const handleEpAge = (value: string) => {
+    setEpAge(value);
+    const parsed = parseInt(value, 10);
+    setEpDob(!isNaN(parsed) && parsed >= 0 ? ageToDob(parsed) : '');
+  };
+
   const savePatient = async () => {
-    // if (!pFirstName.trim() || !pLastName.trim() || !pPhone.trim() || !pEmail.trim()) 
-    if (!pFirstName.trim() || !pLastName.trim() || !pPhone.trim()) 
+    if (!pFirstName.trim() || !pPhone.trim())
     {
-      setPError('First name, last name and phone are required.');
+      setPError('Name and phone are required.');
       return;
     }
     setPSaving(true);
@@ -852,7 +870,7 @@ const Therapy: React.FC = () => {
       const id = await localDB.patients.add({
         machine_id: machineId,
         first_name: pFirstName.trim(),
-        last_name: pLastName.trim(),
+        last_name: '',
         phone: pPhone.trim(),
         email: pEmail.trim(),
         gender: pGender,
@@ -882,27 +900,25 @@ const Therapy: React.FC = () => {
   };
 
   const openEditTherapist = (t: LocalTherapist) => {
-    setEtFirstName(t.first_name);
-    setEtLastName(t.last_name);
+    setEtFirstName(fullName(t));
     setEtPhone(t.phone);
-    setEtEmail(t.email);
     setEtGender(t.gender || '');
     setEtError('');
     setEditTherapist(t);
   };
 
   const saveEditTherapist = async () => {
-    if (!etFirstName.trim() || !etLastName.trim() || !etPhone.trim() || !etEmail.trim()) {
-      setEtError('First name, last name, phone and email are required.');
+    if (!etFirstName.trim() || !etPhone.trim()) {
+      setEtError('Name and phone are required.');
       return;
     }
     setEtSaving(true);
     try {
       await localDB.therapists.update(editTherapist!.id!, {
         first_name: etFirstName.trim(),
-        last_name: etLastName.trim(),
+        last_name: '',
         phone: etPhone.trim(),
-        email: etEmail.trim(),
+        email: '',
         gender: etGender,
         synced: 0,
       });
@@ -917,7 +933,7 @@ const Therapy: React.FC = () => {
   };
 
   const deleteTherapist = async (t: LocalTherapist) => {
-    if (!window.confirm(`Delete ${t.first_name} ${t.last_name}? This cannot be undone.`)) return;
+    if (!window.confirm(`Delete ${fullName(t)}? This cannot be undone.`)) return;
     await localDB.therapists.update(t.id!, { is_active: false, synced: 0 });
     if (selectedTherapistId === t.id) setSelectedTherapistId(null);
     await loadLocal();
@@ -934,27 +950,30 @@ const Therapy: React.FC = () => {
   };
 
   const openEditPatient = (p: LocalPatient) => {
-    setEpFirstName(p.first_name);
-    setEpLastName(p.last_name);
+    setEpFirstName(fullName(p));
     setEpPhone(p.phone);
     setEpEmail(p.email);
     setEpGender(p.gender || '');
     setEpDob(p.dob || '');
+    // Prefills the current computed age for display; only overwritten (and only then
+    // does dob get recomputed) if the operator actually edits this field — see handleEpAge.
+    const currentAge = computeAge(p.dob);
+    setEpAge(currentAge === '—' ? '' : currentAge);
     setEpNotes(p.notes || '');
     setEpError('');
     setEditPatient(p);
   };
 
   const saveEditPatient = async () => {
-    if (!epFirstName.trim() || !epLastName.trim() || !epPhone.trim() || !epEmail.trim()) {
-      setEpError('First name, last name, phone and email are required.');
+    if (!epFirstName.trim() || !epPhone.trim() || !epEmail.trim()) {
+      setEpError('Name, phone and email are required.');
       return;
     }
     setEpSaving(true);
     try {
       await localDB.patients.update(editPatient!.id!, {
         first_name: epFirstName.trim(),
-        last_name: epLastName.trim(),
+        last_name: '',
         phone: epPhone.trim(),
         email: epEmail.trim(),
         gender: epGender,
@@ -973,7 +992,7 @@ const Therapy: React.FC = () => {
   };
 
   const deletePatient = async (p: LocalPatient) => {
-    if (!window.confirm(`Delete ${p.first_name} ${p.last_name}? This cannot be undone.`)) return;
+    if (!window.confirm(`Delete ${fullName(p)}? This cannot be undone.`)) return;
     await localDB.patients.update(p.id!, { is_active: false, synced: 0 });
     if (selectedPatientId === p.id) setSelectedPatientId(null);
     await loadLocal();
@@ -1027,7 +1046,7 @@ const Therapy: React.FC = () => {
   const tFiltered = therapists.filter((t) => {
     if (!tManageSearch.trim()) return true;
     const q = tManageSearch.toLowerCase();
-    return `${t.first_name} ${t.last_name}`.toLowerCase().includes(q)
+    return fullName(t).toLowerCase().includes(q)
       || t.phone.toLowerCase().includes(q)
       || t.email.toLowerCase().includes(q);
   });
@@ -1035,7 +1054,7 @@ const Therapy: React.FC = () => {
   const pFiltered = patients.filter((p) => {
     if (!pManageSearch.trim()) return true;
     const q = pManageSearch.toLowerCase();
-    return `${p.first_name} ${p.last_name}`.toLowerCase().includes(q)
+    return fullName(p).toLowerCase().includes(q)
       || p.phone.toLowerCase().includes(q)
       || p.email.toLowerCase().includes(q);
   });
@@ -1118,7 +1137,7 @@ const Therapy: React.FC = () => {
                   onSelect={(t) => setSelectedTherapistId(t.id!)}
                   onAddNew={openAddTherapist}
                   placeholder="Select Therapist..."
-                  getLabel={(t) => `${t.first_name} ${t.last_name}`}
+                  getLabel={(t) => fullName(t)}
                   getId={(t) => t.id!}
                   disabled={isLocked}
                 />
@@ -1139,7 +1158,7 @@ const Therapy: React.FC = () => {
                   onSelect={(p) => setSelectedPatientId(p.id!)}
                   onAddNew={openAddPatient}
                   placeholder="Select Patient..."
-                  getLabel={(p) => `${p.first_name} ${p.last_name}`}
+                  getLabel={(p) => fullName(p)}
                   getId={(p) => p.id!}
                   disabled={isLocked}
                 />
@@ -1435,20 +1454,12 @@ const Therapy: React.FC = () => {
         </IonHeader>
         <IonContent className="ion-padding">
           <IonItem>
-            {/* <IonLabel position="floating">First Name *</IonLabel> */}
-            <IonInput fill="outline" label='First Name' className="ion-padding-top" value={tFirstName} onIonInput={(e) => setTFirstName((e.target as HTMLIonInputElement).value as string || '')} />
-          </IonItem>
-          <IonItem>
-            {/* <IonLabel position="floating">Last Name *</IonLabel> */}
-            <IonInput fill="outline" label='Last Name' className="ion-padding-top" value={tLastName} onIonInput={(e) => setTLastName((e.target as HTMLIonInputElement).value as string || '')} />
+            {/* <IonLabel position="floating">Name *</IonLabel> */}
+            <IonInput fill="outline" label='Name' className="ion-padding-top" value={tFirstName} onIonInput={(e) => setTFirstName((e.target as HTMLIonInputElement).value as string || '')} />
           </IonItem>
           <IonItem>
             {/* <IonLabel position="floating">Phone *</IonLabel> */}
             <IonInput fill="outline" label='Phone' className="ion-padding-top" type="tel" value={tPhone} onIonInput={(e) => setTPhone((e.target as HTMLIonInputElement).value as string || '')} />
-          </IonItem>
-          <IonItem>
-            {/* <IonLabel position="floating">Email *</IonLabel> */}
-            <IonInput fill="outline"  label='Email' className="ion-padding-top" type="email" value={tEmail} onIonInput={(e) => setTEmail((e.target as HTMLIonInputElement).value as string || '')} />
           </IonItem>
           <IonItem>
             {/* <IonLabel>Gender</IonLabel> */}
@@ -1476,11 +1487,7 @@ const Therapy: React.FC = () => {
         <IonContent className="ion-padding">
           <IonItem>
             {/* <IonLabel position="floating">First Name *</IonLabel> */}
-            <IonInput label='First Name' className="ion-padding-top" value={pFirstName} onIonInput={(e) => setPFirstName((e.target as HTMLIonInputElement).value as string || '')} />
-          </IonItem>
-          <IonItem>
-            {/* <IonLabel position="floating">Last Name *</IonLabel> */}
-            <IonInput label='Last Name' className="ion-padding-top" value={pLastName} onIonInput={(e) => setPLastName((e.target as HTMLIonInputElement).value as string || '')} />
+            <IonInput label='Name' className="ion-padding-top" value={pFirstName} onIonInput={(e) => setPFirstName((e.target as HTMLIonInputElement).value as string || '')} />
           </IonItem>
           <IonItem>
             {/* <IonLabel position="floating">Phone *</IonLabel> */}
@@ -1497,7 +1504,15 @@ const Therapy: React.FC = () => {
             </IonSelect>
           </IonItem>
           <IonItem lines="none">
-            <DobPicker value={pDob} onChange={setPDob} />
+            <IonInput
+              label="Age"
+              type="number"
+              min={0}
+              max={120}
+              className="ion-padding-top"
+              value={pAge}
+              onIonInput={(e) => handlePAge((e.target as HTMLIonInputElement).value as string || '')}
+            />
           </IonItem>
           <IonItem>
             {/* <IonLabel position="stacked">Notes</IonLabel> */}
@@ -1531,19 +1546,11 @@ const Therapy: React.FC = () => {
             <div>
               <IonItem>
                 {/* <IonLabel position="floating">First Name *</IonLabel> */}
-                <IonInput label='First Name' className="ion-padding-top" value={etFirstName} onIonInput={(e) => setEtFirstName((e.target as HTMLIonInputElement).value as string || '')} />
-              </IonItem>
-              <IonItem>
-                {/* <IonLabel position="floating">Last Name *</IonLabel> */}
-                <IonInput label='Last Name' className="ion-padding-top" value={etLastName} onIonInput={(e) => setEtLastName((e.target as HTMLIonInputElement).value as string || '')} />
+                <IonInput label='Name' className="ion-padding-top" value={etFirstName} onIonInput={(e) => setEtFirstName((e.target as HTMLIonInputElement).value as string || '')} />
               </IonItem>
               <IonItem>
                 {/* <IonLabel position="floating">Phone *</IonLabel> */}
                 <IonInput label='Phone' className="ion-padding-top" type="tel" value={etPhone} onIonInput={(e) => setEtPhone((e.target as HTMLIonInputElement).value as string || '')} />
-              </IonItem>
-              <IonItem>
-                {/* <IonLabel position="floating">Email *</IonLabel> */}
-                <IonInput label='Email' className="ion-padding-top" type="email" value={etEmail} onIonInput={(e) => setEtEmail((e.target as HTMLIonInputElement).value as string || '')} />
               </IonItem>
               <IonItem>
                 {/* <IonLabel>Gender</IonLabel> */}
@@ -1605,7 +1612,7 @@ const Therapy: React.FC = () => {
                           onMouseEnter={(e) => { if (selectedTherapistId !== t.id) e.currentTarget.style.backgroundColor = '#f4f5f8'; }}
                           onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = selectedTherapistId === t.id ? '#eef5f9' : 'white'; }}
                         >
-                          <td style={tdStyle}>{t.first_name} {t.last_name}</td>
+                          <td style={tdStyle}>{fullName(t)}</td>
                           <td style={tdStyle}>{t.phone}</td>
                           <td style={tdStyle}>{t.email}</td>
                           <td style={tdStyle}>{t.gender || '—'}</td>
@@ -1653,12 +1660,8 @@ const Therapy: React.FC = () => {
           {editPatient ? (
             <div>
               <IonItem>
-                {/* <IonLabel position="floating">First Name *</IonLabel> */}
-                <IonInput label='First Name' className="ion-padding-top" value={epFirstName} onIonInput={(e) => setEpFirstName((e.target as HTMLIonInputElement).value as string || '')} />
-              </IonItem>
-              <IonItem>
-                {/* <IonLabel position="floating">Last Name *</IonLabel> */}
-                <IonInput label='Last Name' className="ion-padding-top" value={epLastName} onIonInput={(e) => setEpLastName((e.target as HTMLIonInputElement).value as string || '')} />
+                {/* <IonLabel position="floating">Name *</IonLabel> */}
+                <IonInput label='Name' className="ion-padding-top" value={epFirstName} onIonInput={(e) => setEpFirstName((e.target as HTMLIonInputElement).value as string || '')} />
               </IonItem>
               <IonItem>
                 {/* <IonLabel position="floating">Phone *</IonLabel> */}
@@ -1675,8 +1678,15 @@ const Therapy: React.FC = () => {
                 </IonSelect>
               </IonItem>
               <IonItem>
-                {/* <IonLabel position="floating">Date of Birth</IonLabel> */}
-                <DobPicker value={epDob} onChange={setEpDob} />
+                <IonInput
+                  label="Age"
+                  type="number"
+                  min={0}
+                  max={120}
+                  className="ion-padding-top"
+                  value={epAge}
+                  onIonInput={(e) => handleEpAge((e.target as HTMLIonInputElement).value as string || '')}
+                />
               </IonItem>
               <IonItem>
                 {/* <IonLabel position="stacked">Notes</IonLabel> */}
@@ -1713,7 +1723,6 @@ const Therapy: React.FC = () => {
                       <th style={thStyle}>Mobile</th>
                       <th style={thStyle}>Email</th>
                       <th style={thStyle}>Gender</th>
-                      <th style={thStyle}>DOB</th>
                       <th style={thStyle}>Age</th>
                       <th style={thStyle}>Total<br/>Sessions</th>
                       <th style={thStyle}>Last<br />Session</th>
@@ -1738,11 +1747,10 @@ const Therapy: React.FC = () => {
                           onMouseEnter={(e) => { if (selectedPatientId !== p.id) e.currentTarget.style.backgroundColor = '#f4f5f8'; }}
                           onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = selectedPatientId === p.id ? '#eef5f9' : 'white'; }}
                         >
-                          <td style={tdStyle}>{p.first_name} {p.last_name}</td>
+                          <td style={tdStyle}>{fullName(p)}</td>
                           <td style={tdStyle}>{p.phone}</td>
                           <td style={tdStyle}>{p.email}</td>
                           <td style={tdStyle}>{p.gender || '—'}</td>
-                          <td style={tdStyle}>{formatDate(p.dob) || '—'}</td>
                           <td style={{ ...tdStyle, textAlign: 'center' }}>{computeAge(p.dob)}</td>
                           <td style={{ ...tdStyle, textAlign: 'center' }}>{stats.total}</td>
                           <td style={tdStyle}>{stats.last ? formatDate(stats.last.toString()) : '—'}<br />{formatTime(stats.last) }</td>
@@ -1779,7 +1787,7 @@ const Therapy: React.FC = () => {
       <IonModal isOpen={!!rescheduleTarget} onDidDismiss={closeRescheduleModal} style={{ '--width': '440px', '--height': '380px', '--border-radius': '12px' } as React.CSSProperties}>
         <IonHeader>
           <IonToolbar color="primary">
-            <IonTitle>Reschedule{rescheduleTarget ? ` — ${rescheduleTarget.first_name} ${rescheduleTarget.last_name}` : ''}</IonTitle>
+            <IonTitle>Reschedule{rescheduleTarget ? ` — ${fullName(rescheduleTarget)}` : ''}</IonTitle>
             <IonButton slot="end" fill="clear" color="light" onClick={closeRescheduleModal}>
               <IonIcon icon={closeOutline} />
             </IonButton>

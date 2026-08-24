@@ -10,6 +10,7 @@ import { useStore } from '../store/useStore';
 import { localDB } from '../db/localDB';
 import {
   exportToExcel, exportToBackupZip, importFromBackupZip, peekBackupManifest,
+  pickBackupFolder, isBackupFolderAccessible,
   type ImportMode, type MachineMismatchAction,
 } from '../services/backupService';
 
@@ -42,14 +43,31 @@ const DataExportImport: React.FC = () => {
   const [tab, setTab] = useState<'backups' | 'settings'>('backups');
   const [autoBackupEnabled, setAutoBackupEnabled] = useState(false);
   const [retentionInput, setRetentionInput] = useState(String(DEFAULT_RETENTION));
+  const [backupFolderName, setBackupFolderName] = useState<string | null>(null);
+  const [backupFolderAccessible, setBackupFolderAccessible] = useState(true);
 
   useEffect(() => {
     if (!machineId) return;
     localDB.settings.get(machineId).then((s) => {
       setAutoBackupEnabled(s?.auto_backup_enabled ?? false);
       setRetentionInput(String(s?.auto_backup_retention_count ?? DEFAULT_RETENTION));
+      setBackupFolderName(s?.backup_folder_name ?? null);
+      if (s?.backup_folder_uri) {
+        isBackupFolderAccessible(s.backup_folder_uri).then(setBackupFolderAccessible);
+      }
     });
   }, [machineId]);
+
+  const handleChooseBackupFolder = async () => {
+    try {
+      const result = await pickBackupFolder(machineId);
+      setBackupFolderName(result.name);
+      setBackupFolderAccessible(true);
+      presentToast({ message: `Backup folder set to "${result.name}".`, duration: 2500, color: 'success' });
+    } catch (err) {
+      showError(err instanceof Error ? err.message : 'Failed to choose backup folder.');
+    }
+  };
 
   const showError = (message: string) => {
     presentAlert({ header: 'Error', message, buttons: ['OK'] });
@@ -235,7 +253,7 @@ const DataExportImport: React.FC = () => {
                 onIonChange={(e) => handleAutoBackupToggle(e.detail.checked)}
               />
             </div>
-            <div style={{ ...rowStyle, borderBottom: 'none' }}>
+            <div style={rowStyle}>
               <div>
                 <div style={labelStyle}>Number of old backups to keep</div>
                 <div style={{ fontSize: '0.78rem', color: '#888', marginTop: '0.15rem' }}>
@@ -250,6 +268,25 @@ const DataExportImport: React.FC = () => {
                 disabled={!autoBackupEnabled}
                 style={{ ...inputStyle, opacity: autoBackupEnabled ? 1 : 0.5 }}
               />
+            </div>
+            <div style={{ ...rowStyle, borderBottom: 'none', alignItems: 'flex-start' }}>
+              <div>
+                <div style={labelStyle}>Backup Folder</div>
+                <div style={{ fontSize: '0.78rem', color: '#888', marginTop: '0.15rem' }}>
+                  Chosen folder survives an app uninstall, unlike the app's private storage.
+                </div>
+                <div style={{ fontSize: '0.85rem', color: backupFolderName ? '#333' : '#aaa', marginTop: '0.35rem' }}>
+                  {backupFolderName ? `Current: ${backupFolderName}` : 'Not set'}
+                </div>
+                {backupFolderName && !backupFolderAccessible && (
+                  <div style={{ fontSize: '0.78rem', color: '#c0392b', marginTop: '0.25rem' }}>
+                    This folder is no longer accessible. Please choose it again.
+                  </div>
+                )}
+              </div>
+              <IonButton size="small" fill="outline" onClick={handleChooseBackupFolder}>
+                {backupFolderName ? 'Change' : 'Choose Folder'}
+              </IonButton>
             </div>
           </div>
         )}

@@ -12,6 +12,7 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(android.os.Bundle savedInstanceState) {
         registerPlugin(EspServerPlugin.class);
         registerPlugin(EspUsbPlugin.class);
+        registerPlugin(BackupFolderPlugin.class);
         super.onCreate(savedInstanceState);
         enterImmersiveMode();
     }

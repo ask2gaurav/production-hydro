@@ -1,9 +1,11 @@
+import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
 import { FileOpener } from '@capacitor-community/file-opener';
 import JSZip from 'jszip';
 import * as XLSX from 'xlsx';
 import { localDB } from '../db/localDB';
+import { BackupFolder } from '../plugins/backupFolder';
 
 const BACKUP_SCHEMA_VERSION = 1;
 const BACKUPS_DIR = 'backups';
@@ -184,6 +186,31 @@ async function cleanupOldAutoBackups(machineId: string, retention: number): Prom
   }
 }
 
+// Opens Android's Storage Access Framework folder picker and persists the chosen
+// folder for this machine. Unlike Directory.Data/Directory.External, files written
+// there are real shared storage and survive an app uninstall.
+export async function pickBackupFolder(machineId: string): Promise<{ uri: string; name: string }> {
+  const result = await BackupFolder.pickFolder();
+  const existing = await localDB.settings.get(machineId);
+  await localDB.settings.put({
+    ...existing,
+    machine_id: machineId,
+    backup_folder_uri: result.uri,
+    backup_folder_name: result.name,
+  });
+  return result;
+}
+
+export async function isBackupFolderAccessible(uri: string): Promise<boolean> {
+  if (!Capacitor.isNativePlatform()) return false;
+  try {
+    const { accessible } = await BackupFolder.isAccessible({ uri });
+    return accessible;
+  } catch {
+    return false;
+  }
+}
+
 // Silently writes/overwrites today's auto-backup file (one per day, per machine) when the
 // "Auto Backup" setting is enabled. Never throws — a failure here must not interrupt the
 // therapy session or reminder action that triggered it.
@@ -221,6 +248,22 @@ export async function triggerAutoBackup(machineId: string): Promise<void> {
       await Filesystem.writeFile({ path: fileName, data: base64, directory: Directory.Documents, recursive: true });
     } catch {
       // Non-fatal — the file is still safely stored under Directory.Data.
+    }
+
+    // If the operator has chosen a persistent backup folder (Storage Access Framework),
+    // also write there — unlike Directory.Documents this genuinely survives an uninstall.
+    if (settings.backup_folder_uri) {
+      try {
+        await BackupFolder.writeFile({
+          uri: settings.backup_folder_uri,
+          fileName,
+          data: base64,
+          mimeType: 'application/zip',
+        });
+      } catch {
+        // Non-fatal — e.g. the folder grant was revoked (folder moved/deleted). The
+        // Directory.Data copy is still safe; the operator can re-pick the folder later.
+      }
     }
 
     if (isFirstToday) {
@@ -270,15 +313,33 @@ export async function shareLocalFile(name: string): Promise<void> {
 }
 
 // Capacitor's Filesystem plugin has no dedicated "Downloads" directory constant; Directory.Documents
-// is the closest available public, cross-app-visible location on Android without extra native work.
-export async function copyLocalFileToDownloads(name: string): Promise<void> {
+// is the closest available public, cross-app-visible location on Android without extra native work
+// — but it can fail entirely on some tablets (scoped storage). If it does, and the operator has
+// chosen a backup folder (Storage Access Framework), fall back to writing there instead.
+export async function copyLocalFileToDownloads(
+  name: string,
+  machineId: string
+): Promise<{ location: 'downloads' | 'backup-folder' }> {
   const read = await Filesystem.readFile({ path: `${BACKUPS_DIR}/${name}`, directory: Directory.Data });
-  await Filesystem.writeFile({
-    path: name,
-    data: read.data,
-    directory: Directory.Documents,
-    recursive: true,
-  });
+  try {
+    await Filesystem.writeFile({
+      path: name,
+      data: read.data,
+      directory: Directory.Documents,
+      recursive: true,
+    });
+    return { location: 'downloads' };
+  } catch (e) {
+    const settings = await localDB.settings.get(machineId);
+    if (!settings?.backup_folder_uri) throw e; // no fallback configured — surface the original error
+    await BackupFolder.writeFile({
+      uri: settings.backup_folder_uri,
+      fileName: name,
+      data: read.data as string,
+      mimeType: mimeTypeFor(name),
+    });
+    return { location: 'backup-folder' };
+  }
 }
 
 async function readManifest(zip: JSZip): Promise<BackupManifest> {

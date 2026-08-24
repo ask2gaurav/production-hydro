@@ -72,11 +72,11 @@ const ConnectionSettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
             <span style={{ fontWeight: 700, color: connectionMode === mode ? '#1a7a45' : '#333', fontSize: '0.95rem' }}>
               {label}
             </span>
-            <span style={{ fontSize: '0.8rem', color: '#666' }}>{description}</span>
+            {/* <span style={{ fontSize: '0.8rem', color: '#666' }}>{description}</span> */}
           </div>
         ))}
 
-        <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #eee' }}>
+        {/* <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #eee' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontWeight: 600, color: '#333', fontSize: '0.9rem' }}>Apply reset pulse on USB connect</span>
             <IonToggle
@@ -88,7 +88,7 @@ const ConnectionSettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
             Some ESP32 boards need this to respond over USB-C; others are instead held in reset by it.
             If a board won't connect over USB, try turning this off.
           </p>
-        </div>
+        </div> */}
       </IonContent>
     </IonModal>
   );

@@ -265,8 +265,14 @@ const SavedBackups: React.FC = () => {
 
   const handleDownloadLocal = async (backup: LocalBackupFile) => {
     try {
-      await copyLocalFileToDownloads(backup.name);
-      presentToast({ message: `"${backup.name}" copied to Downloads.`, duration: 2500, color: 'success' });
+      const { location } = await copyLocalFileToDownloads(backup.name, machineId);
+      presentToast({
+        message: location === 'downloads'
+          ? `"${backup.name}" copied to Downloads.`
+          : `Downloads isn't available on this tablet — "${backup.name}" was saved to your chosen backup folder instead.`,
+        duration: 3000,
+        color: 'success',
+      });
     } catch (err) {
       showError(err instanceof Error ? err.message : 'Failed to copy file to Downloads.');
     }
