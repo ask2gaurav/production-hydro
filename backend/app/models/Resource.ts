@@ -6,6 +6,7 @@ const ResourceSchema = new mongoose.Schema({
   content: { type: String, required: true },
   category: { type: String, required: true },
   is_active: { type: Boolean, default: true },
+  sort_order: { type: Number, default: 0 },
   updated_by: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   updated_at: { type: Date, default: Date.now }
 });

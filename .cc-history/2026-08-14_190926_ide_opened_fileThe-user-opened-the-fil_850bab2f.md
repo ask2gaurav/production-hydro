@@ -6,8 +6,8 @@
 | **Session ID** | `850bab2f-2f59-4d07-a582-e8d188f55f9e` |
 | **Working Dir** | `d:\projects\production-hydro-colon-therapy` |
 | **Started** | 8/14/2026, 7:09:26 PM |
-| **Last Updated** | 8/24/2026, 6:23:34 PM |
-| **Messages** | 1388 |
+| **Last Updated** | 8/25/2026, 10:47:41 AM |
+| **Messages** | 1576 |
 
 ---
 
@@ -22486,6 +22486,2856 @@ TypeScript compiles cleanly with no errors. The Storage Access Framework backup-
 - **`DataExportImport.tsx`** — new "Backup Folder" row in Settings tab showing current folder (or "Not set"), a Choose/Change button, and an inline warning if the persisted grant was lost
 
 `npx tsc --noEmit` passes with zero errors across all touched files. The feature requires no Android permission — just the one-time folder-picker interaction — and the chosen folder's files survive an app uninstall.
+
+
+---
+
+## User <sup>8/25/2026, 9:28:47 AM</sup>
+
+<ide_opened_file>The user opened the file d:\projects\production-hydro-colon-therapy\frontend\src\pages\Therapy.tsx in the IDE. This may or may not be related to the current task.</ide_opened_file>
+
+@frontend/src/pages/DataExportImport.tsx for this module we need to create FAQs explaining how to use Export and Import module and how to setup Auto Backup for a non-technical app operator. Just create md file, the FAQ would be added to resources manually through admin panel.
+
+
+---
+
+## Assistant <sup>8/25/2026, 9:28:53 AM</sup>
+
+
+---
+
+## Assistant <sup>8/25/2026, 9:28:53 AM</sup>
+
+<details>
+<summary>Tool: <code>Glob</code></summary>
+
+```json
+{
+  "pattern": "**/*.md"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 9:28:56 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+frontend\node_modules\sharp\vendor\8.14.5\win32-x64\THIRD-PARTY-NOTICES.md
+frontend\node_modules\@babel\preset-env\CONTRIBUTING.md
+frontend\node_modules\keyv\README.md
+frontend\node_modules\@babel\parser\CHANGELOG.md
+frontend\node_modules\@rollup\rollup-win32-x64-gnu\README.md
+frontend\node_modules\once\README.md
+frontend\node_modules\wrappy\README.md
+frontend\node_modules\fast-levenshtein\README.md
+frontend\node_modules\is-extglob\README.md
+frontend\node_modules\@types\node\README.md
+frontend\node_modules\asynckit\README.md
+frontend\node_modules\doctrine\CHANGELOG.md
+frontend\node_modules\natural-compare\README.md
+frontend\node_modules\@types\estree\README.md
+frontend\node_modules\@types\json-schema\README.md
+frontend\node_modules\imurmurhash\README.md
+frontend\node_modules\is-typedarray\README.md
+frontend\node_modules\lodash.once\README.md
+frontend\node_modules\@babel\helper-define-polyfill-provider\README.md
+frontend\node_modules\@babel\helper-string-parser\README.md
+frontend\node_m
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 9:28:58 AM</sup>
+
+
+---
+
+## Assistant <sup>8/25/2026, 9:28:58 AM</sup>
+
+<details>
+<summary>Tool: <code>Glob</code></summary>
+
+```json
+{
+  "pattern": "Recommendations/**"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 9:28:59 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+Recommendations\sample-compose.yaml
+Recommendations\purrfect-hugging-sprout.md
+Recommendations\relead.md
+Recommendations\esp32\archive\final_working_15Apr2026_low_on_logic.ino
+Recommendations\esp32\archive\final_working_15Apr2026_high_on_logic.ino
+Recommendations\esp32\archive\new_board_debug.ino
+Recommendations\esp32\archive\final_working_26jun2026_high_on_logic_NEW.ino
+Recommendations\esp32\archive\final_working_02jul2026_high_on_logic.ino
+Recommendations\esp32\archive\final_working_02jul2026_high_on_logic_1.ino
+Recommendations\esp32\archive\final_working_03Jul2026_high_on_logic_1.ino
+Recommendations\monog_db_autobackup_gdrive\original.sh
+Recommendations\esp32\archive\final_working_08Aig2026_high_on_logic_1.ino
+Recommendations\monog_db_autobackup_gdrive\debug_auto_backup.sh
+Recommendations\monog_db_autobackup_gdrive\auto_backup.sh
+Recommendations\esp32\archive\final_working_15Apr2026_high_on_logic_1.ino
+Recommendations\esp32\archive\final_working_15Aug2026_high_on_logic_1.ino
+Recomme
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 9:29:01 AM</sup>
+
+
+---
+
+## Assistant <sup>8/25/2026, 9:29:02 AM</sup>
+
+<details>
+<summary>Tool: <code>Grep</code></summary>
+
+```json
+{
+  "pattern": "Resource",
+  "path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.resources.tsx",
+  "output_mode": "content",
+  "-n": true,
+  "head_limit": 40
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 9:29:03 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+5:import Resource from "../models/Resource";
+6:import SupplierResource from "../models/SupplierResource";
+12:type ResourceDoc = {
+36:  const [rawResources, total] = await Promise.all([
+37:    Resource.find({}).sort({ updated_at: -1 }).skip(skip).limit(LIMIT).lean(),
+38:    Resource.countDocuments({}),
+41:  const resources = rawResources.map((r: any) => ({
+68:      await Resource.create({ title, slug, content, category, is_active: true, updated_at: new Date() });
+90:      await Resource.findByIdAndUpdate(id, { title, slug, content, category, updated_at: new Date() });
+99:    await Resource.findByIdAndUpdate(formData.get("id"), { is_active: false });
+104:    await Resource.findByIdAndUpdate(formData.get("id"), { is_active: true });
+109:    await Resource.findByIdAndDelete(formData.get("id"));
+119:      Resource.find({}).lean(),
+126:    const existing = await SupplierResource.find({
+156:        const inserted = await SupplierResource.insertMany(toInsert, { ordered: false });
+173:export de
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 9:29:05 AM</sup>
+
+Good — resources are simple title/content markdown-ish text pasted into the admin panel. This is a straightforward content-writing task, no code exploration needed. Writing the plan directly.
+
+
+---
+
+## Assistant <sup>8/25/2026, 9:29:05 AM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "C:\\Users\\Gaurav\\.claude\\plans\\frontend-src-pages-therapy-tsx-right-no-jaunty-popcorn.md"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 9:29:05 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+1	# Reliable backup fallback storage using app-specific external directory
+2	
+3	## Context
+4	
+5	`backupService.ts`'s auto-backup already stores its primary copy in `Directory.Data` (private internal storage — always works, this is what `SavedBackups.tsx` actually lists/reads), and separately makes a best-effort attempt to also write a copy to `Directory.Documents` (public storage) for external visibility. That `Documents` write can fail entirely on some tablets — as the user notes, Android 10+ scoped storage means a public Documents folder isn't reliably writable/available on every device, and today that failure is just silently swallowed (no visible copy anywhere outside the app).
+6	
+7	The user wants: when the public folder path isn't available, fall back to a distinctly-named folder (`{app_name}.dbbackup.{app_unique_code}`) instead, applied to both the auto-backup's secondary copy and the manual "download to Downloads" action (`copyLocalFileToDownloads`, used by `SavedBackups.tsx`'s 
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 9:29:08 AM</sup>
+
+This old plan is stale (the SAF folder feature superseded it already). I'll overwrite it with the plan for the new FAQ task.
+
+
+---
+
+## Assistant <sup>8/25/2026, 9:29:23 AM</sup>
+
+<details>
+<summary>Tool: <code>Write</code></summary>
+
+```json
+{
+  "file_path": "C:\\Users\\Gaurav\\.claude\\plans\\frontend-src-pages-therapy-tsx-right-no-jaunty-popcorn.md",
+  "content": "# FAQ content for Data Export/Import and Auto Backup\n\n## Context\n\nThe Data Export/Import screen (`frontend/src/pages/DataExportImport.tsx`) now covers: exporting to Excel, exporting a restorable `.zip` backup, importing a `.zip` backup (with merge/overwrite and different-machine-mismatch handling), viewing/restoring/deleting saved backups, and configuring Auto Backup (enable toggle, retention count, and the persistent SAF Backup Folder). None of this is explained anywhere for the person actually operating the tablet, who is not technical. The user wants a plain-language FAQ written as a standalone Markdown file — not wired into the app — which they will paste into the CMS \"Resources\" content field by hand through the admin panel (`backend/app/routes/admin.resources.tsx`, where a Resource is just a title + free-text content field).\n\nSince this is a content-only deliverable with no code change, no exploration/design agents are needed — just write the file directly against what the screen actually does today.\n\n## Content to cover (sourced from the current DataExportImport.tsx / backupService.ts behavior)\n\n1. **What is a backup, and why should I make one?** — plain explanation, no jargon.\n2. **How do I export a backup manually?** — Backups tab → \"Export Backup (.zip)\" → share sheet to send it somewhere (Drive, email, etc).\n3. **What's the difference between \"Export to Excel\" and \"Export Backup\"?** — Excel is for reading/printing, not restorable; Backup zip is for restoring.\n4. **How do I restore a backup on this or another tablet?** — Import Backup → pick file → Merge vs Overwrite explained in plain terms → what happens if it's from a different machine (Discard vs Reassign, explained simply).\n5. **How do I view or delete old backups saved on this tablet?** — View Saved Backups screen.\n6. **What is Auto Backup and should I 
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 9:29:24 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file C:\Users\Gaurav\.claude\plans\frontend-src-pages-therapy-tsx-right-no-jaunty-popcorn.md has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 9:29:25 AM</sup>
+
+<details>
+<summary>Tool: <code>ToolSearch</code></summary>
+
+```json
+{
+  "query": "select:ExitPlanMode",
+  "max_results": 3
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 9:29:25 AM</sup>
+
+
+---
+
+## Assistant <sup>8/25/2026, 9:29:27 AM</sup>
+
+<details>
+<summary>Tool: <code>ExitPlanMode</code></summary>
+
+```json
+{
+  "plan": "# FAQ content for Data Export/Import and Auto Backup\n\n## Context\n\nThe Data Export/Import screen (`frontend/src/pages/DataExportImport.tsx`) now covers: exporting to Excel, exporting a restorable `.zip` backup, importing a `.zip` backup (with merge/overwrite and different-machine-mismatch handling), viewing/restoring/deleting saved backups, and configuring Auto Backup (enable toggle, retention count, and the persistent SAF Backup Folder). None of this is explained anywhere for the person actually operating the tablet, who is not technical. The user wants a plain-language FAQ written as a standalone Markdown file — not wired into the app — which they will paste into the CMS \"Resources\" content field by hand through the admin panel (`backend/app/routes/admin.resources.tsx`, where a Resource is just a title + free-text content field).\n\nSince this is a content-only deliverable with no code change, no exploration/design agents are needed — just write the file directly against what the screen actually does today.\n\n## Content to cover (sourced from the current DataExportImport.tsx / backupService.ts behavior)\n\n1. **What is a backup, and why should I make one?** — plain explanation, no jargon.\n2. **How do I export a backup manually?** — Backups tab → \"Export Backup (.zip)\" → share sheet to send it somewhere (Drive, email, etc).\n3. **What's the difference between \"Export to Excel\" and \"Export Backup\"?** — Excel is for reading/printing, not restorable; Backup zip is for restoring.\n4. **How do I restore a backup on this or another tablet?** — Import Backup → pick file → Merge vs Overwrite explained in plain terms → what happens if it's from a different machine (Discard vs Reassign, explained simply).\n5. **How do I view or delete old backups saved on this tablet?** — View Saved Backups screen.\n6. **What is Auto Backup and should I turn it on?** — Settings tab, toggle, saves automatically after each session.\n7. **How many backups does it keep?
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 9:42:59 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+User has approved your plan. You can now start coding. Start with updating your todo list if applicable
+
+Your plan has been saved to: C:\Users\Gaurav\.claude\plans\frontend-src-pages-therapy-tsx-right-no-jaunty-popcorn.md
+You can refer back to it if needed during implementation.
+
+## Approved Plan:
+# FAQ content for Data Export/Import and Auto Backup
+
+## Context
+
+The Data Export/Import screen (`frontend/src/pages/DataExportImport.tsx`) now covers: exporting to Excel, exporting a restorable `.zip` backup, importing a `.zip` backup (with merge/overwrite and different-machine-mismatch handling), viewing/restoring/deleting saved backups, and configuring Auto Backup (enable toggle, retention count, and the persistent SAF Backup Folder). None of this is explained anywhere for the person actually operating the tablet, who is not technical. The user wants a plain-language FAQ written as a standalone Markdown file — not wired into the app — which they will paste into the CMS "Resources" content 
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 9:43:19 AM</sup>
+
+<details>
+<summary>Tool: <code>Write</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\Recommendations\\faq-data-export-import-backup.md",
+  "content": "# Data Backup & Restore — Frequently Asked Questions\n\nThis guide explains the **Data Export / Import** screen in the app, and how to keep your patient and therapy data safe using backups.\n\n---\n\n### Q: What is a \"backup\" and why should I make one?\n\n**A:** A backup is a saved copy of all your data — patients, therapists, and session records — stored in a single file. If something ever happens to the tablet (it breaks, is lost, or the app needs to be reinstalled), you can use a backup to bring all your data back instead of losing it. It's like a safety net for your records.\n\n---\n\n### Q: How do I create a backup manually?\n\n**A:**\n1. Open **Data Export / Import** from the Settings screen.\n2. On the **Backups** tab, tap **Export Backup (.zip)**.\n3. Wait for the \"Backup file ready\" message.\n4. A sharing menu will open — choose where to send or save it (for example, Google Drive, email, or a USB drive).\n\nDo this regularly, especially before any major change like updating the app or replacing the tablet.\n\n---\n\n### Q: What's the difference between \"Export to Excel\" and \"Export Backup\"?\n\n**A:**\n- **Export to Excel** creates a spreadsheet you can open, read, and print. It's useful for reports, but it **cannot** be used to restore your data.\n- **Export Backup (.zip)** creates a special file made specifically for restoring your data later. This is the one to use for safekeeping.\n\n---\n\n### Q: How do I restore a backup (on this tablet or a new one)?\n\n**A:**\n1. Open **Data Export / Import** → **Backups** tab.\n2. Tap **Import Backup** and choose the backup file.\n3. You'll be asked to choose how to bring the data in:\n   - **Merge** — keeps everything already on the tablet and adds/updates records from the backup. Use this if you just want to add missing information.\n   - **Overwrite** — replaces everything curr
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 9:43:20 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+File created successfully at: d:\projects\production-hydro-colon-therapy\Recommendations\faq-data-export-import-backup.md (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 9:43:23 AM</sup>
+
+Created [Recommendations/faq-data-export-import-backup.md](Recommendations/faq-data-export-import-backup.md) — a plain-language FAQ covering exporting (Excel vs. backup zip), importing (merge/overwrite, machine-mismatch discard/reassign), viewing/deleting saved backups, Auto Backup setup, retention count, the Backup Folder (SAF) setup and its "no longer accessible" warning, where backups end up saved, and basic troubleshooting. It's a standalone Markdown file, ready to be copy-pasted into a Resource via the admin panel — no app code was touched.
+
+
+---
+
+## User <sup>8/25/2026, 9:54:56 AM</sup>
+
+<ide_opened_file>The user opened the file d:\projects\production-hydro-colon-therapy\Recommendations\faq-data-export-import-backup.md in the IDE. This may or may not be related to the current task.</ide_opened_file>
+
+@faq-data-export-import-backup.md convert to html
+
+
+---
+
+## Assistant <sup>8/25/2026, 9:54:59 AM</sup>
+
+
+---
+
+## Assistant <sup>8/25/2026, 9:55:00 AM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\Recommendations\\faq-data-export-import-backup.md"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 9:55:00 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+1	# Data Backup & Restore — Frequently Asked Questions
+2	
+3	This guide explains the **Data Export / Import** screen in the app, and how to keep your patient and therapy data safe using backups.
+4	
+5	---
+6	
+7	### Q: What is a "backup" and why should I make one?
+8	
+9	**A:** A backup is a saved copy of all your data — patients, therapists, and session records — stored in a single file. If something ever happens to the tablet (it breaks, is lost, or the app needs to be reinstalled), you can use a backup to bring all your data back instead of losing it. It's like a safety net for your records.
+10	
+11	---
+12	
+13	### Q: How do I create a backup manually?
+14	
+15	**A:**
+16	1. Open **Data Export / Import** from the Settings screen.
+17	2. On the **Backups** tab, tap **Export Backup (.zip)**.
+18	3. Wait for the "Backup file ready" message.
+19	4. A sharing menu will open — choose where to send or save it (for example, Google Drive, email, or a USB drive).
+20	
+21	Do this regularly, especially before
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 9:55:04 AM</sup>
+
+
+---
+
+## Assistant <sup>8/25/2026, 9:55:05 AM</sup>
+
+<details>
+<summary>Tool: <code>Grep</code></summary>
+
+```json
+{
+  "pattern": "content",
+  "path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.resources.tsx",
+  "output_mode": "content",
+  "-n": true
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 9:55:05 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+16:  content: string;
+57:    const content = (formData.get("content") as string)?.trim();
+60:    if (!title || !content || !category) {
+61:      return { error: "Title, content, and category are required." };
+68:      await Resource.create({ title, slug, content, category, is_active: true, updated_at: new Date() });
+79:    const content = (formData.get("content") as string)?.trim();
+82:    if (!title || !content || !category) {
+83:      return { error: "Title, content, and category are required." };
+90:      await Resource.findByIdAndUpdate(id, { title, slug, content, category, updated_at: new Date() });
+145:          content: resource.content,
+424:                  name="content"
+425:                  defaultValue={editItem?.content}
+429:                  placeholder="Resource content..."
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 9:55:06 AM</sup>
+
+
+---
+
+## Assistant <sup>8/25/2026, 9:55:07 AM</sup>
+
+<details>
+<summary>Tool: <code>Grep</code></summary>
+
+```json
+{
+  "pattern": "dangerouslySetInnerHTML|resource.content|\\.content}",
+  "path": "d:\\projects\\production-hydro-colon-therapy\\frontend\\src",
+  "output_mode": "content",
+  "-n": true
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 9:55:07 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+frontend\src\pages\Resources.tsx:134:                          dangerouslySetInnerHTML={{ __html: r.content }}
+frontend\src\pages\Resources.tsx:151:                        dangerouslySetInnerHTML={{ __html: r.content }}
+frontend\src\components\DebugLogModal.tsx:110:            {viewing.content}
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 9:55:09 AM</sup>
+
+Confirmed — Resource content is rendered via `dangerouslySetInnerHTML`, so it expects raw HTML. Writing an HTML version of the FAQ as a sibling file.
+
+
+---
+
+## Assistant <sup>8/25/2026, 9:55:28 AM</sup>
+
+<details>
+<summary>Tool: <code>Write</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\Recommendations\\faq-data-export-import-backup.html",
+  "content": "<h1>Data Backup &amp; Restore &mdash; Frequently Asked Questions</h1>\n\n<p>This guide explains the <strong>Data Export / Import</strong> screen in the app, and how to keep your patient and therapy data safe using backups.</p>\n\n<hr>\n\n<h3>Q: What is a \"backup\" and why should I make one?</h3>\n<p><strong>A:</strong> A backup is a saved copy of all your data &mdash; patients, therapists, and session records &mdash; stored in a single file. If something ever happens to the tablet (it breaks, is lost, or the app needs to be reinstalled), you can use a backup to bring all your data back instead of losing it. It's like a safety net for your records.</p>\n\n<hr>\n\n<h3>Q: How do I create a backup manually?</h3>\n<p><strong>A:</strong></p>\n<ol>\n  <li>Open <strong>Data Export / Import</strong> from the Settings screen.</li>\n  <li>On the <strong>Backups</strong> tab, tap <strong>Export Backup (.zip)</strong>.</li>\n  <li>Wait for the \"Backup file ready\" message.</li>\n  <li>A sharing menu will open &mdash; choose where to send or save it (for example, Google Drive, email, or a USB drive).</li>\n</ol>\n<p>Do this regularly, especially before any major change like updating the app or replacing the tablet.</p>\n\n<hr>\n\n<h3>Q: What's the difference between \"Export to Excel\" and \"Export Backup\"?</h3>\n<p><strong>A:</strong></p>\n<ul>\n  <li><strong>Export to Excel</strong> creates a spreadsheet you can open, read, and print. It's useful for reports, but it <strong>cannot</strong> be used to restore your data.</li>\n  <li><strong>Export Backup (.zip)</strong> creates a special file made specifically for restoring your data later. This is the one to use for safekeeping.</li>\n</ul>\n\n<hr>\n\n<h3>Q: How do I restore a backup (on this tablet or a new one)?</h3>\n<p><strong>A:</strong></p>\n<ol>\n  <li>Open <strong>Data Export / Import</st
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 9:55:29 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+File created successfully at: d:\projects\production-hydro-colon-therapy\Recommendations\faq-data-export-import-backup.html (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 9:55:32 AM</sup>
+
+Created [Recommendations/faq-data-export-import-backup.html](Recommendations/faq-data-export-import-backup.html) — same FAQ content as clean HTML (h1/h3/p/ol/ul/strong, no doctype/head/body), ready to paste straight into the Resource **content** field, since `Resources.tsx` renders that field via `dangerouslySetInnerHTML`.
+
+
+---
+
+## User <sup>8/25/2026, 10:14:52 AM</sup>
+
+<ide_selection>The user selected the lines 101 to 106 from d:\projects\production-hydro-colon-therapy\Recommendations\faq-data-export-import-backup.html:
+<ol>
+  <li>Read the message carefully &mdash; it usually explains what went wrong (for example, a file that couldn't be read).</li>
+  <li>Try the action again &mdash; a second attempt often succeeds, especially for temporary issues.</li>
+  <li>If setting up the <strong>Backup Folder</strong> fails or a backup won't restore, make sure you selected the correct file and folder.</li>
+  <li>If the problem continues, note down the exact message shown and contact support for help.</li>
+</ol>
+
+This may or may not be related to the current task.</ide_selection>
+
+@backend/app/routes/admin.resources.tsx and @backend/app/routes/supplier.resources.tsx  add resource order, so admin and supplier can arrange the display order of the resources. Add button in the listing named re arrange order which would make the list rows draggable and once re-arranged a save button would save the final order, also deliver the resources in the arranged order in api endpoint. @backend/app/routes/api/resources.ts
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:14:55 AM</sup>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:14:55 AM</sup>
+
+<details>
+<summary>Tool: <code>Glob</code></summary>
+
+```json
+{
+  "pattern": "backend/app/models/{Resource,SupplierResource}.ts"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 10:14:56 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+backend\app\models\Resource.ts
+backend\app\models\SupplierResource.ts
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:14:58 AM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\models\\Resource.ts"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 10:14:58 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+1	import mongoose from 'mongoose';
+2	
+3	const ResourceSchema = new mongoose.Schema({
+4	  title: { type: String, required: true },
+5	  slug: { type: String, required: true, unique: true },
+6	  content: { type: String, required: true },
+7	  category: { type: String, required: true },
+8	  is_active: { type: Boolean, default: true },
+9	  updated_by: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+10	  updated_at: { type: Date, default: Date.now }
+11	});
+12	
+13	export default mongoose.models.Resource || mongoose.model('Resource', ResourceSchema);
+14
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:14:59 AM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\models\\SupplierResource.ts"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 10:14:59 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+1	import mongoose from 'mongoose';
+2	
+3	const SupplierResourceSchema = new mongoose.Schema({
+4	  supplier_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+5	  title: { type: String, required: true },
+6	  slug: { type: String, required: true },
+7	  content: { type: String, required: true },
+8	  category: { type: String, required: true },
+9	  is_active: { type: Boolean, default: true },
+10	  updated_by: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+11	  updated_at: { type: Date, default: Date.now },
+12	});
+13	
+14	// Slug must be unique per supplier, not globally
+15	SupplierResourceSchema.index({ supplier_id: 1, slug: 1 }, { unique: true });
+16	
+17	export default mongoose.models.SupplierResource || mongoose.model('SupplierResource', SupplierResourceSchema);
+18
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:15:24 AM</sup>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:15:47 AM</sup>
+
+<details>
+<summary>Tool: <code>Write</code></summary>
+
+```json
+{
+  "file_path": "C:\\Users\\Gaurav\\.claude\\plans\\frontend-src-pages-therapy-tsx-right-no-jaunty-popcorn.md",
+  "content": "# Manual display order for Resources (admin + supplier)\n\n## Context\n\nResources are currently listed sorted by `updated_at desc` (admin) / `updated_at desc` (supplier), and delivered to the PWA via `api/resources.ts` sorted by `updated_at asc` (supplier-specific) or unsorted (global fallback). None of these reflect any intentional order — editing a resource jumps it to the top/bottom of the list, and there's no way to control the order owners actually see resources in the app. The user wants an explicit, admin/supplier-controlled display order: a \"Rearrange Order\" button that makes the rows draggable, a \"Save\" button that persists the new order, and the public API endpoint delivering resources in that saved order.\n\n## Approach\n\n### 1. Schema: add `sort_order`\n- `backend/app/models/Resource.ts` — add `sort_order: { type: Number, default: 0 }`.\n- `backend/app/models/SupplierResource.ts` — add the same field.\n- Existing documents default to `0`; the loader's sort will use `sort_order asc, updated_at desc` as a tiebreaker so pre-existing rows keep a stable, sensible order (most-recently-updated first) until someone explicitly rearranges them.\n\n### 2. Admin route — `backend/app/routes/admin.resources.tsx`\n- **Loader**: sort `Resource.find({})` by `{ sort_order: 1, updated_at: -1 }`. Add support for a `?mode=reorder` query param — when present, skip `skip`/`limit` entirely and fetch **all** resources (still same sort) so the operator arranges the complete list, not just one page; return an extra `reorderMode: boolean` flag.\n- **Action**: add a new `intent === \"reorder\"` branch. It receives an `order` field — a JSON-stringified array of resource `_id` strings in the operator's chosen order — and persists it with one `Resource.bulkWrite(...)` call, setting `sort_order` to each id's index in the array. Return `{ success: true }` o
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 10:15:48 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file C:\Users\Gaurav\.claude\plans\frontend-src-pages-therapy-tsx-right-no-jaunty-popcorn.md has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:15:49 AM</sup>
+
+<details>
+<summary>Tool: <code>ExitPlanMode</code></summary>
+
+```json
+{
+  "plan": "# Manual display order for Resources (admin + supplier)\n\n## Context\n\nResources are currently listed sorted by `updated_at desc` (admin) / `updated_at desc` (supplier), and delivered to the PWA via `api/resources.ts` sorted by `updated_at asc` (supplier-specific) or unsorted (global fallback). None of these reflect any intentional order — editing a resource jumps it to the top/bottom of the list, and there's no way to control the order owners actually see resources in the app. The user wants an explicit, admin/supplier-controlled display order: a \"Rearrange Order\" button that makes the rows draggable, a \"Save\" button that persists the new order, and the public API endpoint delivering resources in that saved order.\n\n## Approach\n\n### 1. Schema: add `sort_order`\n- `backend/app/models/Resource.ts` — add `sort_order: { type: Number, default: 0 }`.\n- `backend/app/models/SupplierResource.ts` — add the same field.\n- Existing documents default to `0`; the loader's sort will use `sort_order asc, updated_at desc` as a tiebreaker so pre-existing rows keep a stable, sensible order (most-recently-updated first) until someone explicitly rearranges them.\n\n### 2. Admin route — `backend/app/routes/admin.resources.tsx`\n- **Loader**: sort `Resource.find({})` by `{ sort_order: 1, updated_at: -1 }`. Add support for a `?mode=reorder` query param — when present, skip `skip`/`limit` entirely and fetch **all** resources (still same sort) so the operator arranges the complete list, not just one page; return an extra `reorderMode: boolean` flag.\n- **Action**: add a new `intent === \"reorder\"` branch. It receives an `order` field — a JSON-stringified array of resource `_id` strings in the operator's chosen order — and persists it with one `Resource.bulkWrite(...)` call, setting `sort_order` to each id's index in the array. Return `{ success: true }` on completion.\n- **Sync action**: when copying admin resources into `SupplierResource` for suppliers missing them,
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 10:17:36 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+User has approved your plan. You can now start coding. Start with updating your todo list if applicable
+
+Your plan has been saved to: C:\Users\Gaurav\.claude\plans\frontend-src-pages-therapy-tsx-right-no-jaunty-popcorn.md
+You can refer back to it if needed during implementation.
+
+## Approved Plan:
+# Manual display order for Resources (admin + supplier)
+
+## Context
+
+Resources are currently listed sorted by `updated_at desc` (admin) / `updated_at desc` (supplier), and delivered to the PWA via `api/resources.ts` sorted by `updated_at asc` (supplier-specific) or unsorted (global fallback). None of these reflect any intentional order — editing a resource jumps it to the top/bottom of the list, and there's no way to control the order owners actually see resources in the app. The user wants an explicit, admin/supplier-controlled display order: a "Rearrange Order" button that makes the rows draggable, a "Save" button that persists the new order, and the public API endpoint delivering resources
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:17:38 AM</sup>
+
+Implementing now. Starting with the two models.
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:17:39 AM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\models\\Resource.ts",
+  "old_string": "  is_active: { type: Boolean, default: true },\n  updated_by: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },\n  updated_at: { type: Date, default: Date.now }\n});",
+  "new_string": "  is_active: { type: Boolean, default: true },\n  sort_order: { type: Number, default: 0 },\n  updated_by: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },\n  updated_at: { type: Date, default: Date.now }\n});"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 10:17:40 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\models\Resource.ts has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:17:43 AM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\models\\SupplierResource.ts",
+  "old_string": "  is_active: { type: Boolean, default: true },\n  updated_by: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },\n  updated_at: { type: Date, default: Date.now },\n});",
+  "new_string": "  is_active: { type: Boolean, default: true },\n  sort_order: { type: Number, default: 0 },\n  updated_by: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },\n  updated_at: { type: Date, default: Date.now },\n});"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 10:17:44 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\models\SupplierResource.ts has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:17:46 AM</sup>
+
+Now the API loader sort order.
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:17:49 AM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\api\\resources.ts",
+  "old_string": "      const resources = await SupplierResource.find({ supplier_id: supplierId, is_active: true }).sort({ updated_at: 1 }).lean();\n      if (resources.length > 0) {\n        return new Response(JSON.stringify(resources), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });\n      }\n    }\n  }\n\n  // Fallback: return global resources if no machine_id or no supplier found\n  const resources = await Resource.find({ is_active: true }).lean();",
+  "new_string": "      const resources = await SupplierResource.find({ supplier_id: supplierId, is_active: true }).sort({ sort_order: 1, updated_at: 1 }).lean();\n      if (resources.length > 0) {\n        return new Response(JSON.stringify(resources), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });\n      }\n    }\n  }\n\n  // Fallback: return global resources if no machine_id or no supplier found\n  const resources = await Resource.find({ is_active: true }).sort({ sort_order: 1, updated_at: 1 }).lean();"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 10:17:50 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\api\resources.ts has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:17:52 AM</sup>
+
+Now the admin.resources.tsx — loader, action, and UI.
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:17:53 AM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.resources.tsx",
+  "old_string": "type ResourceDoc = {\n  _id: string;\n  title: string;\n  slug: string;\n  content: string;\n  category: string;\n  is_active: boolean;\n};",
+  "new_string": "type ResourceDoc = {\n  _id: string;\n  title: string;\n  slug: string;\n  content: string;\n  category: string;\n  is_active: boolean;\n  sort_order: number;\n};"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 10:17:54 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\admin.resources.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:18:00 AM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.resources.tsx",
+  "old_string": "export async function loader({ request }: { request: Request }) {\n  await connectDB();\n  const url = new URL(request.url);\n  const page = Math.max(1, parseInt(url.searchParams.get(\"page\") || \"1\"));\n  const skip = (page - 1) * LIMIT;\n\n  const [rawResources, total] = await Promise.all([\n    Resource.find({}).sort({ updated_at: -1 }).skip(skip).limit(LIMIT).lean(),\n    Resource.countDocuments({}),\n  ]);\n\n  const resources = rawResources.map((r: any) => ({\n    ...r,\n    _id: r._id.toString(),\n    updated_by: r.updated_by?.toString() ?? null,\n  }));\n\n  return { resources, total, page, totalPages: Math.ceil(total / LIMIT) };\n}",
+  "new_string": "export async function loader({ request }: { request: Request }) {\n  await connectDB();\n  const url = new URL(request.url);\n  const reorderMode = url.searchParams.get(\"mode\") === \"reorder\";\n  const page = Math.max(1, parseInt(url.searchParams.get(\"page\") || \"1\"));\n  const skip = (page - 1) * LIMIT;\n\n  const query = Resource.find({}).sort({ sort_order: 1, updated_at: -1 });\n  if (!reorderMode) query.skip(skip).limit(LIMIT);\n\n  const [rawResources, total] = await Promise.all([\n    query.lean(),\n    Resource.countDocuments({}),\n  ]);\n\n  const resources = rawResources.map((r: any) => ({\n    ...r,\n    _id: r._id.toString(),\n    updated_by: r.updated_by?.toString() ?? null,\n  }));\n\n  return { resources, total, page, totalPages: Math.ceil(total / LIMIT), reorderMode };\n}"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 10:18:01 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\admin.resources.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:18:02 AM</sup>
+
+Now the action: add `reorder` intent, and carry `sort_order` through sync.
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:18:05 AM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.resources.tsx",
+  "old_string": "  if (intent === \"hard_delete\") {\n    await Resource.findByIdAndDelete(formData.get(\"id\"));\n    return { success: true };\n  }",
+  "new_string": "  if (intent === \"hard_delete\") {\n    await Resource.findByIdAndDelete(formData.get(\"id\"));\n    return { success: true };\n  }\n\n  if (intent === \"reorder\") {\n    const ids: string[] = JSON.parse((formData.get(\"order\") as string) || \"[]\");\n    if (ids.length > 0) {\n      await Resource.bulkWrite(\n        ids.map((id, index) => ({\n          updateOne: { filter: { _id: id }, update: { sort_order: index } },\n        }))\n      );\n    }\n    return { success: true };\n  }"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 10:18:06 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\admin.resources.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:18:09 AM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.resources.tsx",
+  "old_string": "        toInsert.push({\n          supplier_id: (supplier as any)._id,\n          title: resource.title,\n          slug: resource.slug,\n          content: resource.content,\n          category: resource.category,\n          is_active: resource.is_active,\n          updated_at: new Date(),\n        });",
+  "new_string": "        toInsert.push({\n          supplier_id: (supplier as any)._id,\n          title: resource.title,\n          slug: resource.slug,\n          content: resource.content,\n          category: resource.category,\n          is_active: resource.is_active,\n          sort_order: resource.sort_order ?? 0,\n          updated_at: new Date(),\n        });"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 10:18:10 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\admin.resources.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:18:13 AM</sup>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:18:14 AM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.resources.tsx",
+  "old_string": "import { useLoaderData, useActionData, Form, useNavigation } from \"react-router\";\nimport { useState, useEffect } from \"react\";",
+  "new_string": "import { useLoaderData, useActionData, Form, useNavigation, useNavigate, useSubmit } from \"react-router\";\nimport { useState, useEffect, useRef } from \"react\";"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 10:18:15 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\admin.resources.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:18:25 AM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.resources.tsx",
+  "old_string": "export default function AdminResources() {\n  const { resources, total, page, totalPages } = useLoaderData<typeof loader>();\n  const actionData = useActionData<typeof action>();\n  const navigation = useNavigation();\n  const isSubmitting = navigation.state === \"submitting\";\n\n  const [modalOpen, setModalOpen] = useState(false);\n  const [editItem, setEditItem] = useState<ResourceDoc | null>(null);\n  const [titleValue, setTitleValue] = useState(\"\");\n  const [deleteTarget, setDeleteTarget] = useState<ResourceDoc | null>(null);\n\n  useEffect(() => {\n    if (actionData?.success) {\n      setModalOpen(false);\n      setEditItem(null);\n      setTitleValue(\"\");\n      setDeleteTarget(null);\n    }\n  }, [actionData]);\n\n  const isSyncing =\n    isSubmitting && navigation.formData?.get(\"intent\") === \"sync\";",
+  "new_string": "export default function AdminResources() {\n  const { resources, total, page, totalPages, reorderMode } = useLoaderData<typeof loader>();\n  const actionData = useActionData<typeof action>();\n  const navigation = useNavigation();\n  const navigate = useNavigate();\n  const submit = useSubmit();\n  const isSubmitting = navigation.state === \"submitting\";\n\n  const [modalOpen, setModalOpen] = useState(false);\n  const [editItem, setEditItem] = useState<ResourceDoc | null>(null);\n  const [titleValue, setTitleValue] = useState(\"\");\n  const [deleteTarget, setDeleteTarget] = useState<ResourceDoc | null>(null);\n\n  const [orderedRows, setOrderedRows] = useState<ResourceDoc[]>(resources as ResourceDoc[]);\n  const dragIndex = useRef<number | null>(null);\n\n  useEffect(() => {\n    setOrderedRows(resources as ResourceDoc[]);\n  }, [resources]);\n\n  useEffect(() => {\n    if (actionData?.success) {\n      setModalOpen(false);\n      setEditItem(null);\n      setTitleValue(\"\");\n      s
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 10:18:26 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\admin.resources.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:18:29 AM</sup>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:18:30 AM</sup>
+
+<details>
+<summary>Tool: <code>Grep</code></summary>
+
+```json
+{
+  "pattern": "admin.resources|admin/resources",
+  "path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app",
+  "output_mode": "content",
+  "-n": true
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 10:18:30 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+backend\app\routes.ts:80:      route("resources", "routes/admin.resources.tsx"),
+backend\app\routes\admin.resources.tsx:217:      if (reorderMode) navigate("/admin/resources");
+backend\app\routes\admin.resources.tsx:250:    navigate("/admin/resources");
+backend\app\routes\admin.tsx:39:    { to: "/admin/resources", label: "CMS Resources", abbr: "CM" },
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:18:31 AM</sup>
+
+Good, `/admin/resources` is confirmed correct. Now update the header buttons and table body JSX.
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:18:32 AM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.resources.tsx",
+  "offset": 255,
+  "limit": 130
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 10:18:32 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+255	    setTitleValue("");
+256	    setModalOpen(true);
+257	  };
+258	  const openEdit = (r: ResourceDoc) => {
+259	    setEditItem(r);
+260	    setTitleValue(r.title);
+261	    setModalOpen(true);
+262	  };
+263	
+264	  const autoSlug = generateSlug(titleValue);
+265	
+266	  return (
+267	    <div>
+268	      <div className="flex items-center justify-between mb-6">
+269	        <div>
+270	          <h1 className="text-2xl font-bold text-gray-800">CMS Resources</h1>
+271	          <p className="text-sm text-gray-500 mt-1">
+272	            {total} total records — synced to PWA clients for offline display
+273	          </p>
+274	        </div>
+275	        <div className="flex items-center gap-3">
+276	          <Form
+277	            method="post"
+278	            onSubmit={(e) => {
+279	              if (!confirm("Sync all resources to every supplier? Suppliers who already have a matching resource will be left unchanged.")) e.preventDefault();
+280	            }}
+281	          >
+282	            <input type=
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:18:41 AM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.resources.tsx",
+  "old_string": "        <div className=\"flex items-center gap-3\">\n          <Form\n            method=\"post\"\n            onSubmit={(e) => {\n              if (!confirm(\"Sync all resources to every supplier? Suppliers who already have a matching resource will be left unchanged.\")) e.preventDefault();\n            }}\n          >\n            <input type=\"hidden\" name=\"intent\" value=\"sync\" />\n            <button\n              type=\"submit\"\n              disabled={isSyncing}\n              className=\"px-4 py-2 bg-white border border-blue-700 text-blue-700 rounded hover:bg-blue-50 text-sm font-medium disabled:opacity-50\"\n            >\n              {isSyncing ? \"Syncing...\" : \"Sync to Suppliers\"}\n            </button>\n          </Form>\n          <button\n            onClick={openCreate}\n            className=\"px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-800 text-sm font-medium\"\n          >\n            + Add Resource\n          </button>\n        </div>\n      </div>",
+  "new_string": "        <div className=\"flex items-center gap-3\">\n          {reorderMode ? (\n            <>\n              <button\n                type=\"button\"\n                onClick={handleCancelReorder}\n                disabled={isSavingOrder}\n                className=\"px-4 py-2 border border-gray-300 rounded hover:bg-gray-50 text-sm font-medium disabled:opacity-50\"\n              >\n                Cancel\n              </button>\n              <button\n                type=\"button\"\n                onClick={handleSaveOrder}\n                disabled={isSavingOrder}\n                className=\"px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-800 text-sm font-medium disabled:opacity-50\"\n              >\n                {isSavingOrder ? \"Saving...\" : \"Save Order\"}\n              </button>\n          
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 10:18:42 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\admin.resources.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:18:44 AM</sup>
+
+Now the table body — add a drag-handle column and conditionally render reorder rows vs normal rows.
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:19:00 AM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.resources.tsx",
+  "old_string": "        <table className=\"w-full text-sm\">\n          <thead className=\"bg-gray-50 border-b border-gray-200\">\n            <tr>\n              <th className=\"text-left px-4 py-3 font-semibold text-gray-600\">Title</th>\n              <th className=\"text-left px-4 py-3 font-semibold text-gray-600\">Category</th>\n              <th className=\"text-left px-4 py-3 font-semibold text-gray-600\">Slug</th>\n              <th className=\"text-left px-4 py-3 font-semibold text-gray-600\">Status</th>\n              <th className=\"text-left px-4 py-3 font-semibold text-gray-600\">Actions</th>\n            </tr>\n          </thead>\n          <tbody className=\"divide-y divide-gray-100\">\n            {resources.length === 0 && (\n              <tr>\n                <td colSpan={5} className=\"text-center py-10 text-gray-400\">\n                  No resources found.\n                </td>\n              </tr>\n            )}\n            {resources.map((r: any) => (\n              <tr key={r._id} className=\"hover:bg-gray-50\">\n                <td className=\"px-4 py-3 text-gray-800 font-medium\">{r.title}</td>\n                <td className=\"px-4 py-3 text-gray-600\">{r.category}</td>\n                <td className=\"px-4 py-3 font-mono text-xs text-gray-500\">{r.slug}</td>\n                <td className=\"px-4 py-3\">\n                  <span\n                    className={`px-2 py-0.5 rounded-full text-xs font-medium ${\n                      r.is_active\n                        ? \"bg-green-100 text-green-700\"\n                        : \"bg-red-100 text-red-700\"\n                    }`}\n                  >\n                    {r.is_active ? \"Active\" : \"Inactive\"}\n                  </span>\n                </td>\n                <td className=\"px-4 py-3\">\n                  <div className=\"flex items-cent
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 10:19:01 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\admin.resources.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:19:03 AM</sup>
+
+Now hide pagination while in reorder mode.
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:19:03 AM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.resources.tsx",
+  "offset": 400,
+  "limit": 30
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 10:19:03 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+400	                      >
+401	                        <input type="hidden" name="intent" value="delete" />
+402	                        <input type="hidden" name="id" value={r._id} />
+403	                        <button
+404	                          type="submit"
+405	                          className="text-red-500 hover:underline text-xs font-medium"
+406	                        >
+407	                          Deactivate
+408	                        </button>
+409	                      </Form>
+410	                    ) : (
+411	                      <Form method="post">
+412	                        <input type="hidden" name="intent" value="restore" />
+413	                        <input type="hidden" name="id" value={r._id} />
+414	                        <button
+415	                          type="submit"
+416	                          className="text-green-600 hover:underline text-xs font-medium"
+417	                        >
+418	                          Restore
+419	                     
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:19:06 AM</sup>
+
+<details>
+<summary>Tool: <code>Grep</code></summary>
+
+```json
+{
+  "pattern": "totalPages > 1",
+  "path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.resources.tsx",
+  "output_mode": "content",
+  "-n": true
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 10:19:06 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+439:      {totalPages > 1 && (
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:19:08 AM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.resources.tsx",
+  "old_string": "      {totalPages > 1 && (",
+  "new_string": "      {!reorderMode && totalPages > 1 && ("
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 10:19:09 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\admin.resources.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:19:10 AM</sup>
+
+Now let's do the equivalent for supplier.resources.tsx.
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:19:13 AM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\supplier.resources.tsx",
+  "old_string": "import { useLoaderData, useActionData, Form, useNavigation } from \"react-router\";\nimport { useState, useEffect } from \"react\";\nimport { requireSupplier } from \"../lib/auth.server\";\nimport { connectDB } from \"../lib/db\";\nimport SupplierResource from \"../models/SupplierResource\";\n\nconst LIMIT = 50;\n\ntype ResourceDoc = {\n  _id: string;\n  title: string;\n  slug: string;\n  content: string;\n  category: string;\n  is_active: boolean;\n};",
+  "new_string": "import { useLoaderData, useActionData, Form, useNavigation, useNavigate, useSubmit } from \"react-router\";\nimport { useState, useEffect, useRef } from \"react\";\nimport { requireSupplier } from \"../lib/auth.server\";\nimport { connectDB } from \"../lib/db\";\nimport SupplierResource from \"../models/SupplierResource\";\n\nconst LIMIT = 50;\n\ntype ResourceDoc = {\n  _id: string;\n  title: string;\n  slug: string;\n  content: string;\n  category: string;\n  is_active: boolean;\n  sort_order: number;\n};"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 10:19:15 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\supplier.resources.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:19:21 AM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\supplier.resources.tsx",
+  "old_string": "  const url = new URL(request.url);\n  const page = Math.max(1, parseInt(url.searchParams.get(\"page\") || \"1\"));\n  const skip = (page - 1) * LIMIT;\n\n  const [rawResources, total] = await Promise.all([\n    SupplierResource.find({ supplier_id: supplierId })\n      .sort({ updated_at: -1 })\n      .skip(skip)\n      .limit(LIMIT)\n      .lean(),\n    SupplierResource.countDocuments({ supplier_id: supplierId }),\n  ]);\n\n  const resources = rawResources.map((r: any) => ({\n    _id: r._id.toString(),\n    title: r.title,\n    slug: r.slug,\n    content: r.content,\n    category: r.category,\n    is_active: r.is_active,\n  }));\n\n  return { resources, total, page, totalPages: Math.ceil(total / LIMIT) };\n}",
+  "new_string": "  const url = new URL(request.url);\n  const reorderMode = url.searchParams.get(\"mode\") === \"reorder\";\n  const page = Math.max(1, parseInt(url.searchParams.get(\"page\") || \"1\"));\n  const skip = (page - 1) * LIMIT;\n\n  const query = SupplierResource.find({ supplier_id: supplierId }).sort({ sort_order: 1, updated_at: -1 });\n  if (!reorderMode) query.skip(skip).limit(LIMIT);\n\n  const [rawResources, total] = await Promise.all([\n    query.lean(),\n    SupplierResource.countDocuments({ supplier_id: supplierId }),\n  ]);\n\n  const resources = rawResources.map((r: any) => ({\n    _id: r._id.toString(),\n    title: r.title,\n    slug: r.slug,\n    content: r.content,\n    category: r.category,\n    is_active: r.is_active,\n    sort_order: r.sort_order ?? 0,\n  }));\n\n  return { resources, total, page, totalPages: Math.ceil(total / LIMIT), reorderMode };\n}"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 10:19:22 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\supplier.resources.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:19:24 AM</sup>
+
+Now the action — add reorder intent scoped to supplier.
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:19:26 AM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\supplier.resources.tsx",
+  "old_string": "  if (intent === \"restore\") {\n    const id = formData.get(\"id\") as string;\n    await SupplierResource.findOneAndUpdate({ _id: id, supplier_id: supplierId }, { is_active: true });\n    return { success: true };\n  }\n\n  return { error: \"Unknown intent.\" };\n}",
+  "new_string": "  if (intent === \"restore\") {\n    const id = formData.get(\"id\") as string;\n    await SupplierResource.findOneAndUpdate({ _id: id, supplier_id: supplierId }, { is_active: true });\n    return { success: true };\n  }\n\n  if (intent === \"reorder\") {\n    const ids: string[] = JSON.parse((formData.get(\"order\") as string) || \"[]\");\n    if (ids.length > 0) {\n      await SupplierResource.bulkWrite(\n        ids.map((id, index) => ({\n          updateOne: {\n            filter: { _id: id, supplier_id: supplierId },\n            update: { sort_order: index },\n          },\n        }))\n      );\n    }\n    return { success: true };\n  }\n\n  return { error: \"Unknown intent.\" };\n}"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 10:19:28 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\supplier.resources.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:19:29 AM</sup>
+
+Now the component: state/handlers and header buttons.
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:19:36 AM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\supplier.resources.tsx",
+  "old_string": "export default function SupplierResources() {\n  const { resources, total, page, totalPages } = useLoaderData<typeof loader>();\n  const actionData = useActionData<typeof action>();\n  const navigation = useNavigation();\n  const isSubmitting = navigation.state === \"submitting\";\n\n  const [modalOpen, setModalOpen] = useState(false);\n  const [editItem, setEditItem] = useState<ResourceDoc | null>(null);\n  const [titleValue, setTitleValue] = useState(\"\");\n\n  useEffect(() => {\n    if (actionData?.success) {\n      setModalOpen(false);\n      setEditItem(null);\n      setTitleValue(\"\");\n    }\n  }, [actionData]);\n\n  const openCreate = () => {",
+  "new_string": "export default function SupplierResources() {\n  const { resources, total, page, totalPages, reorderMode } = useLoaderData<typeof loader>();\n  const actionData = useActionData<typeof action>();\n  const navigation = useNavigation();\n  const navigate = useNavigate();\n  const submit = useSubmit();\n  const isSubmitting = navigation.state === \"submitting\";\n\n  const [modalOpen, setModalOpen] = useState(false);\n  const [editItem, setEditItem] = useState<ResourceDoc | null>(null);\n  const [titleValue, setTitleValue] = useState(\"\");\n\n  const [orderedRows, setOrderedRows] = useState<ResourceDoc[]>(resources as ResourceDoc[]);\n  const dragIndex = useRef<number | null>(null);\n\n  useEffect(() => {\n    setOrderedRows(resources as ResourceDoc[]);\n  }, [resources]);\n\n  useEffect(() => {\n    if (actionData?.success) {\n      setModalOpen(false);\n      setEditItem(null);\n      setTitleValue(\"\");\n      if (reorderMode) navigate(\"/supplier/resources\");\n    }\n  }, [actionData]);\n\n  const isSavingOrder =\n    isSubmitting && navigation.formData?.get(\"intent\") === \"reorder\";\n\n  const handleDragStart = (index: number) => () => {\n    
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 10:19:37 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\supplier.resources.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:19:39 AM</sup>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:19:40 AM</sup>
+
+<details>
+<summary>Tool: <code>Grep</code></summary>
+
+```json
+{
+  "pattern": "supplier.resources|supplier/resources",
+  "path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app",
+  "output_mode": "content",
+  "-n": true
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 10:19:40 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+backend\app\routes.ts:62:      route("resources", "routes/supplier.resources.tsx"),
+backend\app\routes\supplier.resources.tsx:179:      if (reorderMode) navigate("/supplier/resources");
+backend\app\routes\supplier.resources.tsx:210:    navigate("/supplier/resources");
+backend\app\routes\supplier._index.tsx:76:        <a href="/supplier/resources" className="block bg-white rounded-lg border border-gray-200 p-5 shadow-sm hover:shadow-md transition-shadow">
+backend\app\routes\supplier.tsx:34:    { to: "/supplier/resources", label: "Resources", abbr: "Re" },
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:19:42 AM</sup>
+
+Confirmed. Now update the header buttons and table JSX in supplier.resources.tsx.
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:19:42 AM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\supplier.resources.tsx",
+  "offset": 210,
+  "limit": 100
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 10:19:42 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+210	    navigate("/supplier/resources");
+211	  };
+212	
+213	  const openCreate = () => {
+214	    setEditItem(null);
+215	    setTitleValue("");
+216	    setModalOpen(true);
+217	  };
+218	
+219	  const openEdit = (r: ResourceDoc) => {
+220	    setEditItem(r);
+221	    setTitleValue(r.title);
+222	    setModalOpen(true);
+223	  };
+224	
+225	  const autoSlug = generateSlug(titleValue);
+226	
+227	  return (
+228	    <div>
+229	      <div className="flex items-center justify-between mb-6">
+230	        <div>
+231	          <h1 className="text-2xl font-bold text-gray-800">Resources</h1>
+232	          <p className="text-sm text-gray-500 mt-1">
+233	            {total} total records — displayed to owners on the PWA
+234	          </p>
+235	        </div>
+236	        <button
+237	          onClick={openCreate}
+238	          className="px-4 py-2 bg-teal-700 text-white rounded hover:bg-teal-800 text-sm font-medium"
+239	        >
+240	          + Add Resource
+241	        </button>
+242	      </div>
+243	
+244	      <div
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:19:49 AM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\supplier.resources.tsx",
+  "old_string": "        <button\n          onClick={openCreate}\n          className=\"px-4 py-2 bg-teal-700 text-white rounded hover:bg-teal-800 text-sm font-medium\"\n        >\n          + Add Resource\n        </button>\n      </div>",
+  "new_string": "        <div className=\"flex items-center gap-3\">\n          {reorderMode ? (\n            <>\n              <button\n                type=\"button\"\n                onClick={handleCancelReorder}\n                disabled={isSavingOrder}\n                className=\"px-4 py-2 border border-gray-300 rounded hover:bg-gray-50 text-sm font-medium disabled:opacity-50\"\n              >\n                Cancel\n              </button>\n              <button\n                type=\"button\"\n                onClick={handleSaveOrder}\n                disabled={isSavingOrder}\n                className=\"px-4 py-2 bg-teal-700 text-white rounded hover:bg-teal-800 text-sm font-medium disabled:opacity-50\"\n              >\n                {isSavingOrder ? \"Saving...\" : \"Save Order\"}\n              </button>\n            </>\n          ) : (\n            <>\n              <button\n                onClick={() => navigate(\"/supplier/resources?mode=reorder\")}\n                className=\"px-4 py-2 bg-white border border-teal-700 text-teal-700 rounded hover:bg-teal-50 text-sm font-medium\"\n              >\n                Rearrange Order\n              </button>\n              <button\n                onClick={openCreate}\n                className=\"px-4 py-2 bg-teal-700 text-white rounded hover:bg-teal-800 text-sm font-medium\"\n              >\n                + Add Resource\n              </button>\n            </>\n          )}\n        </div>\n      </div>"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 10:19:50 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\supplier.resources.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:19:51 AM</sup>
+
+Now the table body and pagination.
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:19:52 AM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\supplier.resources.tsx",
+  "offset": 270,
+  "limit": 70
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 10:19:52 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+270	            </>
+271	          )}
+272	        </div>
+273	      </div>
+274	
+275	      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+276	        <div className="overflow-x-auto">
+277	        <table className="w-full text-sm">
+278	          <thead className="bg-gray-50 border-b border-gray-200">
+279	            <tr>
+280	              <th className="text-left px-4 py-3 font-semibold text-gray-600">Title</th>
+281	              <th className="text-left px-4 py-3 font-semibold text-gray-600">Category</th>
+282	              <th className="text-left px-4 py-3 font-semibold text-gray-600">Slug</th>
+283	              <th className="text-left px-4 py-3 font-semibold text-gray-600">Status</th>
+284	              <th className="text-left px-4 py-3 font-semibold text-gray-600">Actions</th>
+285	            </tr>
+286	          </thead>
+287	          <tbody className="divide-y divide-gray-100">
+288	            {resources.length === 0 && (
+289	              <tr>
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:19:55 AM</sup>
+
+<details>
+<summary>Tool: <code>Read</code></summary>
+
+```json
+{
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\supplier.resources.tsx",
+  "offset": 339,
+  "limit": 30
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 10:19:55 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+339	                        <button
+340	                          type="submit"
+341	                          className="text-green-600 hover:underline text-xs font-medium"
+342	                        >
+343	                          Restore
+344	                        </button>
+345	                      </Form>
+346	                    )}
+347	                  </div>
+348	                </td>
+349	              </tr>
+350	            ))}
+351	          </tbody>
+352	        </table>
+353	        </div>
+354	      </div>
+355	
+356	      {totalPages > 1 && (
+357	        <div className="flex items-center gap-3 mt-4 text-sm">
+358	          <a
+359	            href={`?page=${page - 1}`}
+360	            className={page <= 1 ? "pointer-events-none opacity-40" : ""}
+361	          >
+362	            <span className="px-3 py-1.5 border rounded bg-white hover:bg-gray-50 cursor-pointer">
+363	              ← Previous
+364	            </span>
+365	          </a>
+366	          <span className="text-gray-600">
+36
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:20:11 AM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\supplier.resources.tsx",
+  "old_string": "          <thead className=\"bg-gray-50 border-b border-gray-200\">\n            <tr>\n              <th className=\"text-left px-4 py-3 font-semibold text-gray-600\">Title</th>\n              <th className=\"text-left px-4 py-3 font-semibold text-gray-600\">Category</th>\n              <th className=\"text-left px-4 py-3 font-semibold text-gray-600\">Slug</th>\n              <th className=\"text-left px-4 py-3 font-semibold text-gray-600\">Status</th>\n              <th className=\"text-left px-4 py-3 font-semibold text-gray-600\">Actions</th>\n            </tr>\n          </thead>\n          <tbody className=\"divide-y divide-gray-100\">\n            {resources.length === 0 && (\n              <tr>\n                <td colSpan={5} className=\"text-center py-10 text-gray-400\">\n                  No resources found.\n                </td>\n              </tr>\n            )}\n            {resources.map((r: any) => (\n              <tr key={r._id} className=\"hover:bg-gray-50\">\n                <td className=\"px-4 py-3 text-gray-800 font-medium\">{r.title}</td>\n                <td className=\"px-4 py-3 text-gray-600\">{r.category}</td>\n                <td className=\"px-4 py-3 font-mono text-xs text-gray-500\">{r.slug}</td>\n                <td className=\"px-4 py-3\">\n                  <span\n                    className={`px-2 py-0.5 rounded-full text-xs font-medium ${\n                      r.is_active\n                        ? \"bg-green-100 text-green-700\"\n                        : \"bg-red-100 text-red-700\"\n                    }`}\n                  >\n                    {r.is_active ? \"Active\" : \"Inactive\"}\n                  </span>\n                </td>\n                <td className=\"px-4 py-3\">\n                  <div className=\"flex items-center gap-3\">\n                    <button\n 
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 10:20:12 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\supplier.resources.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:20:14 AM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\supplier.resources.tsx",
+  "old_string": "      {totalPages > 1 && (",
+  "new_string": "      {!reorderMode && totalPages > 1 && ("
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 10:20:15 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\supplier.resources.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:20:18 AM</sup>
+
+Now let's typecheck the backend to catch any TS issues.
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:20:19 AM</sup>
+
+<details>
+<summary>Tool: <code>Bash</code></summary>
+
+```json
+{
+  "command": "cd \"d:/projects/production-hydro-colon-therapy/backend\" && (npx tsc --noEmit -p . 2>&1 || true) | head -100",
+  "description": "Typecheck backend after resource ordering feature"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 10:20:36 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+app/routes/api/auth.login.ts(34,36): error TS2339: Property 'userId' does not exist on type 'string | JwtPayload'.
+  Property 'userId' does not exist on type 'string'.
+app/routes/api/auth.login.ts(36,77): error TS2339: Property 'userId' does not exist on type 'string | JwtPayload'.
+  Property 'userId' does not exist on type 'string'.
+app/routes/supplier.machines.tsx(600,35): error TS18047: 'editModal' is possibly 'null'.
+app/routes/supplier.machines.tsx(613,33): error TS18047: 'editModal' is possibly 'null'.
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:20:39 AM</sup>
+
+These are pre-existing errors unrelated to my changes (auth.login.ts and supplier.machines.tsx). No errors from the files I touched. Let's confirm specifically.
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:20:40 AM</sup>
+
+<details>
+<summary>Tool: <code>Bash</code></summary>
+
+```json
+{
+  "command": "cd \"d:/projects/production-hydro-colon-therapy/backend\" && (npx tsc --noEmit -p . 2>&1 || true) | grep -E \"admin.resources|supplier.resources|api/resources|models/Resource\" ",
+  "description": "Filter typecheck output to touched files"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 10:20:50 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+(Bash completed with no output)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:20:57 AM</sup>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:21:01 AM</sup>
+
+Both `admin.resources.tsx` and `supplier.resources.tsx` now support:
+
+- **"Rearrange Order"** button → navigates to `?mode=reorder`, which makes the loader fetch the full unpaginated list sorted by `sort_order`
+- Drag-and-drop rows (native HTML5 DnD, no new dependency) with a `⠿` handle, replacing the Edit/Deactivate/Delete actions with a "Drag to reorder" label while active
+- **Save Order** / **Cancel** buttons replacing the normal header actions and pagination in reorder mode
+- A new `reorder` action intent that bulk-writes `sort_order` for the dragged sequence (supplier-scoped via `supplier_id` filter on the supplier side)
+- `Resource` and `SupplierResource` models gained a `sort_order: Number` field (default `0`, so existing data is unaffected until someone rearranges)
+- The Sync-to-Suppliers action now carries `sort_order` over so a supplier's initial view matches admin's order
+- `api/resources.ts` now sorts both the supplier-specific and global-fallback queries by `sort_order` first
+
+`npx tsc --noEmit` passes clean on all touched files (the only remaining errors are pre-existing, in unrelated files `auth.login.ts` and `supplier.machines.tsx`).
+
+
+---
+
+## User <sup>8/25/2026, 10:30:37 AM</sup>
+
+@backend/app/routes/admin.resources.tsx add button to sync only resource order with supplier resources. If supplier resource order value is zero update it with admin value.
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:30:45 AM</sup>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:31:00 AM</sup>
+
+<details>
+<summary>Tool: <code>Write</code></summary>
+
+```json
+{
+  "file_path": "C:\\Users\\Gaurav\\.claude\\plans\\frontend-src-pages-therapy-tsx-right-no-jaunty-popcorn.md",
+  "content": "# Sync only resource order to suppliers\n\n## Context\n\n`admin.resources.tsx` already has a \"Sync to Suppliers\" button (`intent === \"sync\"`) that copies any admin `Resource` a supplier is missing into their `SupplierResource` collection, and admin's `sort_order` field (added for the drag-reorder feature) already carries over on that initial copy. But suppliers who already had their `SupplierResource` docs before ordering existed — or whose orders were separately set to `0` for another reason — never get admin's order applied, since the existing sync only touches missing resources, never existing ones. The user wants a second, narrower button that pushes *only* `sort_order` from admin to matching supplier resources, and only overwrites a supplier resource's order when it's currently `0` (so a supplier who already customized their own order via \"Rearrange Order\" is left alone).\n\n## Approach\n\n### `backend/app/routes/admin.resources.tsx` — new action intent `sync_order`\n- Fetch all admin `Resource` docs (`slug`, `sort_order`).\n- Fetch all `SupplierResource` docs where `sort_order: 0` (candidates for update) — matching is by `slug`, the same key already used by the existing `sync` intent for supplier resources vs. admin resources (slugs are unique per supplier but not globally, so this correctly maps each supplier's copy of a given resource back to the admin original).\n- For each candidate whose slug matches an admin resource with a non-zero `sort_order`, build an `updateOne` bulk op setting `sort_order` to admin's value. Skip candidates with no matching admin slug, and skip when admin's own order is still `0` (nothing to propagate).\n- Run one `SupplierResource.bulkWrite(ops)` (mirrors the pattern in the existing `reorder` intent) and return `{ orderSyncSuccess: true, updated: <count> }`.\n\n### UI\n- Add a **\"Sync Order to Suppli
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 10:31:01 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file C:\Users\Gaurav\.claude\plans\frontend-src-pages-therapy-tsx-right-no-jaunty-popcorn.md has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:31:02 AM</sup>
+
+<details>
+<summary>Tool: <code>ExitPlanMode</code></summary>
+
+```json
+{
+  "plan": "# Sync only resource order to suppliers\n\n## Context\n\n`admin.resources.tsx` already has a \"Sync to Suppliers\" button (`intent === \"sync\"`) that copies any admin `Resource` a supplier is missing into their `SupplierResource` collection, and admin's `sort_order` field (added for the drag-reorder feature) already carries over on that initial copy. But suppliers who already had their `SupplierResource` docs before ordering existed — or whose orders were separately set to `0` for another reason — never get admin's order applied, since the existing sync only touches missing resources, never existing ones. The user wants a second, narrower button that pushes *only* `sort_order` from admin to matching supplier resources, and only overwrites a supplier resource's order when it's currently `0` (so a supplier who already customized their own order via \"Rearrange Order\" is left alone).\n\n## Approach\n\n### `backend/app/routes/admin.resources.tsx` — new action intent `sync_order`\n- Fetch all admin `Resource` docs (`slug`, `sort_order`).\n- Fetch all `SupplierResource` docs where `sort_order: 0` (candidates for update) — matching is by `slug`, the same key already used by the existing `sync` intent for supplier resources vs. admin resources (slugs are unique per supplier but not globally, so this correctly maps each supplier's copy of a given resource back to the admin original).\n- For each candidate whose slug matches an admin resource with a non-zero `sort_order`, build an `updateOne` bulk op setting `sort_order` to admin's value. Skip candidates with no matching admin slug, and skip when admin's own order is still `0` (nothing to propagate).\n- Run one `SupplierResource.bulkWrite(ops)` (mirrors the pattern in the existing `reorder` intent) and return `{ orderSyncSuccess: true, updated: <count> }`.\n\n### UI\n- Add a **\"Sync Order to Suppliers\"** button next to the existing \"Sync to Suppliers\" button (same outlined style), wrapped in its own `Form` 
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 10:33:34 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+User has approved your plan. You can now start coding. Start with updating your todo list if applicable
+
+Your plan has been saved to: C:\Users\Gaurav\.claude\plans\frontend-src-pages-therapy-tsx-right-no-jaunty-popcorn.md
+You can refer back to it if needed during implementation.
+
+## Approved Plan:
+# Sync only resource order to suppliers
+
+## Context
+
+`admin.resources.tsx` already has a "Sync to Suppliers" button (`intent === "sync"`) that copies any admin `Resource` a supplier is missing into their `SupplierResource` collection, and admin's `sort_order` field (added for the drag-reorder feature) already carries over on that initial copy. But suppliers who already had their `SupplierResource` docs before ordering existed — or whose orders were separately set to `0` for another reason — never get admin's order applied, since the existing sync only touches missing resources, never existing ones. The user wants a second, narrower button that pushes *only* `sort_order` from admin to matching
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:33:36 AM</sup>
+
+Implementing now.
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:33:40 AM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.resources.tsx",
+  "old_string": "    return { syncSuccess: true, added, skipped: toInsert.length - added };\n  }\n\n  return { error: \"Unknown intent.\" };\n}",
+  "new_string": "    return { syncSuccess: true, added, skipped: toInsert.length - added };\n  }\n\n  if (intent === \"sync_order\") {\n    const [adminResources, candidates] = await Promise.all([\n      Resource.find({}).select(\"slug sort_order\").lean(),\n      SupplierResource.find({ sort_order: 0 }).select(\"slug\").lean(),\n    ]);\n\n    const slugToOrder = new Map(\n      (adminResources as any[]).map((r) => [r.slug, r.sort_order ?? 0])\n    );\n\n    const ops = (candidates as any[])\n      .filter((c) => (slugToOrder.get(c.slug) ?? 0) !== 0)\n      .map((c) => ({\n        updateOne: { filter: { _id: c._id }, update: { sort_order: slugToOrder.get(c.slug) } },\n      }));\n\n    let updated = 0;\n    if (ops.length > 0) {\n      const result = await SupplierResource.bulkWrite(ops);\n      updated = result.modifiedCount ?? ops.length;\n    }\n\n    return { orderSyncSuccess: true, updated };\n  }\n\n  return { error: \"Unknown intent.\" };\n}"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 10:33:41 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\admin.resources.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:33:42 AM</sup>
+
+Now the UI: add the `isSyncingOrder` flag, the button, and the success banner.
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:33:44 AM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.resources.tsx",
+  "old_string": "  const isSyncing =\n    isSubmitting && navigation.formData?.get(\"intent\") === \"sync\";\n  const isSavingOrder =",
+  "new_string": "  const isSyncing =\n    isSubmitting && navigation.formData?.get(\"intent\") === \"sync\";\n  const isSyncingOrder =\n    isSubmitting && navigation.formData?.get(\"intent\") === \"sync_order\";\n  const isSavingOrder ="
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 10:33:45 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\admin.resources.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:33:50 AM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.resources.tsx",
+  "old_string": "                  {isSyncing ? \"Syncing...\" : \"Sync to Suppliers\"}\n                </button>\n              </Form>\n              <button\n                onClick={openCreate}",
+  "new_string": "                  {isSyncing ? \"Syncing...\" : \"Sync to Suppliers\"}\n                </button>\n              </Form>\n              <Form\n                method=\"post\"\n                onSubmit={(e) => {\n                  if (!confirm(\"Push the admin resource order to every supplier resource whose order hasn't been customized yet (still at its default). Suppliers who already rearranged their own resources are left unchanged.\")) e.preventDefault();\n                }}\n              >\n                <input type=\"hidden\" name=\"intent\" value=\"sync_order\" />\n                <button\n                  type=\"submit\"\n                  disabled={isSyncingOrder}\n                  className=\"px-4 py-2 bg-white border border-blue-700 text-blue-700 rounded hover:bg-blue-50 text-sm font-medium disabled:opacity-50\"\n                >\n                  {isSyncingOrder ? \"Syncing Order...\" : \"Sync Order to Suppliers\"}\n                </button>\n              </Form>\n              <button\n                onClick={openCreate}"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 10:33:51 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\admin.resources.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:33:55 AM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.resources.tsx",
+  "old_string": "      {actionData?.syncSuccess && (\n        <div className=\"mb-4 p-3 bg-green-50 border border-green-200 text-green-700 rounded text-sm\">\n          Sync complete — {actionData.added} resource{actionData.added === 1 ? \"\" : \"s\"} added to suppliers\n          {actionData.skipped > 0 ? `, ${actionData.skipped} already existed and were left unchanged` : \"\"}.\n        </div>\n      )}",
+  "new_string": "      {actionData?.syncSuccess && (\n        <div className=\"mb-4 p-3 bg-green-50 border border-green-200 text-green-700 rounded text-sm\">\n          Sync complete — {actionData.added} resource{actionData.added === 1 ? \"\" : \"s\"} added to suppliers\n          {actionData.skipped > 0 ? `, ${actionData.skipped} already existed and were left unchanged` : \"\"}.\n        </div>\n      )}\n\n      {actionData?.orderSyncSuccess && (\n        <div className=\"mb-4 p-3 bg-green-50 border border-green-200 text-green-700 rounded text-sm\">\n          Order sync complete — {actionData.updated} supplier resource{actionData.updated === 1 ? \"\" : \"s\"} updated.\n        </div>\n      )}"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 10:33:57 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\admin.resources.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:33:58 AM</sup>
+
+Now typecheck.
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:33:59 AM</sup>
+
+<details>
+<summary>Tool: <code>Bash</code></summary>
+
+```json
+{
+  "command": "cd \"d:/projects/production-hydro-colon-therapy/backend\" && (npx tsc --noEmit -p . 2>&1 || true) | grep -E \"admin.resources\" ",
+  "description": "Typecheck admin.resources.tsx after order-sync feature"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 10:34:15 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+(Bash completed with no output)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:34:18 AM</sup>
+
+No errors in the touched file. Added a **"Sync Order to Suppliers"** button in `admin.resources.tsx`:
+
+- New action intent `sync_order`: matches admin `Resource` docs to `SupplierResource` docs by `slug`, and updates `sort_order` only on supplier resources currently at `0`, using admin's `sort_order` (skipped if admin's own order is also `0`). One `bulkWrite` call.
+- New button next to "Sync to Suppliers" with a confirm dialog explaining the behavior, a loading state ("Syncing Order..."), and a success banner showing how many supplier resources were updated.
+- Suppliers who've already used "Rearrange Order" (non-zero `sort_order`) are left untouched, as requested.
+
+
+---
+
+## User <sup>8/25/2026, 10:35:51 AM</sup>
+
+<ide_opened_file>The user opened the file d:\projects\production-hydro-colon-therapy\Recommendations\faq-data-export-import-backup.html in the IDE. This may or may not be related to the current task.</ide_opened_file>
+
+@backend/app/routes/admin.resources.tsx and @backend/app/routes/supplier.resources.tsx the order rearrage dragg and drop is not working at all.
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:36:48 AM</sup>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:37:02 AM</sup>
+
+<details>
+<summary>Tool: <code>Write</code></summary>
+
+```json
+{
+  "file_path": "C:\\Users\\Gaurav\\.claude\\plans\\frontend-src-pages-therapy-tsx-right-no-jaunty-popcorn.md",
+  "content": "# Fix broken drag-and-drop reordering in Resources tables\n\n## Context\n\nThe \"Rearrange Order\" drag-and-drop added to `admin.resources.tsx` and `supplier.resources.tsx` doesn't work at all — dragging a row produces no reordering. Both files use the same `<tr draggable={reorderMode}>` pattern with only `onDragStart` (sets `dragIndex.current`), `onDragOver` (splices `orderedRows`), and `onDragEnd` (clears `dragIndex.current`) handlers.\n\nTwo real bugs explain a total failure (not just flakiness):\n1. **No `dataTransfer.setData(...)` call in `onDragStart`.** Per the HTML5 drag-and-drop spec, some browsers (notably Firefox, and WebViews used by embedded/older Chromium) require `dataTransfer.setData` to be called during `dragstart`, or the browser refuses to start a valid drag session at all — meaning `dragover`/`drop` never fire afterward, so `orderedRows` never updates no matter how the row is dragged.\n2. **No `user-select: none` on the draggable rows.** The table cells contain plain selectable text (title, category, slug). Clicking down on that text and moving the mouse is what a user naturally does to \"drag a row\" — but without disabling text selection, the browser interprets that same mousedown+move as starting a **text selection**, not a native HTML5 element drag, so the row's `draggable` behavior is preempted before `dragstart` ever fires.\n3. Missing `dataTransfer.dropEffect` in `onDragOver` and no `onDrop` handler at all — not fatal on their own, but combined with the above, the drag/drop cycle never completes cleanly (some browsers show a \"no drop allowed\" cursor and cancel/snap back).\n\n## Approach\n\nApply the same fix to both `admin.resources.tsx` and `supplier.resources.tsx` (identical drag logic in each):\n\n1. **`handleDragStart`**: change signature to receive the event, and call `e.dataTransfer.effectAllowed = 'move'` 
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 10:37:03 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file C:\Users\Gaurav\.claude\plans\frontend-src-pages-therapy-tsx-right-no-jaunty-popcorn.md has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:37:04 AM</sup>
+
+<details>
+<summary>Tool: <code>ExitPlanMode</code></summary>
+
+```json
+{
+  "plan": "# Fix broken drag-and-drop reordering in Resources tables\n\n## Context\n\nThe \"Rearrange Order\" drag-and-drop added to `admin.resources.tsx` and `supplier.resources.tsx` doesn't work at all — dragging a row produces no reordering. Both files use the same `<tr draggable={reorderMode}>` pattern with only `onDragStart` (sets `dragIndex.current`), `onDragOver` (splices `orderedRows`), and `onDragEnd` (clears `dragIndex.current`) handlers.\n\nTwo real bugs explain a total failure (not just flakiness):\n1. **No `dataTransfer.setData(...)` call in `onDragStart`.** Per the HTML5 drag-and-drop spec, some browsers (notably Firefox, and WebViews used by embedded/older Chromium) require `dataTransfer.setData` to be called during `dragstart`, or the browser refuses to start a valid drag session at all — meaning `dragover`/`drop` never fire afterward, so `orderedRows` never updates no matter how the row is dragged.\n2. **No `user-select: none` on the draggable rows.** The table cells contain plain selectable text (title, category, slug). Clicking down on that text and moving the mouse is what a user naturally does to \"drag a row\" — but without disabling text selection, the browser interprets that same mousedown+move as starting a **text selection**, not a native HTML5 element drag, so the row's `draggable` behavior is preempted before `dragstart` ever fires.\n3. Missing `dataTransfer.dropEffect` in `onDragOver` and no `onDrop` handler at all — not fatal on their own, but combined with the above, the drag/drop cycle never completes cleanly (some browsers show a \"no drop allowed\" cursor and cancel/snap back).\n\n## Approach\n\nApply the same fix to both `admin.resources.tsx` and `supplier.resources.tsx` (identical drag logic in each):\n\n1. **`handleDragStart`**: change signature to receive the event, and call `e.dataTransfer.effectAllowed = 'move'` and `e.dataTransfer.setData('text/plain', String(index))` before setting `dragIndex.current = index`.\n2. **`handl
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 10:39:28 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+User has approved your plan. You can now start coding. Start with updating your todo list if applicable
+
+Your plan has been saved to: C:\Users\Gaurav\.claude\plans\frontend-src-pages-therapy-tsx-right-no-jaunty-popcorn.md
+You can refer back to it if needed during implementation.
+
+## Approved Plan:
+# Fix broken drag-and-drop reordering in Resources tables
+
+## Context
+
+The "Rearrange Order" drag-and-drop added to `admin.resources.tsx` and `supplier.resources.tsx` doesn't work at all — dragging a row produces no reordering. Both files use the same `<tr draggable={reorderMode}>` pattern with only `onDragStart` (sets `dragIndex.current`), `onDragOver` (splices `orderedRows`), and `onDragEnd` (clears `dragIndex.current`) handlers.
+
+Two real bugs explain a total failure (not just flakiness):
+1. **No `dataTransfer.setData(...)` call in `onDragStart`.** Per the HTML5 drag-and-drop spec, some browsers (notably Firefox, and WebViews used by embedded/older Chromium) require `dataTransfer.setData` 
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:39:30 AM</sup>
+
+Implementing the fix in both files.
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:39:35 AM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.resources.tsx",
+  "old_string": "  const handleDragStart = (index: number) => () => {\n    dragIndex.current = index;\n  };\n  const handleDragOver = (index: number) => (e: React.DragEvent) => {\n    e.preventDefault();\n    if (dragIndex.current === null || dragIndex.current === index) return;\n    setOrderedRows((rows) => {\n      const next = [...rows];\n      const [moved] = next.splice(dragIndex.current as number, 1);\n      next.splice(index, 0, moved);\n      return next;\n    });\n    dragIndex.current = index;\n  };\n  const handleDragEnd = () => {\n    dragIndex.current = null;\n  };",
+  "new_string": "  const handleDragStart = (index: number) => (e: React.DragEvent) => {\n    e.dataTransfer.effectAllowed = \"move\";\n    e.dataTransfer.setData(\"text/plain\", String(index));\n    dragIndex.current = index;\n  };\n  const handleDragOver = (index: number) => (e: React.DragEvent) => {\n    e.preventDefault();\n    e.dataTransfer.dropEffect = \"move\";\n    if (dragIndex.current === null || dragIndex.current === index) return;\n    setOrderedRows((rows) => {\n      const next = [...rows];\n      const [moved] = next.splice(dragIndex.current as number, 1);\n      next.splice(index, 0, moved);\n      return next;\n    });\n    dragIndex.current = index;\n  };\n  const handleDragEnd = () => {\n    dragIndex.current = null;\n  };\n  const handleDrop = (e: React.DragEvent) => {\n    e.preventDefault();\n    handleDragEnd();\n  };"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 10:39:36 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\admin.resources.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:39:40 AM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.resources.tsx",
+  "old_string": "              <tr\n                key={r._id}\n                className={`hover:bg-gray-50 ${reorderMode ? \"cursor-move\" : \"\"}`}\n                draggable={reorderMode}\n                onDragStart={reorderMode ? handleDragStart(index) : undefined}\n                onDragOver={reorderMode ? handleDragOver(index) : undefined}\n                onDragEnd={reorderMode ? handleDragEnd : undefined}\n              >",
+  "new_string": "              <tr\n                key={r._id}\n                className={`hover:bg-gray-50 ${reorderMode ? \"cursor-move select-none\" : \"\"}`}\n                draggable={reorderMode}\n                onDragStart={reorderMode ? handleDragStart(index) : undefined}\n                onDragOver={reorderMode ? handleDragOver(index) : undefined}\n                onDrop={reorderMode ? handleDrop : undefined}\n                onDragEnd={reorderMode ? handleDragEnd : undefined}\n              >"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 10:39:41 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\admin.resources.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:39:43 AM</sup>
+
+Now the same fix in supplier.resources.tsx.
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:39:46 AM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\supplier.resources.tsx",
+  "old_string": "  const handleDragStart = (index: number) => () => {\n    dragIndex.current = index;\n  };\n  const handleDragOver = (index: number) => (e: React.DragEvent) => {\n    e.preventDefault();\n    if (dragIndex.current === null || dragIndex.current === index) return;\n    setOrderedRows((rows) => {\n      const next = [...rows];\n      const [moved] = next.splice(dragIndex.current as number, 1);\n      next.splice(index, 0, moved);\n      return next;\n    });\n    dragIndex.current = index;\n  };\n  const handleDragEnd = () => {\n    dragIndex.current = null;\n  };",
+  "new_string": "  const handleDragStart = (index: number) => (e: React.DragEvent) => {\n    e.dataTransfer.effectAllowed = \"move\";\n    e.dataTransfer.setData(\"text/plain\", String(index));\n    dragIndex.current = index;\n  };\n  const handleDragOver = (index: number) => (e: React.DragEvent) => {\n    e.preventDefault();\n    e.dataTransfer.dropEffect = \"move\";\n    if (dragIndex.current === null || dragIndex.current === index) return;\n    setOrderedRows((rows) => {\n      const next = [...rows];\n      const [moved] = next.splice(dragIndex.current as number, 1);\n      next.splice(index, 0, moved);\n      return next;\n    });\n    dragIndex.current = index;\n  };\n  const handleDragEnd = () => {\n    dragIndex.current = null;\n  };\n  const handleDrop = (e: React.DragEvent) => {\n    e.preventDefault();\n    handleDragEnd();\n  };"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 10:39:48 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\supplier.resources.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:39:51 AM</sup>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:39:51 AM</sup>
+
+That file change is unrelated to this task (looks like the user manually edited the FAQ HTML) — noted, not touching it. Continuing the drag-and-drop fix.
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:39:54 AM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\supplier.resources.tsx",
+  "old_string": "              <tr\n                key={r._id}\n                className={`hover:bg-gray-50 ${reorderMode ? \"cursor-move\" : \"\"}`}\n                draggable={reorderMode}\n                onDragStart={reorderMode ? handleDragStart(index) : undefined}\n                onDragOver={reorderMode ? handleDragOver(index) : undefined}\n                onDragEnd={reorderMode ? handleDragEnd : undefined}\n              >",
+  "new_string": "              <tr\n                key={r._id}\n                className={`hover:bg-gray-50 ${reorderMode ? \"cursor-move select-none\" : \"\"}`}\n                draggable={reorderMode}\n                onDragStart={reorderMode ? handleDragStart(index) : undefined}\n                onDragOver={reorderMode ? handleDragOver(index) : undefined}\n                onDrop={reorderMode ? handleDrop : undefined}\n                onDragEnd={reorderMode ? handleDragEnd : undefined}\n              >"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 10:39:55 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\supplier.resources.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:39:57 AM</sup>
+
+Now typecheck both files.
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:39:58 AM</sup>
+
+<details>
+<summary>Tool: <code>Bash</code></summary>
+
+```json
+{
+  "command": "cd \"d:/projects/production-hydro-colon-therapy/backend\" && (npx tsc --noEmit -p . 2>&1 || true) | grep -E \"admin.resources|supplier.resources\"",
+  "description": "Typecheck after drag-and-drop fix"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 10:40:12 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+(Bash completed with no output)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:40:16 AM</sup>
+
+Clean. Fixed the drag-and-drop in both `admin.resources.tsx` and `supplier.resources.tsx`:
+
+- **`dataTransfer.setData(...)` in `onDragStart`** — without this, some browsers (Firefox especially) never actually start a valid drag session, so `dragover`/`drop` never fire.
+- **`select-none` on the row while in reorder mode** — otherwise clicking-and-dragging on the row's text (title/category/slug) gets hijacked into a text-selection drag instead of the native row drag.
+- **`dataTransfer.dropEffect = "move"`** on drag-over, and a new **`onDrop`** handler that finalizes the drag cleanly (the actual reordering still happens live during drag-over, same as before).
+
+`npx tsc --noEmit` is clean on both files.
+
+
+---
+
+## User <sup>8/25/2026, 10:46:13 AM</sup>
+
+@backend/app/routes/admin.resources.tsx dragg is working but drop is not, so we cannot update the order.
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:46:35 AM</sup>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:46:48 AM</sup>
+
+<details>
+<summary>Tool: <code>Write</code></summary>
+
+```json
+{
+  "file_path": "C:\\Users\\Gaurav\\.claude\\plans\\frontend-src-pages-therapy-tsx-right-no-jaunty-popcorn.md",
+  "content": "# Fix drag-and-drop: drop does nothing (order never updates)\n\n## Context\n\nDrag now visibly starts (previous fix for `dataTransfer.setData`/`select-none` worked), but dropping a row does not reorder the list or let **Save Order** persist anything useful. The remaining bug is architectural: the current code reorders `orderedRows` **inside `onDragOver`**, on every hover, via `setOrderedRows(...)`. Since each row's `<tr>` is keyed by `_id`, React's reconciler moves the actual DOM node to its new position in the table whenever `orderedRows` changes — but that DOM node is the very element the browser has an **active native drag session** on. Repositioning the source element mid-drag is a well-known way to make browsers silently abort the drag session: the drag \"looks\" like it's working (the ghost image still follows the cursor, since that's a separate OS-level drag image, not the DOM node), but the browser has already lost the association between the drag session and a valid drop target, so `drop` never fires meaningfully and nothing is ever committed.\n\n## Approach\n\nStop mutating the DOM (`orderedRows`) while the drag is in progress. Move the actual reorder from `onDragOver` to `onDrop`, so the array only changes once — after the browser has already committed to the drop — which is the standard robust pattern for HTML5 native drag-and-drop reordering.\n\nIn both `admin.resources.tsx` and `supplier.resources.tsx`:\n\n1. **`handleDragOver(index)`**: keep only `e.preventDefault()` and `e.dataTransfer.dropEffect = \"move\"` — no more `setOrderedRows` call, no DOM mutation while hovering.\n2. **`handleDrop(index)`** (currently takes no index — needs to become curried like the other handlers): `e.preventDefault()`; if `dragIndex.current !== null && dragIndex.current !== index`, perform the splice (`moved` from `dragIndex.current`, insert at `i
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 10:46:49 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file C:\Users\Gaurav\.claude\plans\frontend-src-pages-therapy-tsx-right-no-jaunty-popcorn.md has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:46:50 AM</sup>
+
+<details>
+<summary>Tool: <code>ExitPlanMode</code></summary>
+
+```json
+{
+  "plan": "# Fix drag-and-drop: drop does nothing (order never updates)\n\n## Context\n\nDrag now visibly starts (previous fix for `dataTransfer.setData`/`select-none` worked), but dropping a row does not reorder the list or let **Save Order** persist anything useful. The remaining bug is architectural: the current code reorders `orderedRows` **inside `onDragOver`**, on every hover, via `setOrderedRows(...)`. Since each row's `<tr>` is keyed by `_id`, React's reconciler moves the actual DOM node to its new position in the table whenever `orderedRows` changes — but that DOM node is the very element the browser has an **active native drag session** on. Repositioning the source element mid-drag is a well-known way to make browsers silently abort the drag session: the drag \"looks\" like it's working (the ghost image still follows the cursor, since that's a separate OS-level drag image, not the DOM node), but the browser has already lost the association between the drag session and a valid drop target, so `drop` never fires meaningfully and nothing is ever committed.\n\n## Approach\n\nStop mutating the DOM (`orderedRows`) while the drag is in progress. Move the actual reorder from `onDragOver` to `onDrop`, so the array only changes once — after the browser has already committed to the drop — which is the standard robust pattern for HTML5 native drag-and-drop reordering.\n\nIn both `admin.resources.tsx` and `supplier.resources.tsx`:\n\n1. **`handleDragOver(index)`**: keep only `e.preventDefault()` and `e.dataTransfer.dropEffect = \"move\"` — no more `setOrderedRows` call, no DOM mutation while hovering.\n2. **`handleDrop(index)`** (currently takes no index — needs to become curried like the other handlers): `e.preventDefault()`; if `dragIndex.current !== null && dragIndex.current !== index`, perform the splice (`moved` from `dragIndex.current`, insert at `index`) via `setOrderedRows`, exactly the logic that used to live in `onDragOver`; then reset `dragIndex.current = 
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 10:47:01 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+User has approved your plan. You can now start coding. Start with updating your todo list if applicable
+
+Your plan has been saved to: C:\Users\Gaurav\.claude\plans\frontend-src-pages-therapy-tsx-right-no-jaunty-popcorn.md
+You can refer back to it if needed during implementation.
+
+## Approved Plan:
+# Fix drag-and-drop: drop does nothing (order never updates)
+
+## Context
+
+Drag now visibly starts (previous fix for `dataTransfer.setData`/`select-none` worked), but dropping a row does not reorder the list or let **Save Order** persist anything useful. The remaining bug is architectural: the current code reorders `orderedRows` **inside `onDragOver`**, on every hover, via `setOrderedRows(...)`. Since each row's `<tr>` is keyed by `_id`, React's reconciler moves the actual DOM node to its new position in the table whenever `orderedRows` changes — but that DOM node is the very element the browser has an **active native drag session** on. Repositioning the source element mid-drag is a well-known
+...(truncated)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:47:03 AM</sup>
+
+Implementing the fix in both files.
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:47:07 AM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.resources.tsx",
+  "old_string": "  const handleDragOver = (index: number) => (e: React.DragEvent) => {\n    e.preventDefault();\n    e.dataTransfer.dropEffect = \"move\";\n    if (dragIndex.current === null || dragIndex.current === index) return;\n    setOrderedRows((rows) => {\n      const next = [...rows];\n      const [moved] = next.splice(dragIndex.current as number, 1);\n      next.splice(index, 0, moved);\n      return next;\n    });\n    dragIndex.current = index;\n  };\n  const handleDragEnd = () => {\n    dragIndex.current = null;\n  };\n  const handleDrop = (e: React.DragEvent) => {\n    e.preventDefault();\n    handleDragEnd();\n  };",
+  "new_string": "  const handleDragOver = (index: number) => (e: React.DragEvent) => {\n    e.preventDefault();\n    e.dataTransfer.dropEffect = \"move\";\n  };\n  const handleDragEnd = () => {\n    dragIndex.current = null;\n  };\n  const handleDrop = (index: number) => (e: React.DragEvent) => {\n    e.preventDefault();\n    if (dragIndex.current !== null && dragIndex.current !== index) {\n      setOrderedRows((rows) => {\n        const next = [...rows];\n        const [moved] = next.splice(dragIndex.current as number, 1);\n        next.splice(index, 0, moved);\n        return next;\n      });\n    }\n    dragIndex.current = null;\n  };"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 10:47:08 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\admin.resources.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:47:11 AM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\admin.resources.tsx",
+  "old_string": "                onDrop={reorderMode ? handleDrop : undefined}",
+  "new_string": "                onDrop={reorderMode ? handleDrop(index) : undefined}"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 10:47:12 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\admin.resources.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:47:15 AM</sup>
+
+Now the same fix in supplier.resources.tsx.
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:47:18 AM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\supplier.resources.tsx",
+  "old_string": "  const handleDragOver = (index: number) => (e: React.DragEvent) => {\n    e.preventDefault();\n    e.dataTransfer.dropEffect = \"move\";\n    if (dragIndex.current === null || dragIndex.current === index) return;\n    setOrderedRows((rows) => {\n      const next = [...rows];\n      const [moved] = next.splice(dragIndex.current as number, 1);\n      next.splice(index, 0, moved);\n      return next;\n    });\n    dragIndex.current = index;\n  };\n  const handleDragEnd = () => {\n    dragIndex.current = null;\n  };\n  const handleDrop = (e: React.DragEvent) => {\n    e.preventDefault();\n    handleDragEnd();\n  };",
+  "new_string": "  const handleDragOver = (index: number) => (e: React.DragEvent) => {\n    e.preventDefault();\n    e.dataTransfer.dropEffect = \"move\";\n  };\n  const handleDragEnd = () => {\n    dragIndex.current = null;\n  };\n  const handleDrop = (index: number) => (e: React.DragEvent) => {\n    e.preventDefault();\n    if (dragIndex.current !== null && dragIndex.current !== index) {\n      setOrderedRows((rows) => {\n        const next = [...rows];\n        const [moved] = next.splice(dragIndex.current as number, 1);\n        next.splice(index, 0, moved);\n        return next;\n      });\n    }\n    dragIndex.current = null;\n  };"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 10:47:19 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\supplier.resources.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:47:22 AM</sup>
+
+<details>
+<summary>Tool: <code>Edit</code></summary>
+
+```json
+{
+  "replace_all": false,
+  "file_path": "d:\\projects\\production-hydro-colon-therapy\\backend\\app\\routes\\supplier.resources.tsx",
+  "old_string": "                onDrop={reorderMode ? handleDrop : undefined}",
+  "new_string": "                onDrop={reorderMode ? handleDrop(index) : undefined}"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 10:47:23 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+The file d:\projects\production-hydro-colon-therapy\backend\app\routes\supplier.resources.tsx has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:47:25 AM</sup>
+
+<details>
+<summary>Tool: <code>Bash</code></summary>
+
+```json
+{
+  "command": "cd \"d:/projects/production-hydro-colon-therapy/backend\" && (npx tsc --noEmit -p . 2>&1 || true) | grep -E \"admin.resources|supplier.resources\"",
+  "description": "Typecheck after moving reorder logic to onDrop"
+}
+```
+
+</details>
+
+
+---
+
+## User <sup>8/25/2026, 10:47:37 AM</sup>
+
+<details>
+<summary>Tool Result</summary>
+
+```
+(Bash completed with no output)
+```
+
+</details>
+
+
+---
+
+## Assistant <sup>8/25/2026, 10:47:41 AM</sup>
+
+Clean. The root cause: reordering `orderedRows` inside `onDragOver` moved the dragged `<tr>`'s DOM node mid-drag (React's keyed reconciliation repositions it), which silently aborts the browser's native drag session — so `drop` never actually committed anything. Fixed in both files:
+
+- `onDragOver` now only calls `preventDefault()`/sets `dropEffect` — no state changes, no DOM mutation while dragging.
+- The actual splice/reorder moved into `onDrop`, which now takes the target `index` (curried like the other handlers) and updates `orderedRows` once, after the drag session has already completed.
+
+`npx tsc --noEmit` is clean on both files.
 
 
 ---

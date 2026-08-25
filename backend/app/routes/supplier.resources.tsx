@@ -1,5 +1,5 @@
-import { useLoaderData, useActionData, Form, useNavigation } from "react-router";
-import { useState, useEffect } from "react";
+import { useLoaderData, useActionData, Form, useNavigation, useNavigate, useSubmit } from "react-router";
+import { Fragment, useState, useEffect, useRef } from "react";
 import { requireSupplier } from "../lib/auth.server";
 import { connectDB } from "../lib/db";
 import SupplierResource from "../models/SupplierResource";
@@ -13,6 +13,7 @@ type ResourceDoc = {
   content: string;
   category: string;
   is_active: boolean;
+  sort_order: number;
 };
 
 function generateSlug(title: string): string {
@@ -30,15 +31,15 @@ export async function loader({ request }: { request: Request }) {
   await connectDB();
 
   const url = new URL(request.url);
+  const reorderMode = url.searchParams.get("mode") === "reorder";
   const page = Math.max(1, parseInt(url.searchParams.get("page") || "1"));
   const skip = (page - 1) * LIMIT;
 
+  const query = SupplierResource.find({ supplier_id: supplierId }).sort({ sort_order: 1, updated_at: -1 });
+  if (!reorderMode) query.skip(skip).limit(LIMIT);
+
   const [rawResources, total] = await Promise.all([
-    SupplierResource.find({ supplier_id: supplierId })
-      .sort({ updated_at: -1 })
-      .skip(skip)
-      .limit(LIMIT)
-      .lean(),
+    query.lean(),
     SupplierResource.countDocuments({ supplier_id: supplierId }),
   ]);
 
@@ -49,9 +50,10 @@ export async function loader({ request }: { request: Request }) {
     content: r.content,
     category: r.category,
     is_active: r.is_active,
+    sort_order: r.sort_order ?? 0,
   }));
 
-  return { resources, total, page, totalPages: Math.ceil(total / LIMIT) };
+  return { resources, total, page, totalPages: Math.ceil(total / LIMIT), reorderMode };
 }
 
 export async function action({ request }: { request: Request }) {
@@ -129,6 +131,21 @@ export async function action({ request }: { request: Request }) {
     return { success: true };
   }
 
+  if (intent === "reorder") {
+    const ids: string[] = JSON.parse((formData.get("order") as string) || "[]");
+    if (ids.length > 0) {
+      await SupplierResource.bulkWrite(
+        ids.map((id, index) => ({
+          updateOne: {
+            filter: { _id: id, supplier_id: supplierId },
+            update: { sort_order: index },
+          },
+        }))
+      );
+    }
+    return { success: true };
+  }
+
   return { error: "Unknown intent." };
 }
 
@@ -136,22 +153,104 @@ const inputCls =
   "w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm";
 
 export default function SupplierResources() {
-  const { resources, total, page, totalPages } = useLoaderData<typeof loader>();
+  const { resources, total, page, totalPages, reorderMode } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
+  const navigate = useNavigate();
+  const submit = useSubmit();
   const isSubmitting = navigation.state === "submitting";
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editItem, setEditItem] = useState<ResourceDoc | null>(null);
   const [titleValue, setTitleValue] = useState("");
 
+  const [orderedRows, setOrderedRows] = useState<ResourceDoc[]>(resources as ResourceDoc[]);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const dragIndex = useRef<number | null>(null);
+
+  useEffect(() => {
+    setOrderedRows(resources as ResourceDoc[]);
+  }, [resources]);
+
   useEffect(() => {
     if (actionData?.success) {
       setModalOpen(false);
       setEditItem(null);
       setTitleValue("");
+      if (reorderMode) navigate("/supplier/resources");
     }
   }, [actionData]);
+
+  const isSavingOrder =
+    isSubmitting && navigation.formData?.get("intent") === "reorder";
+
+  const handleDragStart = (index: number) => (e: React.DragEvent) => {
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", String(index));
+    dragIndex.current = index;
+
+    const row = e.currentTarget as HTMLTableRowElement;
+    const rect = row.getBoundingClientRect();
+    const wrapperTable = document.createElement("table");
+    wrapperTable.style.position = "fixed";
+    wrapperTable.style.top = "-9999px";
+    wrapperTable.style.left = "-9999px";
+    wrapperTable.style.width = `${rect.width}px`;
+    wrapperTable.style.opacity = "0.95";
+    wrapperTable.style.boxShadow = "0 4px 12px rgba(0,0,0,0.25)";
+    wrapperTable.style.background = "white";
+    const tbody = document.createElement("tbody");
+    tbody.appendChild(row.cloneNode(true));
+    wrapperTable.appendChild(tbody);
+    document.body.appendChild(wrapperTable);
+    e.dataTransfer.setDragImage(wrapperTable, e.clientX - rect.left, e.clientY - rect.top);
+    setTimeout(() => document.body.removeChild(wrapperTable), 0);
+  };
+  const handleDragOver = (index: number) => (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    const from = dragIndex.current;
+    if (from === null) return;
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const isAfter = e.clientY > rect.top + rect.height / 2;
+    const slot = isAfter ? index + 1 : index;
+    if (slot === from || slot === from + 1) return;
+    setDragOverIndex(slot);
+  };
+  const handlePlaceholderDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  };
+  const handleDragEnd = () => {
+    dragIndex.current = null;
+    setDragOverIndex(null);
+  };
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const from = dragIndex.current;
+    const to = dragOverIndex;
+    if (from !== null && to !== null) {
+      setOrderedRows((rows) => {
+        const moved = rows[from];
+        const rest = rows.filter((_, i) => i !== from);
+        const insertAt = to > from ? to - 1 : to;
+        const next = [...rest];
+        next.splice(insertAt, 0, moved);
+        return next;
+      });
+    }
+    dragIndex.current = null;
+    setDragOverIndex(null);
+  };
+  const handleSaveOrder = () => {
+    const formData = new FormData();
+    formData.set("intent", "reorder");
+    formData.set("order", JSON.stringify(orderedRows.map((r) => r._id)));
+    submit(formData, { method: "post" });
+  };
+  const handleCancelReorder = () => {
+    navigate("/supplier/resources");
+  };
 
   const openCreate = () => {
     setEditItem(null);
@@ -176,12 +275,43 @@ export default function SupplierResources() {
             {total} total records — displayed to owners on the PWA
           </p>
         </div>
-        <button
-          onClick={openCreate}
-          className="px-4 py-2 bg-teal-700 text-white rounded hover:bg-teal-800 text-sm font-medium"
-        >
-          + Add Resource
-        </button>
+        <div className="flex items-center gap-3">
+          {reorderMode ? (
+            <>
+              <button
+                type="button"
+                onClick={handleCancelReorder}
+                disabled={isSavingOrder}
+                className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50 text-sm font-medium disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveOrder}
+                disabled={isSavingOrder}
+                className="px-4 py-2 bg-teal-700 text-white rounded hover:bg-teal-800 text-sm font-medium disabled:opacity-50"
+              >
+                {isSavingOrder ? "Saving..." : "Save Order"}
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={() => navigate("/supplier/resources?mode=reorder")}
+                className="px-4 py-2 bg-white border border-teal-700 text-teal-700 rounded hover:bg-teal-50 text-sm font-medium"
+              >
+                Rearrange Order
+              </button>
+              <button
+                onClick={openCreate}
+                className="px-4 py-2 bg-teal-700 text-white rounded hover:bg-teal-800 text-sm font-medium"
+              >
+                + Add Resource
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
@@ -189,6 +319,7 @@ export default function SupplierResources() {
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
+              {reorderMode && <th className="w-10 px-4 py-3" />}
               <th className="text-left px-4 py-3 font-semibold text-gray-600">Title</th>
               <th className="text-left px-4 py-3 font-semibold text-gray-600">Category</th>
               <th className="text-left px-4 py-3 font-semibold text-gray-600">Slug</th>
@@ -197,15 +328,34 @@ export default function SupplierResources() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {resources.length === 0 && (
+            {(reorderMode ? orderedRows : resources).length === 0 && (
               <tr>
-                <td colSpan={5} className="text-center py-10 text-gray-400">
+                <td colSpan={reorderMode ? 6 : 5} className="text-center py-10 text-gray-400">
                   No resources found.
                 </td>
               </tr>
             )}
-            {resources.map((r: any) => (
-              <tr key={r._id} className="hover:bg-gray-50">
+            {(reorderMode ? orderedRows : resources).map((r: any, index: number) => (
+              <Fragment key={r._id}>
+                {reorderMode && dragOverIndex === index && (
+                  <tr onDragOver={handlePlaceholderDragOver} onDrop={handleDrop}>
+                    <td colSpan={6} className="p-0">
+                      <div className="h-10 mx-4 my-1 border-2 border-dashed border-teal-400 bg-teal-50 rounded" />
+                    </td>
+                  </tr>
+                )}
+              <tr
+                className={`hover:bg-gray-50 ${reorderMode ? "cursor-move select-none" : ""}`}
+                draggable={reorderMode}
+                onDragStart={reorderMode ? handleDragStart(index) : undefined}
+                onDragOver={reorderMode ? handleDragOver(index) : undefined}
+                onDrop={reorderMode ? handleDrop : undefined}
+                onDragEnd={reorderMode ? handleDragEnd : undefined}
+                style={((reorderMode && dragIndex.current === index) ? {display: 'none'} : {})}
+              >
+                {reorderMode && (
+                  <td className="px-4 py-3 text-gray-400 text-center select-none">⠿</td>
+                )}
                 <td className="px-4 py-3 text-gray-800 font-medium">{r.title}</td>
                 <td className="px-4 py-3 text-gray-600">{r.category}</td>
                 <td className="px-4 py-3 font-mono text-xs text-gray-500">{r.slug}</td>
@@ -221,6 +371,9 @@ export default function SupplierResources() {
                   </span>
                 </td>
                 <td className="px-4 py-3">
+                  {reorderMode ? (
+                    <span className="text-gray-400 text-xs italic">Drag to reorder</span>
+                  ) : (
                   <div className="flex items-center gap-3">
                     <button
                       onClick={() => openEdit(r as ResourceDoc)}
@@ -257,15 +410,24 @@ export default function SupplierResources() {
                       </Form>
                     )}
                   </div>
+                  )}
                 </td>
               </tr>
+              </Fragment>
             ))}
+            {reorderMode && dragOverIndex === orderedRows.length && (
+              <tr onDragOver={handlePlaceholderDragOver} onDrop={handleDrop}>
+                <td colSpan={6} className="p-0">
+                  <div className="h-10 mx-4 my-1 border-2 border-dashed border-teal-400 bg-teal-50 rounded" />
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
         </div>
       </div>
 
-      {totalPages > 1 && (
+      {!reorderMode && totalPages > 1 && (
         <div className="flex items-center gap-3 mt-4 text-sm">
           <a
             href={`?page=${page - 1}`}

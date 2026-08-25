@@ -18,7 +18,7 @@ export async function loader({ request }: { request: Request }) {
       const supplierId = (assignment as any).supplier_id;
       // Fetch resources specific to the supplier in assending order of creation date time 
 
-      const resources = await SupplierResource.find({ supplier_id: supplierId, is_active: true }).sort({ updated_at: 1 }).lean();
+      const resources = await SupplierResource.find({ supplier_id: supplierId, is_active: true }).sort({ sort_order: 1, updated_at: 1 }).lean();
       if (resources.length > 0) {
         return new Response(JSON.stringify(resources), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
@@ -26,7 +26,7 @@ export async function loader({ request }: { request: Request }) {
   }
 
   // Fallback: return global resources if no machine_id or no supplier found
-  const resources = await Resource.find({ is_active: true }).lean();
+  const resources = await Resource.find({ is_active: true }).sort({ sort_order: 1, updated_at: 1 }).lean();
   return new Response(JSON.stringify(resources), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 }
 
