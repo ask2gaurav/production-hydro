@@ -10,7 +10,14 @@ import { localDB, type LocalResource } from '../db/localDB';
 import api from '../services/api';
 import { useHistory } from 'react-router-dom';
 
-const CATEGORIES = ['FAQ', 'Guide', 'Help', 'Troubleshooting', 'KeyboardTroubleshooting'];
+// Fallback for resources saved before the type/category_label fields existed
+const legacyCategoryLabel: Record<string, string> = {
+  FAQ: 'Frequently Asked Questions',
+  Guide: 'Guidelines & Best Practices',
+  Help: 'Need More Help?',
+  Troubleshooting: 'Troubleshooting',
+  KeyboardTroubleshooting: 'Keyboard Troubleshooting',
+};
 
 const syncResources = async (machineId: string): Promise<void> => {
   if (!navigator.onLine || !machineId) return;
@@ -29,6 +36,9 @@ const syncResources = async (machineId: string): Promise<void> => {
           slug: r.slug,
           content: r.content,
           category: r.category,
+          category_label: r.category_label,
+          type: r.type,
+          sort_order: r.sort_order,
           is_active: r.is_active ?? true,
         });
       } else {
@@ -39,6 +49,9 @@ const syncResources = async (machineId: string): Promise<void> => {
           slug: r.slug,
           content: r.content,
           category: r.category,
+          category_label: r.category_label,
+          type: r.type,
+          sort_order: r.sort_order,
           is_active: r.is_active ?? true,
         });
       }
@@ -49,7 +62,7 @@ const syncResources = async (machineId: string): Promise<void> => {
 };
 
 const Resources: React.FC = () => {
-  const { machineId } = useStore();
+  const { modeStatus, machineId } = useStore();
   const [resources, setResources] = useState<LocalResource[]>([]);
   const [loading, setLoading] = useState(true);
   const history = useHistory();
@@ -58,6 +71,7 @@ const Resources: React.FC = () => {
       .where('machine_id').equals(machineId)
       .and((r) => r.is_active !== false)
       .toArray();
+    local.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
     setResources(local);
     setLoading(false);
   }, [machineId]);
@@ -80,13 +94,9 @@ const Resources: React.FC = () => {
 
   const byCategory = (cat: string) => resources.filter((r) => r.category === cat);
 
-  const categoryLabel: Record<string, string> = {
-    FAQ: 'Frequently Asked Questions',
-    Guide: 'Guidelines & Best Practices',
-    Help: 'Need More Help?',
-    Troubleshooting: 'Troubleshooting',
-    KeyboardTroubleshooting: 'Keyboard Troubleshooting',
-  };
+  const resourceType = (r: LocalResource) => r.type || (r.category === 'FAQ' ? 'FAQ' : 'Description');
+
+  const categories = Array.from(new Set(resources.map((r) => r.category)));
 
   return (
     <IonPage>
@@ -99,12 +109,17 @@ const Resources: React.FC = () => {
         </IonToolbar>
       </IonHeader>
       <IonContent className="ion-padding">
+
+      {/* add if condition to check if app is in demo mode or full   */}
+        {modeStatus && modeStatus.mode === 'demo' && (
         <IonCard>
           <IonCardContent>
             <h2>Need More Help?</h2>
             <p>Contact your supplier to extend your therapy sessions.</p>
           </IonCardContent>
         </IonCard>
+      )}
+        
 
         {loading ? (
           <div style={{ display: 'flex', justifyContent: 'center', padding: '3rem' }}>
@@ -115,15 +130,18 @@ const Resources: React.FC = () => {
             <p>No resources available. Connect to the internet to load resources.</p>
           </div>
         ) : (
-          CATEGORIES.map((cat) => {
+          categories.map((cat) => {
             const items = byCategory(cat);
             if (items.length === 0) return null;
+            const label = items[0].category_label || legacyCategoryLabel[cat] || cat;
+            const faqItems = items.filter((r) => resourceType(r) === 'FAQ');
+            const descriptionItems = items.filter((r) => resourceType(r) !== 'FAQ');
             return (
               <div key={cat}>
-                <h3 style={{ marginTop: '1.25rem', marginBottom: '0.5rem' }}>{categoryLabel[cat] ?? cat}</h3>
-                {cat === 'FAQ' ? (
+                <h3 style={{ marginTop: '1.25rem', marginBottom: '0.5rem' }}>{label}</h3>
+                {faqItems.length > 0 && (
                   <IonAccordionGroup>
-                    {items.map((r) => (
+                    {faqItems.map((r) => (
                       <IonAccordion key={r.id} value={`faq-${r.id}`}>
                         <IonItem slot="header" color="light">
                           <IonLabel>{r.title}</IonLabel>
@@ -136,23 +154,22 @@ const Resources: React.FC = () => {
                       </IonAccordion>
                     ))}
                   </IonAccordionGroup>
-                ) : (
-                  items.map((r) => (
-                    <div
-                      key={r.id}
-                      style={{
-                        border: '1px solid #ccc', borderRadius: '8px',
-                        padding: '0.75rem', backgroundColor: 'white', marginBottom: '1rem',
-                      }}
-                    >
-                      <IonLabel style={{ fontWeight: 600 }}>{r.title}</IonLabel>
-                      <div
-                        className="ion-padding"
-                        dangerouslySetInnerHTML={{ __html: r.content }}
-                      />
-                    </div>
-                  ))
                 )}
+                {descriptionItems.map((r) => (
+                  <div
+                    key={r.id}
+                    style={{
+                      border: '1px solid #ccc', borderRadius: '8px',
+                      padding: '0.75rem', backgroundColor: 'white', marginBottom: '1rem',
+                    }}
+                  >
+                    <IonLabel style={{ fontWeight: 600 }}>{r.title}</IonLabel>
+                    <div
+                      className="ion-padding"
+                      dangerouslySetInnerHTML={{ __html: r.content }}
+                    />
+                  </div>
+                ))}
               </div>
             );
           })

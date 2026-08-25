@@ -6,8 +6,10 @@ const SupplierResourceSchema = new mongoose.Schema({
   slug: { type: String, required: true },
   content: { type: String, required: true },
   category: { type: String, required: true },
+  category_label: { type: String, default: '' },
+  type: { type: String, enum: ['FAQ', 'Description'], default: 'Description' },
   is_active: { type: Boolean, default: true },
-  sort_order: { type: Number, default: 0 },
+  sort_order: { type: Number, default: -1 },
   updated_by: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   updated_at: { type: Date, default: Date.now },
 });

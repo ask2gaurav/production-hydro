@@ -136,6 +136,9 @@ export interface LocalResource {
   slug: string;
   content: string;
   category: string;
+  category_label?: string;
+  type?: string;
+  sort_order?: number;
   is_active: boolean;
 }
 

@@ -9,12 +9,24 @@ import UserType from "../models/UserType";
 
 const LIMIT = 50;
 
+// Mirrors frontend/src/pages/Resources.tsx's legacyCategoryLabel — used to backfill
+// category_label on resources saved before that field existed.
+const LEGACY_CATEGORY_LABEL: Record<string, string> = {
+  FAQ: "Frequently Asked Questions",
+  Guide: "Guidelines & Best Practices",
+  Help: "Need More Help?",
+  Troubleshooting: "Troubleshooting",
+  KeyboardTroubleshooting: "Keyboard Troubleshooting",
+};
+
 type ResourceDoc = {
   _id: string;
   title: string;
   slug: string;
   content: string;
   category: string;
+  category_label: string;
+  type: string;
   is_active: boolean;
   sort_order: number;
 };
@@ -61,6 +73,9 @@ export async function action({ request }: { request: Request }) {
     const title = (formData.get("title") as string)?.trim();
     const content = (formData.get("content") as string)?.trim();
     const category = (formData.get("category") as string)?.trim();
+    const category_label = (formData.get("category_label") as string)?.trim() || "";
+    const rawType = (formData.get("type") as string)?.trim();
+    const type = rawType === "FAQ" ? "FAQ" : "Description";
 
     if (!title || !content || !category) {
       return { error: "Title, content, and category are required." };
@@ -70,7 +85,7 @@ export async function action({ request }: { request: Request }) {
     const slug = generateSlug(rawSlug);
 
     try {
-      await Resource.create({ title, slug, content, category, is_active: true, updated_at: new Date() });
+      await Resource.create({ title, slug, content, category, category_label, type, is_active: true, updated_at: new Date() });
       return { success: true };
     } catch (e: any) {
       if (e.code === 11000) return { error: "A resource with this slug already exists. Change the title or customize the slug." };
@@ -83,6 +98,9 @@ export async function action({ request }: { request: Request }) {
     const title = (formData.get("title") as string)?.trim();
     const content = (formData.get("content") as string)?.trim();
     const category = (formData.get("category") as string)?.trim();
+    const category_label = (formData.get("category_label") as string)?.trim() || "";
+    const rawType = (formData.get("type") as string)?.trim();
+    const type = rawType === "FAQ" ? "FAQ" : "Description";
 
     if (!title || !content || !category) {
       return { error: "Title, content, and category are required." };
@@ -92,7 +110,7 @@ export async function action({ request }: { request: Request }) {
     const slug = generateSlug(rawSlug);
 
     try {
-      await Resource.findByIdAndUpdate(id, { title, slug, content, category, updated_at: new Date() });
+      await Resource.findByIdAndUpdate(id, { title, slug, content, category, category_label, type, updated_at: new Date() });
       return { success: true };
     } catch (e: any) {
       if (e.code === 11000) return { error: "A resource with this slug already exists." };
@@ -161,8 +179,10 @@ export async function action({ request }: { request: Request }) {
           slug: resource.slug,
           content: resource.content,
           category: resource.category,
+          category_label: resource.category_label,
+          type: resource.type,
           is_active: resource.is_active,
-          sort_order: resource.sort_order ?? 0,
+          sort_order: -1,
           updated_at: new Date(),
         });
       }
@@ -182,21 +202,41 @@ export async function action({ request }: { request: Request }) {
     return { syncSuccess: true, added, skipped: toInsert.length - added };
   }
 
-  if (intent === "sync_order") {
-    const [adminResources, candidates] = await Promise.all([
-      Resource.find({}).select("slug sort_order").lean(),
-      SupplierResource.find({ sort_order: 0 }).select("slug").lean(),
-    ]);
-
-    const slugToOrder = new Map(
-      (adminResources as any[]).map((r) => [r.slug, r.sort_order ?? 0])
+  if (intent === "sync_fields") {
+    await SupplierResource.updateMany(
+      { sort_order: { $exists: false } },
+      { $set: { sort_order: -1 } }
     );
 
-    const ops = (candidates as any[])
-      .filter((c) => (slugToOrder.get(c.slug) ?? 0) !== 0)
-      .map((c) => ({
-        updateOne: { filter: { _id: c._id }, update: { sort_order: slugToOrder.get(c.slug) } },
-      }));
+    const [adminResources, supplierResources] = await Promise.all([
+      Resource.find({}).select("slug sort_order category_label type").lean(),
+      SupplierResource.find({}).select("slug sort_order category_label type").lean(),
+    ]);
+
+    const slugToAdmin = new Map(
+      (adminResources as any[]).map((r) => [r.slug, r])
+    );
+
+    const ops: any[] = [];
+    for (const s of supplierResources as any[]) {
+      const admin = slugToAdmin.get(s.slug);
+      if (!admin) continue;
+
+      const update: Record<string, any> = {};
+      if (s.sort_order === -1 || s.sort_order === undefined) {
+        update.sort_order = admin.sort_order ?? 0;
+      }
+      if (!s.category_label && admin.category_label) {
+        update.category_label = admin.category_label;
+      }
+      if (!s.type && admin.type) {
+        update.type = admin.type;
+      }
+
+      if (Object.keys(update).length > 0) {
+        ops.push({ updateOne: { filter: { _id: s._id }, update } });
+      }
+    }
 
     let updated = 0;
     if (ops.length > 0) {
@@ -204,7 +244,36 @@ export async function action({ request }: { request: Request }) {
       updated = result.modifiedCount ?? ops.length;
     }
 
-    return { orderSyncSuccess: true, updated };
+    return { fieldsSyncSuccess: true, updated };
+  }
+
+  if (intent === "fix_data") {
+    const resources = await Resource.find({
+      $or: [
+        { category_label: { $in: [null, ""] } },
+        { type: { $in: [null, ""] } },
+      ],
+    })
+      .select("category category_label type")
+      .lean();
+
+    const ops = (resources as any[]).map((r) => ({
+      updateOne: {
+        filter: { _id: r._id },
+        update: {
+          type: r.category === "FAQ" ? "FAQ" : "Description",
+          category_label: r.category_label || LEGACY_CATEGORY_LABEL[r.category] || r.category,
+        },
+      },
+    }));
+
+    let fixed = 0;
+    if (ops.length > 0) {
+      const result = await Resource.bulkWrite(ops);
+      fixed = result.modifiedCount ?? ops.length;
+    }
+
+    return { fixDataSuccess: true, fixed };
   }
 
   return { error: "Unknown intent." };
@@ -250,10 +319,12 @@ export default function AdminResources() {
 
   const isSyncing =
     isSubmitting && navigation.formData?.get("intent") === "sync";
-  const isSyncingOrder =
-    isSubmitting && navigation.formData?.get("intent") === "sync_order";
+  const isSyncingFields =
+    isSubmitting && navigation.formData?.get("intent") === "sync_fields";
   const isSavingOrder =
     isSubmitting && navigation.formData?.get("intent") === "reorder";
+  const isFixingData =
+    isSubmitting && navigation.formData?.get("intent") === "fix_data";
 
   const handleDragStart = (index: number) => (e: React.DragEvent) => {
     e.dataTransfer.effectAllowed = "move";
@@ -404,16 +475,31 @@ export default function AdminResources() {
               <Form
                 method="post"
                 onSubmit={(e) => {
-                  if (!confirm("Push the admin resource order to every supplier resource whose order hasn't been customized yet (still at its default). Suppliers who already rearranged their own resources are left unchanged.")) e.preventDefault();
+                  if (!confirm("Push the admin resource order to every supplier resource whose order hasn't been customized yet (still at its default), and fill in any missing Category Label / Type fields on slug-matching supplier resources from the admin copy. Suppliers who already rearranged their own resources keep their order unchanged.")) e.preventDefault();
                 }}
               >
-                <input type="hidden" name="intent" value="sync_order" />
+                <input type="hidden" name="intent" value="sync_fields" />
                 <button
                   type="submit"
-                  disabled={isSyncingOrder}
+                  disabled={isSyncingFields}
                   className="px-4 py-2 bg-white border border-blue-700 text-blue-700 rounded hover:bg-blue-50 text-sm font-medium disabled:opacity-50"
                 >
-                  {isSyncingOrder ? "Syncing Order..." : "Sync Order to Suppliers"}
+                  {isSyncingFields ? "Syncing Fields..." : "Sync Fields to Supplier"}
+                </button>
+              </Form>
+              <Form
+                method="post"
+                onSubmit={(e) => {
+                  if (!confirm("Scan all resources and fill in missing Type/Category Label fields (Type: FAQ for the FAQ category, Description for all others; Category Label: from the app's legacy category names)? Resources that already have both fields set are left unchanged.")) e.preventDefault();
+                }}
+              >
+                <input type="hidden" name="intent" value="fix_data" />
+                <button
+                  type="submit"
+                  disabled={isFixingData}
+                  className="px-4 py-2 bg-white border border-blue-700 text-blue-700 rounded hover:bg-blue-50 text-sm font-medium disabled:opacity-50"
+                >
+                  {isFixingData ? "Fixing..." : "Fix Data"}
                 </button>
               </Form>
               <button
@@ -434,9 +520,15 @@ export default function AdminResources() {
         </div>
       )}
 
-      {actionData?.orderSyncSuccess && (
+      {actionData?.fieldsSyncSuccess && (
         <div className="mb-4 p-3 bg-green-50 border border-green-200 text-green-700 rounded text-sm">
-          Order sync complete — {actionData.updated} supplier resource{actionData.updated === 1 ? "" : "s"} updated.
+          Fields sync complete — {actionData.updated} supplier resource{actionData.updated === 1 ? "" : "s"} updated.
+        </div>
+      )}
+
+      {actionData?.fixDataSuccess && (
+        <div className="mb-4 p-3 bg-green-50 border border-green-200 text-green-700 rounded text-sm">
+          Fix complete — {actionData.fixed} resource{actionData.fixed === 1 ? "" : "s"} updated with a Type and/or Category Label.
         </div>
       )}
 
@@ -645,6 +737,32 @@ export default function AdminResources() {
                   placeholder="e.g. FAQ, Help, Guide"
                   className={inputCls}
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Category Label{" "}
+                  <span className="text-gray-400 font-normal text-xs">
+                    (heading shown on the app, e.g. "Frequently Asked Questions")
+                  </span>
+                </label>
+                <input
+                  name="category_label"
+                  defaultValue={editItem?.category_label}
+                  placeholder="e.g. Frequently Asked Questions"
+                  className={inputCls}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Type *</label>
+                <select
+                  name="type"
+                  defaultValue={editItem?.type || "Description"}
+                  required
+                  className={inputCls}
+                >
+                  <option value="FAQ">FAQ</option>
+                  <option value="Description">Description</option>
+                </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Content *</label>

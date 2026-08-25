@@ -5,6 +5,8 @@ const ResourceSchema = new mongoose.Schema({
   slug: { type: String, required: true, unique: true },
   content: { type: String, required: true },
   category: { type: String, required: true },
+  category_label: { type: String, default: '' },
+  type: { type: String, enum: ['FAQ', 'Description'], default: 'Description' },
   is_active: { type: Boolean, default: true },
   sort_order: { type: Number, default: 0 },
   updated_by: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },

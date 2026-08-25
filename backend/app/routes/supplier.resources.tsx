@@ -12,6 +12,8 @@ type ResourceDoc = {
   slug: string;
   content: string;
   category: string;
+  category_label: string;
+  type: string;
   is_active: boolean;
   sort_order: number;
 };
@@ -68,6 +70,9 @@ export async function action({ request }: { request: Request }) {
     const title = (formData.get("title") as string)?.trim();
     const content = (formData.get("content") as string)?.trim();
     const category = (formData.get("category") as string)?.trim();
+    const category_label = (formData.get("category_label") as string)?.trim() || "";
+    const rawType = (formData.get("type") as string)?.trim();
+    const type = rawType === "FAQ" ? "FAQ" : "Description";
 
     if (!title || !content || !category) {
       return { error: "Title, content, and category are required." };
@@ -83,6 +88,8 @@ export async function action({ request }: { request: Request }) {
         slug,
         content,
         category,
+        category_label,
+        type,
         is_active: true,
         updated_at: new Date(),
       });
@@ -98,6 +105,9 @@ export async function action({ request }: { request: Request }) {
     const title = (formData.get("title") as string)?.trim();
     const content = (formData.get("content") as string)?.trim();
     const category = (formData.get("category") as string)?.trim();
+    const category_label = (formData.get("category_label") as string)?.trim() || "";
+    const rawType = (formData.get("type") as string)?.trim();
+    const type = rawType === "FAQ" ? "FAQ" : "Description";
 
     if (!title || !content || !category) {
       return { error: "Title, content, and category are required." };
@@ -111,7 +121,7 @@ export async function action({ request }: { request: Request }) {
     if (!existing) return { error: "Resource not found." };
 
     try {
-      await SupplierResource.findByIdAndUpdate(id, { title, slug, content, category, updated_at: new Date() });
+      await SupplierResource.findByIdAndUpdate(id, { title, slug, content, category, category_label, type, updated_at: new Date() });
       return { success: true };
     } catch (e: any) {
       if (e.code === 11000) return { error: "A resource with this slug already exists." };
@@ -509,6 +519,32 @@ export default function SupplierResources() {
                   placeholder="e.g. FAQ, Help, Guide"
                   className={inputCls}
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Category Label{" "}
+                  <span className="text-gray-400 font-normal text-xs">
+                    (heading shown on the app, e.g. "Frequently Asked Questions")
+                  </span>
+                </label>
+                <input
+                  name="category_label"
+                  defaultValue={editItem?.category_label}
+                  placeholder="e.g. Frequently Asked Questions"
+                  className={inputCls}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Type *</label>
+                <select
+                  name="type"
+                  defaultValue={editItem?.type || "Description"}
+                  required
+                  className={inputCls}
+                >
+                  <option value="FAQ">FAQ</option>
+                  <option value="Description">Description</option>
+                </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Content *</label>
